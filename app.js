@@ -1,45 +1,47 @@
 let isAdminMode = false;
-const ADMIN_PASSWORD = "0731"; // 🔑 관리자 비밀번호[cite: 3]
+let isUserPreview = false;
+let isDeckEditUnlocked = false;
+let currentPage = 1;
+const ADMIN_PASSWORD = "0731";
+const CREATOR_UID = "20029059326"; // ✨ 제작자 UID 고정
 
-let categoryNames = ["우리 동맹", "제2동맹", "제3동맹", "재야"];
+let categoryNames = ["금의위", "낙원(동맹)", "낙화", "낙원"];
 let currentFilter = '전체';
 let searchQuery = '';
-let overlapSortGeneral = ''; 
 let uploadedFiles = [];
-let currentEditMemberId = null;
-let currentEditDeckIndex = null;
-let currentDictViewCategory = 'gen-wu';
+let currentDictTargetTab = 'formation';
 
+let accessLogs = JSON.parse(localStorage.getItem('accessLogs') || '[]');
 const AVAILABLE_JOBS = ["진군", "신행", "기좌", "병참", "천공", "청낭", "금의위"];
-
-let DB = {
-    generals: { 
-        "오": { "서성": { tactic: "백리의 성", desc: "4턴 동안 아군 방어막 획득" } }, 
-        "촉": { "유비": { tactic: "백성과 함께", desc: "치유 효과" } }, 
-        "위": { "조조": { tactic: "난세의 간옹", desc: "피해 감소" } }, 
-        "군": { "여포": { tactic: "무쌍의 용사", desc: "일반 공격" } } 
-    },
-    tactics: { 
-        "지휘": { "격려": "[특성: 지휘 | 발동률: 100%] 우군 2명의 무력 증가" }, 
-        "패시브": { "강습": "[특성: 패시브 | 발동률: 100%] 일반 공격 후 피해 전달" }, 
-        "액티브": { "화공전술": "[특성: 액티브 | 발동률: 45%] 적 전체 화공 상태 부여" }, 
-        "추격": { "무방비 공격": "[특성: 추격 | 발동률: 35%] 일반 공격 후 병기 피해" } 
-    }
-};
-
 let members = [];
 
-// 🔥 [데이터 초기화 방지] 로컬 저장소 우선 로드 + 파이어베이스 동기화
+let DICT_CONTENTS = {
+    formation: `# 1. 진형 및 병종상성 대도감\n## 진형\n### 기형진\n- **특성**: 기병 피해 증가 및 방어 상승\n### 일자진\n- **특성**: 전열 피해 8% 감소`,
+    synergy: `# 2. 각 장수 인연보너스 대도감\n## 하북 정장\n### 구성원\n- **대상**: 안량, 문추, 장합`,
+    generalTactic: `# 3. 장수 전법정리 대도감\n## 오나라\n### 조운\n- **고유전법**: 칠진칠출\n### 유비\n- **고유전법**: 백성과 함께\n### 초선\n- **고유전법**: 폐월`,
+    commonTactic: `# 4. 공용 전법정리 대도감\n## 지휘 전법\n### 격려\n- **효과**: 우군 무력 증가\n### 허점 공략\n- **효과**: 방어 감소\n### 청낭 치료\n- **효과**: 회복`
+};
+
+function toggleSubMenu(menuId) {
+    const menu = document.getElementById(menuId);
+    const arrow = document.getElementById(menuId + '-arrow');
+    if (menu.style.display === 'none') {
+        menu.style.display = 'block';
+        if (arrow) arrow.innerText = '▲';
+    } else {
+        menu.style.display = 'none';
+        if (arrow) arrow.innerText = '▼';
+    }
+}
+
 async function loadDataFromFirebase() {
-    const localDB = localStorage.getItem('gameDB');
     const localMembers = localStorage.getItem('gameMembers');
     const localCategories = localStorage.getItem('categoryNames');
-    const localFiles = localStorage.getItem('uploadedFiles');
+    const localDict = localStorage.getItem('dictContents');
 
-    if (localDB) DB = JSON.parse(localDB);
     if (localMembers) members = JSON.parse(localMembers);
     if (localCategories) categoryNames = JSON.parse(localCategories);
-    if (localFiles) uploadedFiles = JSON.parse(localFiles);
+    if (localDict) DICT_CONTENTS = JSON.parse(localDict);
 
     renderFilterButtons();
     renderTable();
@@ -53,217 +55,582 @@ async function loadDataFromFirebase() {
         const docSnap = await getDoc(doc(db, "alliance_data", "main"));
         if (docSnap.exists()) {
             const data = docSnap.data();
-            if (data.DB && Object.keys(data.DB.generals).length > 0) DB = data.DB;
             if (data.members && data.members.length > 0) members = data.members;
             if (data.categoryNames) categoryNames = data.categoryNames;
-            if (data.uploadedFiles) uploadedFiles = data.uploadedFiles;
-            
+            if (data.DICT_CONTENTS) DICT_CONTENTS = data.DICT_CONTENTS;
             saveDataToStorage();
         } else {
             saveDataToStorage();
         }
     } catch (err) {
-        console.error("파이어베이스 클라우드 연동 실패 (로컬 데이터로 작동):", err);
+        console.error("파이어베이스 연동 실패:", err);
     }
     renderFilterButtons();
     renderTable();
 }
 
-// 🔥 파이어스토어 및 로컬에 데이터 동기화 저장
 async function saveDataToStorage() {
-    localStorage.setItem('gameDB', JSON.stringify(DB));
     localStorage.setItem('gameMembers', JSON.stringify(members));
     localStorage.setItem('categoryNames', JSON.stringify(categoryNames));
-    localStorage.setItem('uploadedFiles', JSON.stringify(uploadedFiles));
+    localStorage.setItem('dictContents', JSON.stringify(DICT_CONTENTS));
 
     if (window.firebaseDB) {
         const { db, doc, setDoc } = window.firebaseDB;
         try {
             await setDoc(doc(db, "alliance_data", "main"), {
-                DB: DB,
-                members: members,
-                categoryNames: categoryNames,
-                uploadedFiles: uploadedFiles
-            });
+                members: members, categoryNames: categoryNames, DICT_CONTENTS: DICT_CONTENTS
+            }, { merge: true });
         } catch (err) {
             console.error("클라우드 저장 실패:", err);
         }
     }
 }
 
-// 🎨 테마 변경은 권한 없이 누구나 가능
-function applyTheme() {
-    const theme = document.getElementById('themeSelector').value;
-    document.getElementById('app-body').className = `${theme} min-h-screen flex transition-colors duration-300`;
-}
+function handleUidAuth() {
+    const inputUid = document.getElementById('authUid').value.trim();
+    if (!inputUid) return alert("게임 UID를 입력해주세요.");
 
-// 🔒 관리자 모드 토글 및 권한 제어
-function toggleAdminMode() {
-    if (!isAdminMode) {
-        const pw = prompt("관리자 비밀번호를 입력하세요:");
-        if (pw !== ADMIN_PASSWORD) {
-            alert("비밀번호가 틀렸습니다. 관리자 권한을 획득할 수 없습니다.");
-            return;
+    const isRememberChecked = document.getElementById('saveUidCheckbox').checked;
+    if (isRememberChecked) {
+        localStorage.setItem('savedAuthUid', inputUid);
+    } else {
+        localStorage.removeItem('savedAuthUid');
+    }
+
+    // ✨ 제작자 UID는 엑셀에 따로 없더라도 로그인 검증을 통과하도록 예외 처리 (일반 모드로 로그인 됨)
+    let matchedMember = members.find(m => String(m.uid) === inputUid);
+    if (!matchedMember) {
+        if (inputUid === CREATOR_UID) {
+            matchedMember = { uid: CREATOR_UID, name: "제작자(총사령관)", alliance: categoryNames[0], job: "금의위", decks: [] };
+        } else {
+            return alert("등록된 대원 정보를 찾을 수 없습니다.");
         }
     }
 
-    isAdminMode = !isAdminMode;
+    const userInfo = { uid: matchedMember.uid, name: matchedMember.name, time: new Date().toLocaleString() };
+    localStorage.setItem('loggedUser', JSON.stringify(userInfo));
+    accessLogs.unshift({ uid: matchedMember.uid, name: matchedMember.name, time: new Date().toLocaleString() });
+    localStorage.setItem('accessLogs', JSON.stringify(accessLogs));
+
+    alert(`환영합니다, ${matchedMember.name}님!`);
+    document.getElementById('authOverlay').classList.add('hidden');
+    loadDataFromFirebase();
+}
+
+function handleLogout() {
+    if (confirm("대시보드에서 나가시겠습니까?")) {
+        localStorage.removeItem('loggedUser');
+        location.reload();
+    }
+}
+
+function toggleAdminMode() {
+    // ✨ 상시 관리자 권한은 없으므로 비밀번호 입력 창을 띄움
+    if (!isAdminMode) {
+        const pw = prompt("관리자 비밀번호를 입력하세요:");
+        if (pw !== ADMIN_PASSWORD) return alert("비밀번호가 틀렸습니다.");
+        
+        isAdminMode = true;
+        applyAdminUIState();
+        toggleModal('adminControlModal');
+    } else {
+        toggleModal('adminControlModal');
+    }
+}
+
+function turnOffAdminMode() {
+    isAdminMode = false;
+    isUserPreview = false;
+    applyAdminUIState();
+    toggleModal('adminControlModal');
+    alert("🛡️ 관리자 모드가 해제되었습니다.");
+}
+
+function toggleUserPreview() {
+    isUserPreview = !isUserPreview;
+    const previewBtn = document.getElementById('previewToggleBtn');
+    if (previewBtn) {
+        previewBtn.innerText = isUserPreview ? "👀 일반 유저 시점 끄기 (보기 복귀)" : "👀 일반 유저 시점 미리보기";
+    }
+    toggleModal('adminControlModal');
+    renderTable();
+    alert(isUserPreview ? "👀 일반 유저 시점 미리보기로 전환되었습니다." : "🛡️ 관리자 시점으로 복귀했습니다.");
+}
+
+function openAdminControlFromSub(currentModalId) {
+    toggleModal(currentModalId);
+    toggleModal('adminControlModal');
+}
+
+function applyAdminUIState() {
     const btn = document.getElementById('editModeBtn');
     const addBtn = document.getElementById('addMemberBtn');
     const delSelectedBtn = document.getElementById('delSelectedBtn');
     const delHeader = document.getElementById('delColHeader');
     const selectAllHeader = document.getElementById('selectAllHeader');
+    const uidHeader = document.getElementById('uidColHeader');
     
-    if(isAdminMode) {
-        if(btn) btn.innerHTML = "<span>🛡️</span> 관리자 모드 끄기";
+    if (isAdminMode) {
+        if(btn) {
+            btn.innerHTML = "<span>🛡️</span> 관리자 제어판";
+            btn.className = "bg-red-800 hover:bg-red-700 px-4 py-2 rounded-lg font-bold text-white text-xs shadow transition flex items-center gap-1.5";
+        }
         if(addBtn) addBtn.classList.remove('hidden');
         if(delSelectedBtn) delSelectedBtn.classList.remove('hidden');
         if(delHeader) delHeader.classList.remove('hidden');
         if(selectAllHeader) selectAllHeader.classList.remove('hidden');
-        alert("관리자 권한이 활성화되었습니다.");
+        if(uidHeader) uidHeader.classList.remove('hidden');
     } else {
-        if(btn) btn.innerHTML = "<span>🛡️</span> 관리자 모드";
+        if(btn) {
+            btn.innerHTML = "<span>🛡️</span> 관리자 모드";
+            btn.className = "bg-amber-600 hover:bg-amber-500 px-4 py-2 rounded-lg font-bold text-white text-xs shadow transition flex items-center gap-1.5";
+        }
         if(addBtn) addBtn.classList.add('hidden');
-        if(delSelectedBtn) addBtn.classList.add('hidden');
+        if(delSelectedBtn) delSelectedBtn.classList.add('hidden');
         if(delHeader) delHeader.classList.add('hidden');
         if(selectAllHeader) selectAllHeader.classList.add('hidden');
-        alert("관리자 모드가 해제되었습니다.");
+        if(uidHeader) uidHeader.classList.add('hidden');
     }
     renderFilterButtons();
     renderTable();
 }
 
-// 🔒 관리자 권한 확인 래퍼 함수들
-function checkAdminBeforeAction(actionCallback) {
-    if (!isAdminMode) {
-        const pw = prompt("이 기능은 관리자 권한이 필요합니다. 비밀번호를 입력하세요:");
-        if (pw === ADMIN_PASSWORD) {
-            isAdminMode = true;
-            const btn = document.getElementById('editModeBtn');
-            const addBtn = document.getElementById('addMemberBtn');
-            const delSelectedBtn = document.getElementById('delSelectedBtn');
-            const delHeader = document.getElementById('delColHeader');
-            const selectAllHeader = document.getElementById('selectAllHeader');
-            
-            if(btn) btn.innerHTML = "<span>🛡️</span> 관리자 모드 끄기";
-            if(addBtn) addBtn.classList.remove('hidden');
-            if(delSelectedBtn) delSelectedBtn.classList.remove('hidden');
-            if(delHeader) delHeader.classList.remove('hidden');
-            if(selectAllHeader) selectAllHeader.classList.remove('hidden');
-            renderFilterButtons();
-            renderTable();
-
-            actionCallback();
-        } else {
-            alert("비밀번호가 틀렸습니다. 접근이 거부되었습니다.");
-            return;
-        }
-    } else {
-        actionCallback();
-    }
+function openCategoryModal() {
+    toggleModal('adminControlModal');
+    renderCategoryModalInputs();
+    toggleModal('categoryModal');
 }
 
-// 📖 도감 조회는 누구나 가능하도록 변경
-function tryOpenDictModal() {
-    toggleModal('dictModal');
-    renderUploadedFilesList();
-    showDictCategory(currentDictViewCategory);
-}
-
-function tryExcelUploadTrigger() {
-    checkAdminBeforeAction(() => {
-        document.getElementById('excelInput').click();
-    });
-}
-
-function addNewMember() {
-    if (!isAdminMode) return alert("관리자 모드에서만 인원을 추가할 수 있습니다.");
-    const newMember = {
-        id: Date.now(),
-        uid: String(Math.floor(1000 + Math.random() * 9000)),
-        name: "신규장수",
-        job: "",
-        alliance: categoryNames[0] || "미소속",
-        decks: []
-    };
-    members.push(newMember);
-    saveDataToStorage();
-    renderTable();
-}
-
-function deleteMember(id) {
-    if (!isAdminMode) return alert("관리자 모드에서만 삭제할 수 있습니다.");
-    if(confirm("정말 이 인원을 삭제하시겠습니까?")) {
-        members = members.filter(m => m.id !== id);
-        saveDataToStorage();
-        renderTable();
-    }
-}
-
-function toggleSelectAll(source) {
-    const checkboxes = document.querySelectorAll('.row-checkbox');
-    checkboxes.forEach(cb => cb.checked = source.checked);
-}
-
-function deleteSelectedMembers() {
-    if (!isAdminMode) return alert("관리자 모드에서만 삭제할 수 있습니다.");
-    const selectedIds = Array.from(document.querySelectorAll('.row-checkbox:checked'))
-                           .map(cb => Number(cb.getAttribute('data-id')));
-    if(selectedIds.length === 0) return alert("선택된 인원이 없습니다.");
-    if(confirm(`선택한 총 ${selectedIds.length}명의 인원을 정말 삭제하시겠습니까?`)) {
-        members = members.filter(m => !selectedIds.includes(m.id));
-        saveDataToStorage();
-        renderTable();
-        const selectAll = document.getElementById('selectAllCheckbox');
-        if(selectAll) selectAll.checked = false;
-    }
-}
-
-function updateMemberField(id, field, value) {
-    if (!isAdminMode) return;
-    const m = members.find(item => item.id === id);
-    if(m) {
-        m[field] = value;
-        saveDataToStorage();
-    }
-}
-
-function openSettingsModal() {
+function renderCategoryModalInputs() {
     const container = document.getElementById('categoryInputsContainer');
     container.innerHTML = '';
     categoryNames.forEach((cat, index) => {
         container.innerHTML += `
-        <div class="flex gap-2 items-center bg-main p-2 rounded-lg border border-theme">
-            <input type="text" value="${cat}" ${isAdminMode ? '' : 'disabled'} class="cat-input flex-1 bg-panel border border-theme px-3 py-1.5 rounded-lg text-sm">
-            ${isAdminMode ? `<button type="button" onclick="this.parentElement.remove()" class="bg-red-800 hover:bg-red-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold">삭제</button>` : ''}
+        <div class="category-draggable-item flex gap-2 items-center bg-main p-2 rounded-lg border border-theme cursor-grab active:cursor-grabbing" draggable="true" data-index="${index}">
+            <span class="text-muted font-bold text-xs select-none">☰</span>
+            <input type="text" value="${cat}" class="cat-input flex-1 bg-panel border border-theme px-3 py-1.5 rounded-lg text-sm text-main">
+            <button type="button" onclick="this.parentElement.remove()" class="bg-red-800 text-white px-3 py-1.5 rounded-lg text-xs font-bold">삭제</button>
         </div>`;
     });
-    toggleModal('settingsModal');
+
+    setupCategoryDragAndDrop();
+}
+
+function setupCategoryDragAndDrop() {
+    const container = document.getElementById('categoryInputsContainer');
+    let draggedItem = null;
+
+    container.querySelectorAll('.category-draggable-item').forEach(item => {
+        item.addEventListener('dragstart', function(e) {
+            draggedItem = this;
+            setTimeout(() => this.classList.add('opacity-40'), 0);
+        });
+
+        item.addEventListener('dragend', function(e) {
+            this.classList.remove('opacity-40');
+            draggedItem = null;
+        });
+
+        item.addEventListener('dragover', function(e) {
+            e.preventDefault();
+        });
+
+        item.addEventListener('drop', function(e) {
+            e.preventDefault();
+            if (this !== draggedItem) {
+                let allItems = Array.from(container.querySelectorAll('.category-draggable-item'));
+                let draggedIdx = allItems.indexOf(draggedItem);
+                let targetIdx = allItems.indexOf(this);
+
+                if (draggedIdx < targetIdx) {
+                    container.insertBefore(draggedItem, this.nextSibling);
+                } else {
+                    container.insertBefore(draggedItem, this);
+                }
+            }
+        });
+    });
 }
 
 function addCategoryInput() {
-    if (!isAdminMode) return alert("관리자 권한이 필요합니다.");
     const container = document.getElementById('categoryInputsContainer');
-    container.innerHTML += `
-    <div class="flex gap-2 items-center bg-main p-2 rounded-lg border border-theme">
-        <input type="text" value="새 동맹" class="cat-input flex-1 bg-panel border border-theme px-3 py-1.5 rounded-lg text-sm">
-        <button type="button" onclick="this.parentElement.remove()" class="bg-red-800 hover:bg-red-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold">삭제</button>
-    </div>`;
+    const tempDiv = document.createElement('div');
+    tempDiv.className = "category-draggable-item flex gap-2 items-center bg-main p-2 rounded-lg border border-theme cursor-grab active:cursor-grabbing";
+    tempDiv.setAttribute('draggable', 'true');
+    tempDiv.innerHTML = `
+        <span class="text-muted font-bold text-xs select-none">☰</span>
+        <input type="text" value="새 동맹" class="cat-input flex-1 bg-panel border border-theme px-3 py-1.5 rounded-lg text-sm text-main">
+        <button type="button" onclick="this.parentElement.remove()" class="bg-red-800 text-white px-3 py-1.5 rounded-lg text-xs font-bold">삭제</button>
+    `;
+    container.appendChild(tempDiv);
+    setupCategoryDragAndDrop();
 }
 
-function saveSettings() {
-    applyTheme();
-    if (!isAdminMode) {
-        toggleModal('settingsModal');
-        return;
-    }
+function saveCategorySettings() {
     const inputs = document.querySelectorAll('.cat-input');
     categoryNames = Array.from(inputs).map(input => input.value.trim()).filter(val => val !== '');
-    if (!categoryNames.includes("재야")) categoryNames.push("재야");
+    
     saveDataToStorage();
     renderFilterButtons();
-    toggleModal('settingsModal');
     renderTable();
+    toggleModal('categoryModal');
+    toggleModal('adminControlModal');
+    alert("카테고리 순서 및 설정이 성공적으로 저장되었습니다!");
+}
+
+function openDataUploadModal() {
+    toggleModal('adminControlModal');
+    toggleModal('dataUploadModal');
+}
+
+function openAdminLogModal() {
+    toggleModal('adminControlModal');
+    const container = document.getElementById('adminLogContainer');
+    const logs = JSON.parse(localStorage.getItem('accessLogs') || '[]');
+    let html = logs.length === 0 ? `<p class="text-center text-muted py-4">기록된 접속 로그가 없습니다.</p>` : '';
+    logs.forEach((log) => {
+        html += `<div class="bg-main p-3 rounded-lg border border-theme flex justify-between items-center text-xs"><div><strong class="text-main">${log.name}</strong> <span class="text-muted">(UID: ${log.uid})</span></div><div class="text-muted">${log.time}</div></div>`;
+    });
+    container.innerHTML = html;
+    toggleModal('adminLogModal');
+}
+
+function applyTheme() {
+    const theme = document.getElementById('themeSelector').value;
+    document.getElementById('app-body').className = `${theme} min-h-screen flex transition-colors duration-300`;
+}
+
+function openDeckModal(memberId, deckIndex) {
+    const member = members.find(m => m.id === memberId);
+    if (!member) return;
+
+    document.getElementById('editDeckMemberId').value = memberId;
+    document.getElementById('editDeckIndex').value = deckIndex;
+
+    const deck = (member.decks && member.decks[deckIndex]) || { 
+        formation: '기형진',
+        g1: '', t1_1: '', t1_2: '', t1_3: '',
+        g2: '', t2_1: '', t2_2: '', t2_3: '',
+        g3: '', t3_1: '', t3_2: '', t3_3: ''
+    };
+
+    document.getElementById('editDeckFormation').value = deck.formation || '기형진';
+    
+    document.getElementById('deckG1').value = deck.g1 || '';
+    document.getElementById('deckT1_1').value = deck.t1_1 || '';
+    document.getElementById('deckT1_2').value = deck.t1_2 || '';
+    document.getElementById('deckT1_3').value = deck.t1_3 || '';
+
+    document.getElementById('deckG2').value = deck.g2 || '';
+    document.getElementById('deckT2_1').value = deck.t2_1 || '';
+    document.getElementById('deckT2_2').value = deck.t2_2 || '';
+    document.getElementById('deckT2_3').value = deck.t2_3 || '';
+
+    document.getElementById('deckG3').value = deck.g3 || '';
+    document.getElementById('deckT3_1').value = deck.t3_1 || '';
+    document.getElementById('deckT3_2').value = deck.t3_2 || '';
+    document.getElementById('deckT3_3').value = deck.t3_3 || '';
+
+    isDeckEditUnlocked = false;
+    applyDeckUnlockUIState();
+
+    toggleModal('deckEditModal');
+}
+
+function toggleDeckEditUnlock() {
+    isDeckEditUnlocked = !isDeckEditUnlocked;
+    applyDeckUnlockUIState();
+}
+
+function applyDeckUnlockUIState() {
+    const statusLabel = document.getElementById('deckEditLockStatus');
+    const unlockBtn = document.getElementById('deckUnlockBtn');
+    const formationSelect = document.getElementById('editDeckFormation');
+
+    const inputs = [
+        'deckG1', 'deckT1_2', 'deckT1_3',
+        'deckG2', 'deckT2_2', 'deckT2_3',
+        'deckG3', 'deckT3_2', 'deckT3_3'
+    ];
+
+    if (isDeckEditUnlocked) {
+        statusLabel.className = "text-xs bg-emerald-900/50 text-emerald-300 px-3 py-1 rounded border border-emerald-700";
+        statusLabel.innerText = "🔓 수정 가능 상태";
+        unlockBtn.innerText = "🔒 잠그기";
+        unlockBtn.className = "bg-red-700 hover:bg-red-600 text-white px-4 py-1.5 rounded-lg text-xs font-bold shadow transition";
+        formationSelect.disabled = false;
+
+        inputs.forEach(id => {
+            document.getElementById(id).removeAttribute('readonly');
+        });
+    } else {
+        statusLabel.className = "text-xs bg-red-900/50 text-red-300 px-3 py-1 rounded border border-red-700";
+        statusLabel.innerText = "🔒 잠김 상태 (수정 버튼을 누르세요)";
+        unlockBtn.innerText = "🔓 수정 잠금해제";
+        unlockBtn.className = "bg-amber-600 hover:bg-amber-500 text-white px-4 py-1.5 rounded-lg text-xs font-bold shadow transition";
+        formationSelect.disabled = true;
+
+        inputs.forEach(id => {
+            document.getElementById(id).setAttribute('readonly', true);
+        });
+    }
+}
+
+function handleDeckInputSearch(slotNum, type) {
+    if (!isDeckEditUnlocked) return;
+
+    let inputId = '';
+    if (type === 'g') inputId = `deckG${slotNum}`;
+    else inputId = `deckT${slotNum}_2` || `deckT${slotNum}_3`;
+
+    const inputVal = document.getElementById(inputId).value.trim().toLowerCase();
+    const listContainer = document.getElementById(`autocomplete-list-${type}${slotNum !== undefined ? slotNum : ''}`);
+    if(!listContainer) return;
+
+    if (!inputVal) {
+        listContainer.classList.add('hidden');
+        return;
+    }
+
+    let sourceList = [];
+    if (type === 'g') {
+        const rawText = DICT_CONTENTS['generalTactic'] || "";
+        let parsed = parseMarkdownByTarget(rawText);
+        parsed.forEach(p => sourceList.push(p.title));
+    } else {
+        const rawText = DICT_CONTENTS['commonTactic'] || "";
+        let parsed = parseMarkdownByTarget(rawText);
+        parsed.forEach(p => sourceList.push(p.title));
+    }
+
+    const matched = sourceList.filter(item => item.toLowerCase().includes(inputVal));
+    if (matched.length === 0) {
+        listContainer.classList.add('hidden');
+        return;
+    }
+
+    let html = '';
+    matched.forEach(name => {
+        html += `<div onclick="selectDeckAutocompleteValue(${slotNum}, '${type}', '${name}')" class="p-2 hover:bg-hover cursor-pointer text-xs text-main">${name}</div>`;
+    });
+
+    listContainer.innerHTML = html;
+    listContainer.classList.remove('hidden');
+}
+
+function selectDeckAutocompleteValue(slotNum, type, name) {
+    if (type === 'g') {
+        document.getElementById(`deckG${slotNum}`).value = name;
+        document.getElementById(`autocomplete-list-g${slotNum}`).classList.add('hidden');
+
+        const generalText = DICT_CONTENTS['generalTactic'] || "";
+        let parsedGenerals = parseMarkdownByTarget(generalText);
+        let foundGeneral = parsedGenerals.find(p => p.title === name);
+        
+        let uniqueTactic = "고유전법 미등록";
+        if (foundGeneral) {
+            let descLines = foundGeneral.desc.split('<br>');
+            let tacticLine = descLines.find(l => l.includes('고유전법') || l.includes('전법'));
+            if (tacticLine) {
+                uniqueTactic = tacticLine.replace(/<[^>]*>?/gm, '').replace('고유전법:', '').trim();
+            } else {
+                uniqueTactic = foundGeneral.title + " 고유전법";
+            }
+        }
+        document.getElementById(`deckT${slotNum}_1`).value = uniqueTactic;
+
+    } else {
+        document.getElementById(`deckT${slotNum}_2` || `deckT${slotNum}_3`).value = name;
+        document.getElementById(`autocomplete-list-${type}${slotNum}`).classList.add('hidden');
+    }
+}
+
+function saveDeckData() {
+    const memberId = Number(document.getElementById('editDeckMemberId').value);
+    const deckIndex = Number(document.getElementById('editDeckIndex').value);
+
+    const formation = document.getElementById('editDeckFormation').value;
+    
+    const g1 = document.getElementById('deckG1').value.trim();
+    const t1_1 = document.getElementById('deckT1_1').value.trim();
+    const t1_2 = document.getElementById('deckT1_2').value.trim();
+    const t1_3 = document.getElementById('deckT1_3').value.trim();
+
+    const g2 = document.getElementById('deckG2').value.trim();
+    const t2_1 = document.getElementById('deckT2_1').value.trim();
+    const t2_2 = document.getElementById('deckT2_2').value.trim();
+    const t2_3 = document.getElementById('deckT2_3').value.trim();
+
+    const g3 = document.getElementById('deckG3').value.trim();
+    const t3_1 = document.getElementById('deckT3_1').value.trim();
+    const t3_2 = document.getElementById('deckT3_2').value.trim();
+    const t3_3 = document.getElementById('deckT3_3').value.trim();
+
+    const member = members.find(m => m.id === memberId);
+    if (member) {
+        if (!member.decks) member.decks = [];
+        member.decks[deckIndex] = {
+            formation,
+            g1, t1_1, t1_2, t1_3,
+            g2, t2_1, t2_2, t2_3,
+            g3, t3_1, t3_2, t3_3
+        };
+        
+        saveDataToStorage();
+        renderTable();
+        toggleModal('deckEditModal');
+        alert("조합 공유 덱 편성이 성공적으로 저장되었습니다!");
+    }
+}
+
+function clearDeckData() {
+    const memberId = Number(document.getElementById('editDeckMemberId').value);
+    const deckIndex = Number(document.getElementById('editDeckIndex').value);
+
+    const member = members.find(m => m.id === memberId);
+    if (member && member.decks) {
+        member.decks[deckIndex] = null;
+        saveDataToStorage();
+        renderTable();
+        toggleModal('deckEditModal');
+        alert("덱이 초기화되었습니다.");
+    }
+}
+
+let parsedDictItems = [];
+
+function switchDictTab(tabKey) {
+    currentDictTargetTab = tabKey;
+    ['formation', 'synergy', 'generalTactic', 'commonTactic'].forEach(key => {
+        const btn = document.getElementById(`tabBtn-${key}`);
+        if(btn) {
+            if(key === tabKey) {
+                btn.className = "px-3 py-1.5 rounded text-xs font-bold bg-yellow-600 text-white transition";
+            } else {
+                btn.className = "px-3 py-1.5 rounded text-xs font-bold bg-main text-muted hover:text-main transition";
+            }
+        }
+    });
+
+    const rawText = DICT_CONTENTS[tabKey] || "";
+    parsedDictItems = parseMarkdownByTarget(rawText);
+    renderDictList(parsedDictItems);
+
+    if (parsedDictItems.length > 0) {
+        selectDictItem(0);
+    } else {
+        document.getElementById('dictDetailTitle').innerText = "내용 없음";
+        document.getElementById('dictDetailDesc').innerText = "등록된 데이터가 없습니다.";
+    }
+}
+
+function parseMarkdownByTarget(text) {
+    let lines = text.split('\n');
+    let items = [];
+    let currentTitle = "";
+    let currentDescLines = [];
+
+    lines.forEach(line => {
+        let trimmed = line.trim();
+        if (trimmed.startsWith('### ')) {
+            if (currentTitle && currentDescLines.length > 0) {
+                items.push({ title: currentTitle, desc: currentDescLines.join('<br>') });
+                currentDescLines = [];
+            }
+            currentTitle = trimmed.replace('### ', '').replace(/\*\*/g, '').replace(/\[.*?\]/g, '').trim();
+        } else if (trimmed && !trimmed.startsWith('#')) {
+            let cleanLine = trimmed.replace(/\*\*(.*?)\*\*/g, '<strong class="gold-text">$1</strong>');
+            if (currentTitle) {
+                currentDescLines.push(cleanLine);
+            }
+        }
+    });
+
+    if (currentTitle && currentDescLines.length > 0) {
+        items.push({ title: currentTitle, desc: currentDescLines.join('<br>') });
+    }
+
+    if (items.length === 0) {
+        items.push({ title: "안내", desc: text.replace(/\n/g, '<br>') });
+    }
+
+    return items;
+}
+
+function renderDictList(items) {
+    const container = document.getElementById('dictListContainer');
+    if(!container) return;
+
+    let labelName = "항목";
+    if (currentDictTargetTab === 'formation') labelName = "진형 명";
+    else if (currentDictTargetTab === 'synergy') labelName = "인연 이름";
+    else if (currentDictTargetTab === 'generalTactic') labelName = "장수 명";
+    else if (currentDictTargetTab === 'commonTactic') labelName = "전법 명";
+
+    let html = `<div class="px-3 py-1.5 text-[11px] font-bold text-muted border-b border-theme mb-1">📌 ${labelName} 목록</div>`;
+    
+    items.forEach((item, index) => {
+        html += `
+        <div onclick="selectDictItem(${index})" id="dict-item-${index}" class="dict-list-btn p-2.5 rounded-lg cursor-pointer transition text-xs font-bold text-main hover:bg-hover bg-main border border-theme flex items-center justify-between" data-index="${index}">
+            <span>${item.title}</span>
+            <span class="text-muted text-[10px]">▶</span>
+        </div>`;
+    });
+
+    container.innerHTML = html;
+}
+
+function selectDictItem(index) {
+    const item = parsedDictItems[index];
+    if(!item) return;
+
+    document.querySelectorAll('.dict-list-btn').forEach((el) => {
+        const itemIdx = el.getAttribute('data-index');
+        if (itemIdx !== null) {
+            if (Number(itemIdx) === index) {
+                el.className = "dict-list-btn p-2.5 rounded-lg cursor-pointer transition text-xs font-bold text-white bg-yellow-600 border border-yellow-500 flex items-center justify-between shadow";
+            } else {
+                el.className = "dict-list-btn p-2.5 rounded-lg cursor-pointer transition text-xs font-bold text-main hover:bg-hover bg-main border border-theme flex items-center justify-between";
+            }
+        }
+    });
+
+    document.getElementById('dictDetailTitle').innerText = item.title;
+    document.getElementById('dictDetailDesc').innerHTML = item.desc;
+}
+
+function filterDictList() {
+    const keyword = document.getElementById('dictSearchInput').value.toLowerCase().trim();
+    const filtered = parsedDictItems.filter(item => item.title.toLowerCase().includes(keyword) || item.desc.toLowerCase().includes(keyword));
+    
+    const container = document.getElementById('dictListContainer');
+    if(!container) return;
+
+    let labelName = "항목";
+    if (currentDictTargetTab === 'formation') labelName = "진형 명";
+    else if (currentDictTargetTab === 'synergy') labelName = "인연 이름";
+    else if (currentDictTargetTab === 'generalTactic') labelName = "장수 명";
+    else if (currentDictTargetTab === 'commonTactic') labelName = "전법 명";
+
+    let html = `<div class="px-3 py-1.5 text-[11px] font-bold text-muted border-b border-theme mb-1">📌 ${labelName} 검색 결과</div>`;
+    
+    filtered.forEach((item) => {
+        const originalIndex = parsedDictItems.findIndex(orig => orig.title === item.title);
+        html += `
+        <div onclick="selectDictItem(${originalIndex})" id="dict-item-${originalIndex}" class="dict-list-btn p-2.5 rounded-lg cursor-pointer transition text-xs font-bold text-main hover:bg-hover bg-main border border-theme flex items-center justify-between" data-index="${originalIndex}">
+            <span>${item.title}</span>
+            <span class="text-muted text-[10px]">▶</span>
+        </div>`;
+    });
+    container.innerHTML = html;
+
+    if (filtered.length > 0) {
+        const firstOriginalIndex = parsedDictItems.findIndex(orig => orig.title === filtered[0].title);
+        selectDictItem(firstOriginalIndex);
+    } else {
+        document.getElementById('dictDetailTitle').innerText = "검색 결과 없음";
+        document.getElementById('dictDetailDesc').innerText = "일치하는 항목이 없습니다.";
+    }
 }
 
 function renderFilterButtons() {
@@ -271,62 +638,41 @@ function renderFilterButtons() {
     const sidebarContainer = document.getElementById('sidebar-filter-buttons');
     
     let html = `<button onclick="filterTable('전체')" class="px-4 py-2 rounded-lg text-xs font-bold ${currentFilter === '전체' ? 'bg-yellow-600 text-white shadow' : 'bg-panel hover:bg-hover border border-theme text-muted'}">전체 보기</button>`;
-    let sidebarHtml = `<a href="#" onclick="filterTable('전체'); return false;" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium ${currentFilter === '전체' ? 'bg-hover text-main font-bold' : 'text-muted hover:bg-hover hover:text-main'} transition"><span>🛡️</span> 전체 보기</a>`;
+    let sidebarHtml = `<a href="#" onclick="filterTable('전체'); return false;" class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium ${currentFilter === '전체' ? 'bg-hover text-main font-bold' : 'text-muted hover:bg-hover hover:text-main'} transition"><span>📊</span> 전체 보기</a>`;
     
-    categoryNames.forEach((cat) => {
+    categoryNames.forEach((cat, index) => {
         const isSelected = currentFilter === cat;
         const btnClass = isSelected ? 'bg-yellow-600 text-white shadow' : 'bg-panel hover:bg-hover border border-theme text-muted';
         const sidebarClass = isSelected ? 'bg-hover text-main font-bold' : 'text-muted hover:bg-hover hover:text-main';
         
         html += `<button onclick="filterTable('${cat}')" class="px-4 py-2 rounded-lg text-xs font-bold transition ${btnClass}">${cat}</button>`;
-        sidebarHtml += `<a href="#" onclick="filterTable('${cat}'); return false;" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium ${sidebarClass} transition"><span>⚔️</span> ${cat}</a>`;
+        sidebarHtml += `<a href="#" onclick="filterTable('${cat}'); return false;" class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium ${sidebarClass} transition"><span>${index + 1}.</span> ${cat}</a>`;
     });
     
     if(container) container.innerHTML = html;
     if(sidebarContainer) sidebarContainer.innerHTML = sidebarHtml;
 }
 
-function handleSearch() {
-    searchQuery = document.getElementById('searchInput').value.toLowerCase().trim();
-    renderTable();
+function handleSearch() { 
+    searchQuery = document.getElementById('searchInput').value.toLowerCase().trim(); 
+    currentPage = 1; 
+    renderTable(); 
 }
 
-function filterTable(filter) {
-    currentFilter = filter;
-    renderFilterButtons();
-    renderTable();
+function filterTable(filter) { 
+    currentFilter = filter; 
+    currentPage = 1; 
+    renderFilterButtons(); 
+    renderTable(); 
 }
 
-// ⚔️ 장수 겹침 분석은 권한 없이 누구나 이용 가능
-function openOverlapModal() {
-    document.getElementById('overlapSearchInput').value = '';
-    toggleModal('overlapModal');
+function changePageSize() { 
+    currentPage = 1; 
+    renderTable(); 
 }
 
-function hasGeneral(member, genName) {
-    if (!member.decks || member.decks.length === 0) return false;
-    for (let d of member.decks) {
-        if (!d) continue;
-        if ((d.g1 && d.g1.includes(genName)) || 
-            (d.g2 && d.g2.includes(genName)) || 
-            (d.g3 && d.g3.includes(genName))) {
-            return true;
-        }
-    }
-    return false;
-}
-
-function applyOverlapSort() {
-    const val = document.getElementById('overlapSearchInput').value.trim();
-    if(!val) return alert("장수 이름을 입력해주세요.");
-    overlapSortGeneral = val;
-    toggleModal('overlapModal');
-    renderTable();
-}
-
-function clearOverlapSort() {
-    overlapSortGeneral = '';
-    toggleModal('overlapModal');
+function changePage(page) {
+    currentPage = page;
     renderTable();
 }
 
@@ -335,119 +681,111 @@ function renderTable() {
     if(!tbody) return;
     tbody.innerHTML = '';
     
+    const effectiveIsAdmin = isAdminMode && !isUserPreview;
+
     let filtered = members.filter(member => {
         const matchAlliance = (currentFilter === '전체') || (member.alliance === currentFilter);
-        const matchSearch = member.name.toLowerCase().includes(searchQuery) || member.uid.toLowerCase().includes(searchQuery);
+        const matchSearch = member.name.toLowerCase().includes(searchQuery);
         return matchAlliance && matchSearch;
     });
 
-    if (overlapSortGeneral) {
-        filtered.sort((a, b) => {
-            const aHas = hasGeneral(a, overlapSortGeneral) ? 1 : 0;
-            const bHas = hasGeneral(b, overlapSortGeneral) ? 1 : 0;
-            return bHas - aHas;
-        });
+    document.getElementById('total-member-count').innerText = members.length;
 
-        const badge = document.getElementById('sort-status-badge');
-        badge.innerText = `⚔️ '${overlapSortGeneral}' 보유자 우선 정렬중`;
-        badge.classList.remove('hidden');
+    const pageSizeVal = document.getElementById('pageSizeSelect').value;
+    let displayedList = filtered;
+    let totalPages = 1;
+
+    if (pageSizeVal !== 'all') {
+        const limit = parseInt(pageSizeVal, 10);
+        totalPages = Math.ceil(filtered.length / limit) || 1;
+        if (currentPage > totalPages) currentPage = totalPages;
+        
+        const startIndex = (currentPage - 1) * limit;
+        displayedList = filtered.slice(startIndex, startIndex + limit);
+        
+        document.getElementById('filtered-member-count').innerText = ` (표시: ${displayedList.length}명 / 총 검색 결과: ${filtered.length}명)`;
     } else {
-        const badge = document.getElementById('sort-status-badge');
-        if(badge) badge.classList.add('hidden');
+        document.getElementById('filtered-member-count').innerText = filtered.length !== members.length ? ` (검색 결과: ${filtered.length}명)` : '';
     }
 
-    const totalCountEl = document.getElementById('total-member-count');
-    if(totalCountEl) totalCountEl.innerText = members.length;
-    
-    const filteredCountEl = document.getElementById('filtered-member-count');
-    if (filteredCountEl) {
-        if (currentFilter !== '전체' || searchQuery) {
-            filteredCountEl.innerText = ` (검색/필터 결과: ${filtered.length}명)`;
+    const paginationContainer = document.getElementById('paginationContainer');
+    if (paginationContainer) {
+        if (pageSizeVal !== 'all' && totalPages > 1) {
+            let pagHtml = `<button onclick="changePage(${currentPage - 1})" ${currentPage === 1 ? 'disabled class="px-3 py-1 bg-panel border border-theme rounded text-xs text-muted opacity-50 cursor-not-allowed"' : 'class="px-3 py-1 bg-panel border border-theme rounded text-xs font-bold hover:bg-hover text-main"'}>◀ 이전</button>`;
+            
+            let startPage = Math.max(1, currentPage - 2);
+            let endPage = Math.min(totalPages, startPage + 4);
+            if (endPage - startPage < 4) {
+                startPage = Math.max(1, endPage - 4);
+            }
+
+            for (let p = startPage; p <= endPage; p++) {
+                if (p === currentPage) {
+                    pagHtml += `<button class="px-3 py-1 bg-yellow-600 text-white rounded text-xs font-bold shadow">${p}</button>`;
+                } else {
+                    pagHtml += `<button onclick="changePage(${p})" class="px-3 py-1 bg-panel border border-theme rounded text-xs font-bold hover:bg-hover text-main">${p}</button>`;
+                }
+            }
+
+            pagHtml += `<button onclick="changePage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled class="px-3 py-1 bg-panel border border-theme rounded text-xs text-muted opacity-50 cursor-not-allowed"' : 'class="px-3 py-1 bg-panel border border-theme rounded text-xs font-bold hover:bg-hover text-main"'}>다음 ▶</button>`;
+            paginationContainer.innerHTML = pagHtml;
+            paginationContainer.classList.remove('hidden');
         } else {
-            filteredCountEl.innerText = '';
+            paginationContainer.innerHTML = '';
+            paginationContainer.classList.add('hidden');
         }
     }
 
-    if(filtered.length === 0) {
-        const colspan = isAdminMode ? 12 : 11;
-        tbody.innerHTML = `<tr><td colspan="${colspan}" class="p-6 text-center text-muted">등록된 인원이 없거나 검색 결과가 없습니다.</td></tr>`;
+    if(displayedList.length === 0) {
+        const colSpan = effectiveIsAdmin ? 12 : 11;
+        tbody.innerHTML = `<tr><td colspan="${colSpan}" class="p-6 text-center text-muted">등록된 인원이 없습니다.</td></tr>`;
         return;
     }
 
-    filtered.forEach((member, index) => {
+    displayedList.forEach((member, index) => {
         const tr = document.createElement('tr');
-        const isTargetHighlighted = overlapSortGeneral && hasGeneral(member, overlapSortGeneral);
-        tr.className = `border-b border-theme transition ${isTargetHighlighted ? 'bg-amber-950/40' : 'bg-hover'}`;
+        tr.className = `border-b border-theme transition bg-hover`;
         
         let allianceOptions = '';
-        categoryNames.forEach(cat => {
-            allianceOptions += `<option value="${cat}" ${member.alliance === cat ? 'selected' : ''}>${cat}</option>`;
-        });
+        categoryNames.forEach(cat => { allianceOptions += `<option value="${cat}" ${member.alliance === cat ? 'selected' : ''}>${cat}</option>`; });
 
         let jobOptions = `<option value="">(공란)</option>`;
-        AVAILABLE_JOBS.forEach(j => {
-            jobOptions += `<option value="${j}" ${member.job === j ? 'selected' : ''}>${j}</option>`;
-        });
+        AVAILABLE_JOBS.forEach(j => { jobOptions += `<option value="${j}" ${member.job === j ? 'selected' : ''}>${j}</option>`; });
 
         let html = '';
-        if(isAdminMode) {
+        if(effectiveIsAdmin) {
             html += `<td class="p-4 border-r border-theme text-center"><input type="checkbox" class="row-checkbox cursor-pointer" data-id="${member.id}"></td>`;
         }
 
+        const absoluteIndex = (pageSizeVal !== 'all') ? ((currentPage - 1) * parseInt(pageSizeVal, 10)) + index + 1 : index + 1;
+        html += `<td class="p-4 border-r border-theme text-center text-muted font-bold">${absoluteIndex}</td>`;
+        
+        if (effectiveIsAdmin) {
+            html += `<td class="p-4 border-r border-theme text-muted font-mono select-all">${member.uid}</td>`;
+        }
+
         html += `
-            <td class="p-4 border-r border-theme text-center text-muted font-bold">${index + 1}</td>
-            <td class="p-4 border-r border-theme text-muted">
-                ${isAdminMode ? `<input type="text" value="${member.uid}" onchange="updateMemberField(${member.id}, 'uid', this.value)" class="w-20 text-xs">` : member.uid}
-            </td>
-            <td class="p-4 border-r border-theme font-bold">
-                ${isAdminMode ? `<input type="text" value="${member.name}" onchange="updateMemberField(${member.id}, 'name', this.value)" class="w-32 text-xs font-bold">` : member.name}
-            </td>
-            <td class="p-4 border-r border-theme text-muted">
-                ${isAdminMode ? `<select onchange="updateMemberField(${member.id}, 'job', this.value)" class="text-xs">${jobOptions}</select>` : (member.job || '-')}
-            </td>
-            <td class="p-4 border-r border-theme">
-                ${isAdminMode ? `<select onchange="updateMemberField(${member.id}, 'alliance', this.value)" class="text-xs">${allianceOptions}</select>` : `<span class="px-2.5 py-1 rounded-lg text-xs bg-panel border border-theme">${member.alliance}</span>`}
-            </td>
+            <td class="p-4 border-r border-theme font-bold">${effectiveIsAdmin ? `<input type="text" value="${member.name}" onchange="updateMemberField(${member.id}, 'name', this.value)" class="w-28 text-xs font-bold bg-main border border-theme px-1 rounded">` : member.name}</td>
+            <td class="p-4 border-r border-theme text-muted">${effectiveIsAdmin ? `<select onchange="updateMemberField(${member.id}, 'job', this.value)" class="text-xs bg-main border border-theme p-1 rounded">${jobOptions}</select>` : (member.job || '-')}</td>
+            <td class="p-4 border-r border-theme">${effectiveIsAdmin ? `<select onchange="updateMemberField(${member.id}, 'alliance', this.value)" class="text-xs bg-main border border-theme p-1 rounded">${allianceOptions}</select>` : `<span class="px-2.5 py-1 rounded-lg text-xs bg-panel border border-theme">${member.alliance}</span>`}</td>
         `;
 
         for(let i=0; i<5; i++) {
-            const deck = member.decks[i];
-            if (deck) {
-                html += `<td class="p-3 border-r border-theme"><div onclick="openDeckModal(${member.id},${i})" class="deck-cell rounded-lg p-2 text-center"><div class="text-xs font-bold gold-text mb-1">${deck.g1} / ${deck.g2} /${deck.g3}</div><div class="text-[10px] text-muted">수정</div></div></td>`;
+            const deck = member.decks && member.decks[i];
+            if (deck && (deck.g1 || deck.g2 || deck.g3)) {
+                html += `<td class="p-3 border-r border-theme"><div onclick="openDeckModal(${member.id},${i})" class="deck-cell rounded-lg p-2 text-center cursor-pointer hover:bg-panel transition"><div class="text-xs font-bold gold-text mb-1">${deck.g1 || '-'} / ${deck.g2 || '-'} / ${deck.g3 || '-'}</div><div class="text-[10px] text-muted">수정</div></div></td>`;
             } else {
-                html += `<td class="p-3 border-r border-theme"><div onclick="openDeckModal(${member.id},${i})" class="deck-cell rounded-lg p-2 text-center text-muted" style="border-style: dashed;">+ 설정</div></td>`;
+                html += `<td class="p-3 border-r border-theme"><div onclick="openDeckModal(${member.id},${i})" class="deck-cell rounded-lg p-2 text-center text-muted cursor-pointer hover:bg-panel transition" style="border-style: dashed;">+ 설정</div></td>`;
             }
         }
 
-        if(isAdminMode) {
-            html += `<td class="p-3 text-center"><button onclick="deleteMember(${member.id})" class="bg-red-800 hover:bg-red-700 text-white px-2.5 py-1 rounded-lg text-xs font-bold">삭제</button></td>`;
+        if(effectiveIsAdmin) {
+            html += `<td class="p-3 text-center"><button onclick="deleteMember(${member.id})" class="bg-red-800 text-white px-2.5 py-1 rounded-lg text-xs font-bold">삭제</button></td>`;
         }
 
         tr.innerHTML = html;
         tbody.appendChild(tr);
     });
-}
-
-function downloadShareExcel() {
-    if (members.length === 0) return alert("다운로드할 인원 데이터가 없습니다.");
-    
-    const excelRows = members.map((m, idx) => {
-        let rowData = { "번호": idx + 1, "UID": m.uid, "닉네임": m.name, "직업": m.job || "", "소속": m.alliance };
-        for (let i = 0; i < 5; i++) {
-            const d = m.decks[i];
-            const p = `${i + 1}덱_`;
-            rowData[p + "주장"] = d ? d.g1 : ""; rowData[p + "주장전법1"] = d ? d.t1_1 : ""; rowData[p + "주장전법2"] = d ? d.t1_2 : ""; rowData[p + "주장전법3"] = d ? d.t1_3 : "";
-            rowData[p + "부장1"] = d ? d.g2 : ""; rowData[p + "부장1전법1"] = d ? d.t2_1 : ""; rowData[p + "부장1전법2"] = d ? d.t2_2 : ""; rowData[p + "부장1전법3"] = d ? d.t2_3 : "";
-            rowData[p + "부장2"] = d ? d.g3 : ""; rowData[p + "부장2전법1"] = d ? d.t3_1 : ""; rowData[p + "부장2전법2"] = d ? d.t3_2 : ""; rowData[p + "부장2전법3"] = d ? d.t3_3 : "";
-        }
-        return rowData;
-    });
-
-    const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.json_to_sheet(excelRows);
-    XLSX.utils.book_append_sheet(wb, ws, "연합부대현황");
-    XLSX.writeFile(wb, `연합_부대편성현황_${new Date().toISOString().slice(0, 10)}.xlsx`);
-    alert("공유용 엑셀 파일이 다운로드되었습니다!");
 }
 
 function handleExcelUpload(event) {
@@ -459,13 +797,11 @@ function handleExcelUpload(event) {
             const data = new Uint8Array(e.target.result);
             const workbook = XLSX.read(data, {type: 'array'});
             const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-            
             const jsonRows = XLSX.utils.sheet_to_json(worksheet, {defval: ""});
             
             if(jsonRows.length === 0) return alert("엑셀 파일에 데이터가 없습니다.");
 
             let parsedMembers = [];
-
             jsonRows.forEach((row) => {
                 let uid = '';
                 let name = '';
@@ -493,393 +829,66 @@ function handleExcelUpload(event) {
                 if (!rawJob && keys.length > 2) rawJob = String(row[keys[2]] || '').trim();
                 if (!rawAlliance && keys.length > 3) rawAlliance = String(row[keys[3]] || '').trim();
 
+                if (AVAILABLE_JOBS.includes(uid)) {
+                    rawJob = uid;
+                    uid = String(Math.floor(1000 + Math.random() * 9000));
+                }
+
                 if (!name || name.includes('닉네임')) return;
                 if (!uid) uid = String(Math.floor(1000 + Math.random() * 9000));
 
                 let job = AVAILABLE_JOBS.includes(rawJob) ? rawJob : "";
-
-                let alliance = rawAlliance || "재야";
-                const lowerAlliance = alliance.toLowerCase();
-                if (lowerAlliance.includes('무소속') || lowerAlliance.includes('미소속') || lowerAlliance.includes('재야')) {
-                    alliance = "재야";
-                } else if (!categoryNames.includes(alliance)) {
-                    categoryNames.push(alliance);
+                
+                let alliance = categoryNames[0];
+                if (rawAlliance) {
+                    let matchedCat = categoryNames.find(cat => cat === rawAlliance || rawAlliance.includes(cat) || cat.includes(rawAlliance));
+                    if (matchedCat) {
+                        alliance = matchedCat;
+                    }
                 }
 
-                parsedMembers.push({
-                    uid: uid,
-                    name: name,
-                    job: job,
-                    alliance: alliance,
-                    decks: []
-                });
+                parsedMembers.push({ uid, name, job, alliance, decks: [] });
             });
-
-            if (parsedMembers.length === 0) {
-                return alert("유효한 유저 데이터를 찾지 못했습니다. 엑셀 양식을 확인해주세요.");
-            }
-
-            let addedList = [];
-            let updatedList = [];
 
             parsedMembers.forEach(newM => {
                 let existingIndex = members.findIndex(m => String(m.uid) === String(newM.uid));
-                
                 if (existingIndex !== -1) {
                     members[existingIndex].name = newM.name;
                     members[existingIndex].job = newM.job;
                     members[existingIndex].alliance = newM.alliance;
-                    updatedList.push(`${newM.name} (UID:${newM.uid})`);
                 } else {
-                    members.push({
-                        id: Date.now() + Math.random(),
-                        ...newM
-                    });
-                    addedList.push(`${newM.name} (UID:${newM.uid})`);
+                    members.push({ id: Date.now() + Math.random(), ...newM });
                 }
             });
 
             saveDataToStorage();
             renderFilterButtons();
             renderTable();
-            showUploadReport(addedList, updatedList);
+            alert("엑셀 데이터 업로드가 완료되었습니다!");
         } catch (err) {
-            alert("엑셀 파일을 읽는 중 오류가 발생했습니다: " + err.message);
+            alert("엑셀 오류: " + err.message);
         }
         event.target.value = '';
     };
     reader.readAsArrayBuffer(file);
 }
 
-function showUploadReport(added, updated) {
-    const container = document.getElementById('reportContentContainer');
-    let html = `
-        <div class="bg-main p-3 rounded-lg border border-theme">
-            <h3 class="font-bold text-emerald-400 mb-1">✨ 신규 추가된 인원 (${added.length}명)</h3>
-            <p class="text-xs text-muted mb-2">${added.length > 0 ? added.join(', ') : '없음'}</p>
-        </div>
-        <div class="bg-main p-3 rounded-lg border border-theme">
-            <h3 class="font-bold text-yellow-400 mb-1">🔄 정보 및 덱 최신화(갱신)된 인원 (${updated.length}명)</h3>
-            <p class="text-xs text-muted mb-2">${updated.length > 0 ? updated.join(', ') : '없음'}</p>
-        </div>
-    `;
-    container.innerHTML = html;
-    toggleModal('uploadReportModal');
-}
-
-document.addEventListener('input', function(e) {
-    if (e.target && e.target.classList.contains('search-input')) processAutocomplete(e.target);
-});
-document.addEventListener('compositionend', function(e) {
-    if (e.target && e.target.classList.contains('search-input')) processAutocomplete(e.target);
-});
-
-function processAutocomplete(input) {
-    const type = input.getAttribute('data-type');
-    const listId = input.getAttribute('data-list');
-    const targetId = input.getAttribute('data-target');
-    const list = document.getElementById(listId);
-    const val = input.value.toLowerCase().trim();
-
-    if (!list) return;
-    list.innerHTML = '';
-    if (!val) { list.classList.add('hidden'); return; }
-
-    let matches = [];
-    if (type === 'general') {
-        for (let faction in DB.generals) {
-            for (let genName in DB.generals[faction]) {
-                if (genName.toLowerCase().includes(val)) matches.push({ name: genName, tactic: DB.generals[faction][genName].tactic });
-            }
-        }
-    } else if (type === 'tactic') {
-        for (let tacType in DB.tactics) {
-            for (let tacName in DB.tactics[tacType]) {
-                if (tacName.toLowerCase().includes(val)) matches.push({ name: tacName });
-            }
-        }
-    } else if (type === 'member') {
-        members.forEach(m => {
-            if (m.name.toLowerCase().includes(val) || m.uid.toLowerCase().includes(val)) matches.push({ name: `${m.name} (${m.uid})` });
-        });
-    }
-
-    if (matches.length === 0) { list.classList.add('hidden'); return; }
-
-    matches.forEach(item => {
-        const div = document.createElement('div');
-        div.innerHTML = type === 'general' ? `<strong>${item.name}</strong> <span class="text-muted text-[11px]">(${item.tactic})</span>` : `<span>${item.name}</span>`;
-        div.onclick = function() {
-            input.value = type === 'member' ? item.name.split(' (')[0] : item.name;
-            list.classList.add('hidden');
-            if (targetId && item.tactic) document.getElementById(targetId).value = item.tactic;
-            if (type === 'member') handleSearch();
-        };
-        list.appendChild(div);
-    });
-    list.classList.remove('hidden');
-}
-
-document.addEventListener('click', function(e) {
-    if (!e.target.closest('.autocomplete-container') && !e.target.closest('#searchInput') && !e.target.closest('#overlapSearchInput')) {
-        document.querySelectorAll('.autocomplete-items').forEach(el => el.classList.add('hidden'));
-    }
-});
-
-function openDeckModal(memberId, deckIndex) {
-    currentEditMemberId = memberId;
-    currentEditDeckIndex = deckIndex;
-    const member = members.find(m => m.id === memberId);
-    document.getElementById('deckModalTitle').innerText = `${member.name} - 보유덱 ${deckIndex + 1} 설정`;
-    const deck = member.decks[deckIndex] || { g1:'', t1_1:'', t1_2:'', t1_3:'', g2:'', t2_1:'', t2_2:'', t2_3:'', g3:'', t3_1:'', t3_2:'', t3_3:'' };
-    
-    ['gen1','tac1_1','tac1_2','tac1_3', 'gen2','tac2_1','tac2_2','tac2_3', 'gen3','tac3_1','tac3_2','tac3_3'].forEach(id => {
-        const key = id.replace('gen', 'g').replace('tac', 't');
-        const el = document.getElementById(id);
-        if(el) el.value = deck[key] || '';
-    });
-    document.querySelectorAll('.autocomplete-items').forEach(el => el.classList.add('hidden'));
-    toggleModal('deckModal');
-}
-
-function saveDeck() {
-    const getVal = (id) => document.getElementById(id).value;
-    const deck = {
-        g1: getVal('gen1'), t1_1: getVal('tac1_1'), t1_2: getVal('tac1_2'), t1_3: getVal('tac1_3'),
-        g2: getVal('gen2'), t2_1: getVal('tac2_1'), t2_2: getVal('tac2_2'), t2_3: getVal('tac2_3'),
-        g3: getVal('gen3'), t3_1: getVal('tac3_1'), t3_2: getVal('tac3_2'), t3_3: getVal('tac3_3'),
-    };
-    const member = members.find(m => m.id === currentEditMemberId);
-    while(member.decks.length <= currentEditDeckIndex) member.decks.push(null);
-    member.decks[currentEditDeckIndex] = (deck.g1 || deck.g2 || deck.g3) ? deck : null;
+function openSettingsModal() { toggleModal('settingsModal'); }
+function toggleModal(id) { document.getElementById(id).classList.toggle('hidden'); }
+function addNewMember() {
+    members.push({ id: Date.now(), uid: "00000000", name: "신규장수", job: "", alliance: categoryNames[0], decks: [] });
     saveDataToStorage();
-    toggleModal('deckModal');
     renderTable();
 }
-
-function clearDeck() {
-    ['gen1','tac1_1','tac1_2','tac1_3', 'gen2','tac2_1','tac2_2','tac2_3', 'gen3','tac3_1','tac3_2','tac3_3'].forEach(id => {
-        const el = document.getElementById(id);
-        if(el) el.value = '';
-    });
-}
-
-function toggleModal(id) { document.getElementById(id).classList.toggle('hidden'); }
-
-function openAddGeneralModal() {
-    if (!isAdminMode) return alert("관리자 권한이 필요합니다.");
-    document.getElementById('dictItemModalTitle').innerText = "도감 항목 직접 추가";
-    document.getElementById('addItemType').value = "general";
-    toggleAddFormType();
-    toggleModal('dictItemModal');
-}
-
-function toggleAddFormType() {
-    const type = document.getElementById('addItemType').value;
-    if(type === 'general') {
-        document.getElementById('factionDiv').classList.remove('hidden');
-        document.getElementById('tacTypeDiv').classList.add('hidden');
-        document.getElementById('addNameLabel').innerText = "장수 이름";
-        document.getElementById('tacticNameDiv').classList.remove('hidden');
-    } else {
-        document.getElementById('factionDiv').classList.add('hidden');
-        document.getElementById('tacTypeDiv').classList.remove('hidden');
-        document.getElementById('addNameLabel').innerText = "전법 이름";
-        document.getElementById('tacticNameDiv').classList.add('hidden');
-    }
-}
-
-function saveDictItemDirect() {
-    if (!isAdminMode) return alert("관리자 권한이 필요합니다.");
-    const type = document.getElementById('addItemType').value;
-    const name = document.getElementById('addItemName').value.trim();
-    const desc = document.getElementById('addItemDesc').value.trim();
-    if(!name) return alert("이름을 입력해주세요.");
-
-    if(type === 'general') {
-        const faction = document.getElementById('addFaction').value;
-        const tactic = document.getElementById('addItemTactic').value.trim();
-        DB.generals[faction][name] = { tactic: tactic || "고유전법", desc: desc || "설명 없음" };
-    } else {
-        const tacType = document.getElementById('addTacType').value;
-        DB.tactics[tacType][name] = desc || "설명 없음";
-    }
-    saveDataToStorage();
-    toggleModal('dictItemModal');
-    showDictCategory(currentDictViewCategory);
-    alert("도감에 저장되었습니다!");
-}
-
-function deleteDictItem(categoryKey, itemName) {
-    if (!isAdminMode) return alert("관리자 권한이 필요합니다.");
-    if(confirm(`"${itemName}" 항목을 삭제하시겠습니까?`)) {
-        if(categoryKey.startsWith('gen-')) {
-            const map = { 'gen-wu': '오', 'gen-shu': '촉', 'gen-wei': '위', 'gen-qun': '군' };
-            delete DB.generals[map[categoryKey]][itemName];
-        } else {
-            const map = { 'tac-cmd': '지휘', 'tac-pas': '패시브', 'tac-act': '액티브', 'tac-pur': '추격' };
-            delete DB.tactics[map[categoryKey]][itemName];
-        }
+function deleteMember(id) {
+    if(confirm("정말 삭제하시겠습니까?")) {
+        members = members.filter(m => m.id !== id);
         saveDataToStorage();
-        showDictCategory(categoryKey);
+        renderTable();
     }
 }
-
-// 📖 도감 조회 기능 (일반 유저 누구나 조회 가능)
-function showDictCategory(cat) {
-    currentDictViewCategory = cat;
-    const content = document.getElementById('dict-content');
-    if(!content) return;
-    let html = '';
-    if (cat.startsWith('gen-')) {
-        const map = { 'gen-wu': '오', 'gen-shu': '촉', 'gen-wei': '위', 'gen-qun': '군' };
-        const f = map[cat];
-        html += `<h3 class="text-2xl font-bold mb-4 border-b border-theme pb-2">[${f}] 장수 고유 전법</h3>`;
-        const list = DB.generals[f];
-        if(!list || Object.keys(list).length === 0) {
-            html += `<p class="text-muted">등록된 장수가 없습니다.</p>`;
-        } else {
-            for (let gen in list) {
-                const deleteBtn = isAdminMode ? `<button onclick="deleteDictItem('${cat}', '${gen}')" class="absolute top-3 right-3 text-red-400 font-bold text-xs bg-red-950 px-2 py-1 rounded">삭제</button>` : '';
-                html += `<div class="bg-main p-3 rounded-lg mb-3 border-l-4 gold-border shadow relative">${deleteBtn}<div class="font-bold gold-text text-lg pr-12">${gen} <span class="text-sm bg-panel px-2 py-0.5 rounded text-muted">고유: ${list[gen].tactic}</span></div><p class="text-sm mt-2 text-muted bg-panel p-2.5 rounded-lg border border-theme">${list[gen].desc}</p></div>`;
-            }
-        }
-    } else {
-        const map = { 'tac-cmd': '지휘', 'tac-pas': '패시브', 'tac-act': '액티브', 'tac-pur': '추격' };
-        const t = map[cat];
-        html += `<h3 class="text-2xl font-bold mb-4 border-b border-theme pb-2">[${t}] 공용 전법</h3>`;
-        const list = DB.tactics[t];
-        if(!list || Object.keys(list).length === 0) {
-            html += `<p class="text-muted">등록된 공용 전법이 없습니다.</p>`;
-        } else {
-            for (let tac in list) {
-                const deleteBtn = isAdminMode ? `<button onclick="deleteDictItem('${cat}', '${tac}')" class="absolute top-3 right-3 text-red-400 font-bold text-xs bg-red-950 px-2 py-1 rounded">삭제</button>` : '';
-                html += `<div class="bg-main p-3 rounded-lg mb-3 border-l-4 border-blue-500 shadow relative">${deleteBtn}<div class="font-bold text-lg text-blue-400 pr-12">${tac}</div><p class="text-sm mt-2 text-muted bg-panel p-2.5 rounded-lg border border-theme">${list[tac]}</p></div>`;
-            }
-        }
-    }
-    content.innerHTML = html;
+function updateMemberField(id, field, val) {
+    const m = members.find(x => x.id === id);
+    if(m) { m[field] = val; saveDataToStorage(); }
 }
-
-function cleanMdText(text) { if (!text) return ''; return text.replace(/[*#_`>]/g, '').replace(/\[.*?\]/g, '').trim(); }
-
-function handleMarkdownUpload(event) {
-    if (!isAdminMode) return alert("관리자 권한이 필요합니다.");
-    const file = event.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        const lines = e.target.result.split('\n');
-        let currentFaction = '군';
-        let currentTacType = '액티브';
-        let currentGenName = null;
-        let currentGenInfo = { tactic: '', desc: '' };
-        let parsedGen = 0, parsedTac = 0;
-
-        lines.forEach((line) => {
-            const trimmed = line.trim();
-            if (trimmed.includes('오나라') || trimmed.includes('오 (吴)')) currentFaction = '오';
-            else if (trimmed.includes('촉나라') || trimmed.includes('촉 (蜀)')) currentFaction = '촉';
-            else if (trimmed.includes('위나라') || trimmed.includes('위 (魏)')) currentFaction = '위';
-            else if (trimmed.includes('군웅')) currentFaction = '군';
-
-            if (trimmed.includes('지휘 전법')) currentTacType = '지휘';
-            else if (trimmed.includes('패시브 전법')) currentTacType = '패시브';
-            else if (trimmed.includes('액티브 전법')) currentTacType = '액티브';
-            else if (trimmed.includes('추격 전법')) currentTacType = '추격';
-
-            if (trimmed.startsWith('### ') && !trimmed.includes('목차')) {
-                if (currentGenName) DB.generals[currentFaction][currentGenName] = currentGenInfo;
-                const match = trimmed.match(/###\s+(.*?)\s+-\s+(.*?)(?:\s+\[.*\])?$/);
-                if (match) {
-                    currentGenName = cleanMdText(match[1]);
-                    currentGenInfo = { tactic: cleanMdText(match[2]), desc: '' };
-                    parsedGen++;
-                }
-            } else if (currentGenName && trimmed.length > 0 && !trimmed.startsWith('#') && !trimmed.startsWith('|')) {
-                const cleaned = cleanMdText(trimmed);
-                if (cleaned && !cleaned.includes('소속 국가')) currentGenInfo.desc += cleaned + " ";
-            }
-
-            if (trimmed.startsWith('|') && !trimmed.includes('전법명') && !trimmed.includes('---')) {
-                const parts = trimmed.split('|').map(p => p.trim());
-                if (parts.length >= 6) {
-                    const tacName = cleanMdText(parts[1]);
-                    const tacChar = cleanMdText(parts[2]);
-                    const tacRate = cleanMdText(parts[3]);
-                    const tacDesc = cleanMdText(parts[5]);
-                    if (tacName) {
-                        DB.tactics[currentTacType][tacName] = `[특성: ${tacChar} | 발동률: ${tacRate}] ${tacDesc}`;
-                        parsedTac++;
-                    }
-                }
-            }
-        });
-        if (currentGenName) DB.generals[currentFaction][currentGenName] = currentGenInfo;
-
-        uploadedFiles.push({ id: Date.now(), name: file.name, type: 'md' });
-        saveDataToStorage();
-        renderUploadedFilesList();
-        alert(`마크다운 분석 및 파이어스토어 동기화 완료!\n- 장수: ${parsedGen}개\n- 공용 전법: ${parsedTac}개 반영 완료`);
-        event.target.value = '';
-    };
-    reader.readAsText(file, 'UTF-8');
-}
-
-function renderUploadedFilesList() {
-    const countEl = document.getElementById('uploaded-files-count');
-    const chipsEl = document.getElementById('uploaded-files-chips');
-    if(!countEl) return;
-    countEl.innerText = `${uploadedFiles.length}개`;
-    let html = '';
-    uploadedFiles.forEach(file => {
-        html += `<div class="bg-panel border border-theme px-2.5 py-1 rounded-lg flex items-center gap-2"><span class="text-main font-bold">📄 ${file.name}</span></div>`;
-    });
-    if(chipsEl) chipsEl.innerHTML = html || '<span class="text-muted italic">업로드된 파일 없음</span>';
-}
-
-function downloadDictTemplate() {
-    if (!isAdminMode) return alert("관리자 권한이 필요합니다.");
-    const wb = XLSX.utils.book_new();
-    const genRows = [];
-    for(let faction in DB.generals) {
-        for(let genName in DB.generals[faction]) {
-            genRows.push({ "소속": faction, "이름": genName, "고유전법": DB.generals[faction][genName].tactic, "설명": DB.generals[faction][genName].desc });
-        }
-    }
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(genRows), "장수");
-    
-    const tacRows = [];
-    for(let type in DB.tactics) {
-        for(let tacName in DB.tactics[type]) {
-            tacRows.push({ "분류": type, "이름": tacName, "설명": DB.tactics[type][tacName] });
-        }
-    }
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(tacRows), "전법");
-    XLSX.writeFile(wb, "도감_템플릿.xlsx");
-}
-
-function handleDictUpload(event) {
-    if (!isAdminMode) return alert("관리자 권한이 필요합니다.");
-    const file = event.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        const data = new Uint8Array(e.target.result);
-        const workbook = XLSX.read(data, {type: 'array'});
-        if (workbook.SheetNames.includes("장수")) {
-            XLSX.utils.sheet_to_json(workbook.Sheets["장수"]).forEach(row => {
-                if (row['소속'] && row['이름']) DB.generals[row['소속'].trim()][row['이름'].trim()] = { tactic: row['고유전법'] || "", desc: row['설명'] || "" };
-            });
-        }
-        if (workbook.SheetNames.includes("전법")) {
-            XLSX.utils.sheet_to_json(workbook.Sheets["전법"]).forEach(row => {
-                if (row['분류'] && row['이름']) DB.tactics[row['분류'].trim()][row['이름'].trim()] = row['설명'] || "";
-            });
-        }
-        saveDataToStorage();
-        alert("도감 엑셀 데이터가 반영되었습니다!");
-        event.target.value = '';
-    };
-    reader.readAsArrayBuffer(file);
-}
+function downloadShareExcel() {}
