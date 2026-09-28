@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>금의위 DB - 삼국지 천하결전 대시보드</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="theme-imperial-gold min-h-screen flex" id="app-body">
+
+    <!-- 👈 왼쪽 사이드바 네비게이션 -->
+    <aside class="w-64 bg-panel border-r border-theme flex flex-col justify-between hidden md:flex shrink-0">
+        <div>
+            <!-- 로고 영역 (logo.png로 확실하게 매칭) -->
+            <div class="p-4 border-b border-theme flex items-center justify-center">
+                <img src="logo.png" alt="금의위 로고" class="max-h-12 object-contain" onerror="this.onerror=null; this.src='연맹 아이콘.png';">
+            </div>
+
+            <!-- 메뉴 목록 -->
+            <div class="p-4 space-y-6">
+                <div>
+                    <p class="text-[11px] font-bold text-muted uppercase tracking-wider mb-2 px-3">Menu</p>
+                    <nav class="space-y-1">
+                        <a href="#" onclick="filterTable('전체'); return false;" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-bold bg-hover text-main transition">
+                            <span>📊</span> 전체 대시보드
+                        </a>
+                        <a href="#" onclick="openOverlapModal(); return false;" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted hover:bg-hover hover:text-main transition">
+                            <span>⚔️</span> 장수 겹침 분석
+                        </a>
+                        <a href="#" onclick="tryOpenDictModal(); return false;" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted hover:bg-hover hover:text-main transition">
+                            <span>📖</span> 통합 도감 관리
+                        </a>
+                    </nav>
+                </div>
+
+                <div>
+                    <p class="text-[11px] font-bold text-muted uppercase tracking-wider mb-2 px-3">Alliance Categories</p>
+                    <div id="sidebar-filter-buttons" class="space-y-1">
+                        <!-- 동맹 카테고리 동적 삽입 영역 -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 하단 일반 설정 -->
+        <div class="p-4 border-t border-theme space-y-1">
+            <p class="text-[11px] font-bold text-muted uppercase tracking-wider mb-2 px-3">System</p>
+            <button onclick="openSettingsModal()" class="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-muted hover:bg-hover hover:text-main transition text-left">
+                <span>⚙️</span> 환경 설정 및 테마
+            </button>
+            <button id="editModeBtn" onclick="toggleAdminMode()" class="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-amber-600 hover:bg-hover transition text-left">
+                <span>🛡️</span> 관리자 모드
+            </button>
+        </div>
+    </aside>
+
+    <!-- 💻 메인 컨텐츠 영역 -->
+    <div class="flex-1 flex flex-col min-w-0">
+        <!-- 상단 헤더 바 -->
+        <header class="bg-panel border-b border-theme px-6 py-4 flex flex-col sm:flex-row justify-between items-center gap-4">
+            <div class="flex items-center gap-4 w-full sm:w-auto">
+                <!-- 모바일용 로고 이미지 -->
+                <div class="md:hidden flex items-center">
+                    <img src="logo.png" alt="금의위 로고" class="max-h-8 object-contain">
+                </div>
+                <h2 class="text-lg font-bold text-main hidden md:block">연합 인원 & 부대 편성소</h2>
+            </div>
+
+            <!-- 검색바 -->
+            <div class="flex-1 max-w-md w-full">
+                <input type="text" id="searchInput" oninput="handleSearch()" placeholder="🔍 닉네임 또는 UID로 검색하세요..." class="w-full bg-main border border-theme px-4 py-2 rounded-lg text-sm search-input" data-type="member" data-list="search-list">
+                <div id="search-list" class="autocomplete-items hidden"></div>
+            </div>
+
+            <!-- 상단 액션 버튼들 -->
+            <div class="flex flex-wrap gap-2 items-center">
+                <button onclick="addNewMember()" id="addMemberBtn" class="hidden bg-emerald-700 hover:bg-emerald-600 px-3 py-2 rounded-lg font-bold text-white text-xs shadow transition">+ 인원 추가</button>
+                <button onclick="deleteSelectedMembers()" id="delSelectedBtn" class="hidden bg-red-800 hover:bg-red-700 px-3 py-2 rounded-lg font-bold text-white text-xs shadow transition">🗑️ 선택 삭제</button>
+                <button onclick="downloadShareExcel()" class="bg-teal-700 hover:bg-teal-600 px-3 py-2 rounded-lg font-bold text-white text-xs shadow transition">📥 엑셀 다운로드</button>
+                
+                <input type="file" id="excelInput" accept=".xlsx, .xls, .csv" class="hidden" onchange="handleExcelUpload(event)">
+                <button onclick="tryExcelUploadTrigger()" class="btn-gold px-4 py-2 rounded-lg shadow transition text-xs flex items-center gap-1.5">
+                    <span>📊</span> 업로드
+                </button>
+            </div>
+        </header>
+
+        <!-- 본문 내용 패널 -->
+        <main class="flex-1 p-4 md:p-8 overflow-y-auto">
+            <!-- 필터 및 통계 바 -->
+            <div class="flex flex-wrap justify-between items-center mb-6 gap-4">
+                <div class="flex flex-wrap items-center gap-2" id="filter-buttons"></div>
+                <div class="bg-panel border border-theme px-4 py-2 rounded-lg text-xs font-bold shadow flex items-center gap-3">
+                    <span id="sort-status-badge" class="hidden bg-amber-600 text-white px-2 py-0.5 rounded text-[11px]"></span>
+                    <span>👥 총원: <span id="total-member-count" class="gold-text text-sm">0</span>명</span>
+                    <span id="filtered-member-count" class="text-muted"></span>
+                </div>
+            </div>
+
+            <!-- 대시보드 데이터 테이블 카드 -->
+            <div class="overflow-x-auto bg-panel rounded-xl shadow-2xl border border-theme">
+                <table class="w-full text-left border-collapse whitespace-nowrap text-sm">
+                    <thead>
+                        <tr class="border-b border-theme text-muted bg-main/50">
+                            <th id="selectAllHeader" class="p-4 border-r border-theme text-center hidden w-10">
+                                <input type="checkbox" id="selectAllCheckbox" onclick="toggleSelectAll(this)" class="cursor-pointer">
+                            </th>
+                            <th class="p-4 border-r border-theme text-center w-12">No.</th>
+                            <th class="p-4 border-r border-theme">UID</th>
+                            <th class="p-4 border-r border-theme">닉네임</th>
+                            <th class="p-4 border-r border-theme">직업</th>
+                            <th class="p-4 border-r border-theme">소속</th>
+                            <th class="p-4 text-center border-r border-theme min-w-[150px]">보유덱 1</th>
+                            <th class="p-4 text-center border-r border-theme min-w-[150px]">보유덱 2</th>
+                            <th class="p-4 text-center border-r border-theme min-w-[150px]">보유덱 3</th>
+                            <th class="p-4 text-center border-r border-theme min-w-[150px]">보유덱 4</th>
+                            <th class="p-4 text-center min-w-[150px]">보유덱 5</th>
+                            <th id="delColHeader" class="p-4 text-center hidden">관리</th>
+                        </tr>
+                    </thead>
+                    <tbody id="member-table-body" class="divide-y divide-theme"></tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+
+    <!-- ⚔️ 장수 겹침 분석 모달 -->
+    <div id="overlapModal" class="hidden fixed inset-0 modal-bg flex items-center justify-center z-50 p-4">
+        <div class="bg-panel border-2 gold-border rounded-xl shadow-2xl w-full max-w-lg p-6 relative">
+            <button onclick="toggleModal('overlapModal')" class="absolute top-4 right-4 text-muted hover:text-main text-3xl font-bold">&times;</button>
+            <h2 class="text-2xl font-bold gold-text mb-2 flex items-center gap-2">⚔️ 특정 장수 보유/겹침 정렬</h2>
+            <p class="text-sm text-muted mb-4">확인하고 싶은 장수를 검색하면, 해당 장수를 보유한 유저들이 상단으로 오도록 정렬됩니다.</p>
+            <div class="space-y-4">
+                <div>
+                    <label class="text-xs text-muted mb-1 block">장수 이름 입력 또는 선택</label>
+                    <div class="autocomplete-container">
+                        <input type="text" id="overlapSearchInput" class="search-input" data-type="general" data-list="overlap-gen-list" placeholder="장수 이름 입력 (예: 조조, 여포)...">
+                        <div id="overlap-gen-list" class="autocomplete-items hidden"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-6 flex justify-between items-center">
+                <button onclick="clearOverlapSort()" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-xs">정렬 해제 (기본 보기)</button>
+                <button onclick="applyOverlapSort()" class="btn-gold px-6 py-2 rounded-lg text-sm">해당 장수 보유자 상단 정렬</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 📊 엑셀 업로드 변동 내역 리포트 모달 -->
+    <div id="uploadReportModal" class="hidden fixed inset-0 modal-bg flex items-center justify-center z-50 p-4">
+        <div class="bg-panel border-2 gold-border rounded-xl shadow-2xl w-full max-w-2xl p-6 relative max-h-[90vh] flex flex-col">
+            <button onclick="toggleModal('uploadReportModal')" class="absolute top-4 right-4 text-muted hover:text-main text-3xl font-bold">&times;</button>
+            <h2 class="text-2xl font-bold gold-text mb-2 flex items-center gap-2">📊 엑셀 동기화 및 변동 내역 리포트</h2>
+            <p class="text-sm text-muted mb-4">UID 기반으로 업로드 파일과 기존 데이터를 대조한 결과입니다.</p>
+            <div class="space-y-4 flex-1 overflow-y-auto pr-2" id="reportContentContainer"></div>
+            <div class="mt-6 flex justify-end">
+                <button onclick="toggleModal('uploadReportModal')" class="btn-gold px-6 py-2 rounded-lg">확인</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ⚙️ 환경 설정 모달 -->
+    <div id="settingsModal" class="hidden fixed inset-0 modal-bg flex items-center justify-center z-50 p-4">
+        <div class="bg-panel border border-theme rounded-xl shadow-2xl w-full max-w-md p-6 relative max-h-[90vh] overflow-y-auto">
+            <button onclick="toggleModal('settingsModal')" class="absolute top-4 right-4 text-muted hover:text-main text-3xl font-bold">&times;</button>
+            <h2 class="text-2xl font-bold gold-text mb-4">⚙️ 환경 설정</h2>
+            <div class="space-y-6">
+                <div>
+                    <h3 class="text-lg font-bold mb-2">🎨 웹사이트 테마</h3>
+                    <select id="themeSelector" onchange="applyTheme()">
+                        <option value="theme-imperial-gold">황실 금괴 (Imperial Gold - 기본)</option>
+                        <option value="theme-slate">기본 다크 모드 (Slate Dark)</option>
+                        <option value="theme-silver">백은 청명 모드 (Silver Light)</option>
+                        <option value="theme-peach">도원 클래식 모드 (Peach Light)</option>
+                        <option value="theme-jade">비취 궁궐 모드 (Jade Light)</option>
+                    </select>
+                </div>
+                <div>
+                    <div class="flex justify-between items-center mb-2">
+                        <h3 class="text-lg font-bold">🏷️ 동맹 카테고리 설정</h3>
+                        <button onclick="addCategoryInput()" class="bg-blue-600 hover:bg-blue-500 text-xs px-2 py-1 rounded text-white font-bold">+ 카테고리 추가</button>
+                    </div>
+                    <div id="categoryInputsContainer" class="space-y-2"></div>
+                </div>
+            </div>
+            <div class="mt-6 flex justify-end">
+                <button onclick="saveSettings()" class="btn-gold px-6 py-2 rounded-lg">저장 후 적용</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ⚔️ 덱 설정 모달 -->
+    <div id="deckModal" class="hidden fixed inset-0 modal-bg flex items-center justify-center z-50 p-4">
+        <div class="bg-panel border-2 gold-border rounded-xl shadow-2xl w-full max-w-4xl p-6 relative overflow-y-auto max-h-[90vh]">
+            <button onclick="toggleModal('deckModal')" class="absolute top-4 right-4 text-muted hover:text-main text-3xl font-bold">&times;</button>
+            <h2 class="text-2xl font-bold gold-text mb-2" id="deckModalTitle">닉네임 - 보유덱 설정</h2>
+            <p class="text-sm text-muted mb-6">장수를 검색하면 고유전법이 자동 설정되며, 전법2·3도 한글로 검색하여 선택할 수 있습니다.</p>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="bg-main p-4 rounded-lg border border-theme">
+                    <h3 class="text-center font-bold text-yellow-500 mb-4 border-b border-theme pb-2">👑 주장</h3>
+                    <div class="space-y-3">
+                        <div>
+                            <label class="text-xs text-muted">장수 검색</label>
+                            <div class="autocomplete-container">
+                                <input type="text" id="gen1" class="search-input" data-type="general" data-list="gen1-list" data-target="tac1_1" placeholder="장수 이름 입력...">
+                                <div id="gen1-list" class="autocomplete-items hidden"></div>
+                            </div>
+                        </div>
+                        <div><label class="text-xs text-muted">전법1 (고유전법)</label><input type="text" id="tac1_1" readonly placeholder="자동 입력"></div>
+                        <div>
+                            <label class="text-xs text-muted">전법2 검색</label>
+                            <div class="autocomplete-container">
+                                <input type="text" id="tac1_2" class="search-input" data-type="tactic" data-list="tac1_2-list" placeholder="전법 이름 입력...">
+                                <div id="tac1_2-list" class="autocomplete-items hidden"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="text-xs text-muted">전법3 검색</label>
+                            <div class="autocomplete-container">
+                                <input type="text" id="tac1_3" class="search-input" data-type="tactic" data-list="tac1_3-list" placeholder="전법 이름 입력...">
+                                <div id="tac1_3-list" class="autocomplete-items hidden"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-main p-4 rounded-lg border border-theme">
+                    <h3 class="text-center font-bold text-main mb-4 border-b border-theme pb-2">⚔️ 부장 1</h3>
+                    <div class="space-y-3">
+                        <div>
+                            <label class="text-xs text-muted">장수 검색</label>
+                            <div class="autocomplete-container">
+                                <input type="text" id="gen2" class="search-input" data-type="general" data-list="gen2-list" data-target="tac2_1" placeholder="장수 이름 입력...">
+                                <div id="gen2-list" class="autocomplete-items hidden"></div>
+                            </div>
+                        </div>
+                        <div><label class="text-xs text-muted">전법1 (고유전법)</label><input type="text" id="tac2_1" readonly placeholder="자동 입력"></div>
+                        <div>
+                            <label class="text-xs text-muted">전법2 검색</label>
+                            <div class="autocomplete-container">
+                                <input type="text" id="tac2_2" class="search-input" data-type="tactic" data-list="tac2_2-list" placeholder="전법 이름 입력...">
+                                <div id="tac2_2-list" class="autocomplete-items hidden"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="text-xs text-muted">전법3 검색</label>
+                            <div class="autocomplete-container">
+                                <input type="text" id="tac2_3" class="search-input" data-type="tactic" data-list="tac2_3-list" placeholder="전법 이름 입력...">
+                                <div id="tac2_3-list" class="autocomplete-items hidden"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-main p-4 rounded-lg border border-theme">
+                    <h3 class="text-center font-bold text-main mb-4 border-b border-theme pb-2">🛡️ 부장 2</h3>
+                    <div class="space-y-3">
+                        <div>
+                            <label class="text-xs text-muted">장수 검색</label>
+                            <div class="autocomplete-container">
+                                <input type="text" id="gen3" class="search-input" data-type="general" data-list="gen3-list" data-target="tac3_1" placeholder="장수 이름 입력...">
+                                <div id="gen3-list" class="autocomplete-items hidden"></div>
+                            </div>
+                        </div>
+                        <div><label class="text-xs text-muted">전법1 (고유전법)</label><input type="text" id="tac3_1" readonly placeholder="자동 입력"></div>
+                        <div>
+                            <label class="text-xs text-muted">전법2 검색</label>
+                            <div class="autocomplete-container">
+                                <input type="text" id="tac3_2" class="search-input" data-type="tactic" data-list="tac3_2-list" placeholder="전법 이름 입력...">
+                                <div id="tac3_2-list" class="autocomplete-items hidden"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="text-xs text-muted">전법3 검색</label>
+                            <div class="autocomplete-container">
+                                <input type="text" id="tac3_3" class="search-input" data-type="tactic" data-list="tac3_3-list" placeholder="전법 이름 입력...">
+                                <div id="tac3_3-list" class="autocomplete-items hidden"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-6 flex justify-end gap-2">
+                <button onclick="clearDeck()" class="px-4 py-2 bg-red-800 hover:bg-red-700 text-white rounded-lg">초기화</button>
+                <button onclick="saveDeck()" class="btn-gold px-6 py-2 rounded-lg">저장 및 반영</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 📖 통합 도감 관리 모달 -->
+    <div id="dictModal" class="hidden fixed inset-0 modal-bg flex items-center justify-center z-50 p-4">
+         <div class="bg-panel border-2 gold-border rounded-xl shadow-2xl w-full max-w-5xl max-h-[85vh] flex flex-col">
+            <div class="p-4 border-b border-theme flex flex-wrap justify-between items-center bg-main rounded-t-xl gap-2">
+                <h2 class="text-2xl font-bold gold-text flex items-center gap-2">📖 게임 통합 도감 관리</h2>
+                <div class="flex flex-wrap gap-2">
+                    <button onclick="openAddGeneralModal()" class="bg-emerald-700 hover:bg-emerald-600 px-3 py-1.5 rounded-lg text-white text-sm font-bold shadow transition">+ 장수/전법 직접추가</button>
+                    <input type="file" id="mdInput" accept=".md" class="hidden" onchange="handleMarkdownUpload(event)">
+                    <button onclick="document.getElementById('mdInput').click()" class="bg-purple-700 hover:bg-purple-600 px-3 py-1.5 rounded-lg text-white text-sm font-bold shadow transition">📄 마크다운(.md) 업로드</button>
+                    <button onclick="downloadDictTemplate()" class="bg-blue-700 hover:bg-blue-600 px-3 py-1.5 rounded-lg text-white text-sm font-bold shadow transition">📥 엑셀 다운로드</button>
+                    <input type="file" id="dictInput" accept=".xlsx, .xls, .csv" class="hidden" onchange="handleDictUpload(event)">
+                    <button onclick="document.getElementById('dictInput').click()" class="bg-green-700 hover:bg-green-600 px-3 py-1.5 rounded-lg text-white text-sm font-bold shadow transition">📤 엑셀 업로드</button>
+                    <button onclick="toggleModal('dictModal')" class="ml-2 text-muted hover:text-main text-3xl font-bold">&times;</button>
+                </div>
+            </div>
+            <div class="bg-gray-900 px-4 py-2 border-b border-theme flex items-center justify-between text-xs" id="file-management-bar">
+                <span class="text-muted">📁 업로드된 도감 소스 파일: <strong id="uploaded-files-count" class="text-yellow-400">0개</strong></span>
+                <div id="uploaded-files-chips" class="flex flex-wrap gap-2"></div>
+            </div>
+            <div class="flex flex-1 overflow-hidden flex-col md:flex-row">
+                <div class="w-full md:w-1/4 bg-main border-r border-theme p-2 overflow-y-auto flex md:flex-col gap-1">
+                    <button onclick="showDictCategory('gen-wu')" class="w-full text-left p-2 bg-hover rounded-lg font-bold mb-1">오나라 장수 (吴)</button>
+                    <button onclick="showDictCategory('gen-shu')" class="w-full text-left p-2 bg-hover rounded-lg font-bold mb-1">촉나라 장수 (蜀)</button>
+                    <button onclick="showDictCategory('gen-wei')" class="w-full text-left p-2 bg-hover rounded-lg font-bold mb-1">위나라 장수 (魏)</button>
+                    <button onclick="showDictCategory('gen-qun')" class="w-full text-left p-2 bg-hover rounded-lg font-bold mb-1">군웅 장수 (群)</button>
+                    <div class="border-t border-theme my-2 hidden md:block"></div>
+                    <button onclick="showDictCategory('tac-cmd')" class="w-full text-left p-2 bg-hover rounded-lg mb-1">지휘 전법</button>
+                    <button onclick="showDictCategory('tac-pas')" class="w-full text-left p-2 bg-hover rounded-lg mb-1">패시브 전법</button>
+                    <button onclick="showDictCategory('tac-act')" class="w-full text-left p-2 bg-hover rounded-lg mb-1">액티브 전법</button>
+                    <button onclick="showDictCategory('tac-pur')" class="w-full text-left p-2 bg-hover rounded-lg mb-1">추격 전법</button>
+                </div>
+                <div class="w-full md:w-3/4 p-4 overflow-y-auto bg-panel space-y-4" id="dict-content">
+                    <p class="text-center text-muted mt-10">좌측 메뉴를 선택하여 도감 내용을 확인하고 수정하세요.</p>
+                </div>
+            </div>
+         </div>
+    </div>
+
+    <!-- ➕ 도감 항목 직접 추가/수정 모달 -->
+    <div id="dictItemModal" class="hidden fixed inset-0 modal-bg flex items-center justify-center z-50 p-4">
+        <div class="bg-panel border-2 gold-border rounded-xl shadow-2xl w-full max-w-md p-6 relative">
+            <button onclick="toggleModal('dictItemModal')" class="absolute top-4 right-4 text-muted hover:text-main text-3xl font-bold">&times;</button>
+            <h2 class="text-2xl font-bold gold-text mb-4" id="dictItemModalTitle">도감 항목 추가</h2>
+            <div class="space-y-4">
+                <div>
+                    <label class="text-xs text-muted">항목 종류</label>
+                    <select id="addItemType" onchange="toggleAddFormType()">
+                        <option value="general">장수 (고유전법 포함)</option>
+                        <option value="tactic">공용 전법</option>
+                    </select>
+                </div>
+                <div id="factionDiv">
+                    <label class="text-xs text-muted">소속 진영</label>
+                    <select id="addFaction">
+                        <option value="오">오나라</option>
+                        <option value="촉">촉나라</option>
+                        <option value="위">위나라</option>
+                        <option value="군">군웅</option>
+                    </select>
+                </div>
+                <div id="tacTypeDiv" class="hidden">
+                    <label class="text-xs text-muted">전법 분류</label>
+                    <select id="addTacType">
+                        <option value="지휘">지휘 전법</option>
+                        <option value="패시브">패시브 전법</option>
+                        <option value="액티브">액티브 전법</option>
+                        <option value="추격">추격 전법</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="text-xs text-muted" id="addNameLabel">장수 이름</label>
+                    <input type="text" id="addItemName" placeholder="예: 조조">
+                </div>
+                <div id="tacticNameDiv">
+                    <label class="text-xs text-muted">고유 전법 이름</label>
+                    <input type="text" id="addItemTactic" placeholder="예: 난세의 간옹">
+                </div>
+                <div>
+                    <label class="text-xs text-muted">상세 설명 및 수치</label>
+                    <textarea id="addItemDesc" rows="4" placeholder="전법 효과 및 10레벨 기준 수치 입력..."></textarea>
+                </div>
+            </div>
+            <div class="mt-6 flex justify-end gap-2">
+                <button onclick="toggleModal('dictItemModal')" class="px-4 py-2 bg-gray-700 rounded-lg">취소</button>
+                <button onclick="saveDictItemDirect()" class="btn-gold px-6 py-2 rounded-lg">저장</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 파이어베이스 및 로직 스크립트 연결 -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
+        import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyChbzbLZfjfeaQCcKvxJJFlyrBqnaY_jMY",
+            authDomain: "sandoro-93e0e.firebaseapp.com",
+            projectId: "sandoro-93e0e",
+            storageBucket: "sandoro-93e0e.firebasestorage.app",
+            messagingSenderId: "926098068916",
+            appId: "1:926098068916:web:10cac3a721681fc4230ee1"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        window.firebaseDB = { db, doc, getDoc, setDoc };
+        window.loadDataFromFirebase();
+    </script>
+    <script src="app.js"></script>
+</body>
+</html>

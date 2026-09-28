@@ -1,0 +1,146 @@
+/* 기본 입력창 및 공통 스타일 설정 */
+input[type="text"], select, textarea {
+    background-color: #ffffff !important;
+    border: 1px solid #d1d5db !important;
+    color: #1f2937 !important;
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-size: 13px;
+    outline: none;
+    width: 100%;
+}
+
+input[type="text"]:focus, select:focus, textarea:focus {
+    border-color: #d97706 !important;
+}
+
+/* 자동완성 드롭다운 스타일 */
+.autocomplete-container {
+    position: relative;
+}
+
+.autocomplete-items {
+    position: absolute;
+    border: 1px solid #d97706;
+    z-index: 100;
+    top: 100%;
+    left: 0;
+    right: 0;
+    max-height: 200px;
+    overflow-y: auto;
+    background-color: #ffffff;
+    border-radius: 0 0 6px 6px;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+}
+
+.autocomplete-items div {
+    padding: 10px;
+    cursor: pointer;
+    background-color: #ffffff;
+    border-bottom: 1px solid #e5e7eb;
+    font-size: 12px;
+    color: #1f2937;
+}
+
+.autocomplete-items div:hover {
+    background-color: #fef3c7;
+    color: #b45309;
+}
+
+/* 덱 셀 디자인 */
+.deck-cell {
+    background-color: #fffbeb;
+    border: 1px solid #fde68a;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.deck-cell:hover {
+    border-color: #d97706;
+    background-color: #fef3c7;
+}
+
+/* 모달 백그라운드 어둡게 처리 */
+.modal-bg {
+    background-color: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+}
+
+/* 골드 포인트 컬러 테마 */
+.gold-text {
+    color: #b45309 !important;
+}
+
+.gold-border {
+    border-color: #d97706 !important;
+}
+
+.btn-gold {
+    background: linear-gradient(135deg, #d97706, #b45309);
+    color: white;
+    font-weight: bold;
+}
+
+.btn-gold:hover {
+    background: linear-gradient(135deg, #b45309, #92400e);
+}
+
+/* 🌟 [NEW] 0. 황실 금괴 테마 (Imperial Gold Light - 제공해주신 로고 기반 기본 테마) */
+.theme-imperial-gold {
+    background-color: #fdfbf7 !important;
+    color: #292524 !important;
+}
+.theme-imperial-gold .bg-panel { background-color: #ffffff !important; }
+.theme-imperial-gold .bg-main { background-color: #fafaf9 !important; }
+.theme-imperial-gold .bg-hover:hover { background-color: #fef3c7 !important; }
+.theme-imperial-gold .border-theme { border-color: #e7e5e4 !important; }
+.theme-imperial-gold .text-muted { color: #78716c !important; }
+
+/* 1. 기본 다크 모드 (Slate Dark) */
+.theme-slate {
+    background-color: #0f172a !important;
+    color: #f8fafc !important;
+}
+.theme-slate .bg-panel { background-color: #1e293b !important; }
+.theme-slate .bg-main { background-color: #0f172a !important; }
+.theme-slate .bg-hover:hover { background-color: #334155 !important; }
+.theme-slate .border-theme { border-color: #334155 !important; }
+.theme-slate .text-muted { color: #94a3b8 !important; }
+.theme-slate input[type="text"], .theme-slate select, .theme-slate textarea {
+    background-color: #1f2937 !important;
+    border: 1px solid #374151 !important;
+    color: #f3f4f6 !important;
+}
+
+/* 2. 백은 청명 모드 (Silver Light) */
+.theme-silver {
+    background-color: #f1f5f9 !important;
+    color: #0f172a !important;
+}
+.theme-silver .bg-panel { background-color: #ffffff !important; }
+.theme-silver .bg-main { background-color: #f8fafc !important; }
+.theme-silver .bg-hover:hover { background-color: #e2e8f0 !important; }
+.theme-silver .border-theme { border-color: #cbd5e1 !important; }
+.theme-silver .text-muted { color: #64748b !important; }
+
+/* 3. 도원 클래식 모드 (Peach Light) */
+.theme-peach {
+    background-color: #fdf2f2 !important;
+    color: #451a03 !important;
+}
+.theme-peach .bg-panel { background-color: #ffffff !important; }
+.theme-peach .bg-main { background-color: #fff1f2 !important; }
+.theme-peach .bg-hover:hover { background-color: #ffe4e6 !important; }
+.theme-peach .border-theme { border-color: #fecdd3 !important; }
+.theme-peach .text-muted { color: #9f1239 !important; }
+
+/* 4. 비취 궁궐 모드 (Jade Light) */
+.theme-jade {
+    background-color: #f0fdf4 !important;
+    color: #064e3b !important;
+}
+.theme-jade .bg-panel { background-color: #ffffff !important; }
+.theme-jade .bg-main { background-color: #f7fee7 !important; }
+.theme-jade .bg-hover:hover { background-color: #dcfce7 !important; }
+.theme-jade .border-theme { border-color: #bbf7d0 !important; }
+.theme-jade .text-muted { color: #047857 !important; }
