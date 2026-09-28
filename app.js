@@ -97,7 +97,6 @@ function handleUidAuth() {
         localStorage.removeItem('savedAuthUid');
     }
 
-    // ✨ 제작자 UID는 엑셀에 따로 없더라도 로그인 검증을 통과하도록 예외 처리 (일반 모드로 로그인 됨)
     let matchedMember = members.find(m => String(m.uid) === inputUid);
     if (!matchedMember) {
         if (inputUid === CREATOR_UID) {
@@ -125,7 +124,6 @@ function handleLogout() {
 }
 
 function toggleAdminMode() {
-    // ✨ 상시 관리자 권한은 없으므로 비밀번호 입력 창을 띄움
     if (!isAdminMode) {
         const pw = prompt("관리자 비밀번호를 입력하세요:");
         if (pw !== ADMIN_PASSWORD) return alert("비밀번호가 틀렸습니다.");
@@ -160,6 +158,12 @@ function toggleUserPreview() {
 function openAdminControlFromSub(currentModalId) {
     toggleModal(currentModalId);
     toggleModal('adminControlModal');
+}
+
+// ✨ 정보일람 및 대도감 팝업 열기 함수 추가
+function openDictTabWithScroll(tabKey) {
+    switchDictTab(tabKey);
+    toggleModal('dictModal');
 }
 
 function applyAdminUIState() {
