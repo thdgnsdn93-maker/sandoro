@@ -297,7 +297,7 @@ async function loadDataFromFirebase() {
                 if (data.categoryNames) categoryNames = data.categoryNames;
                 if (data.DICT_CONTENTS) DICT_CONTENTS = data.DICT_CONTENTS;
                 
-                if (currentFilter !== '즐겨찾기' && !categoryNames.includes(currentFilter)) {
+                if (currentFilter !== '금의위' && !categoryNames.includes(currentFilter)) {
                     currentFilter = categoryNames[0] || '금의위';
                 }
 
@@ -320,7 +320,7 @@ async function loadDataFromFirebase() {
     if (localCategories) categoryNames = JSON.parse(localCategories);
     if (localDict) DICT_CONTENTS = JSON.parse(localDict);
 
-    if (currentFilter !== '즐겨찾기' && !categoryNames.includes(currentFilter)) {
+    if (currentFilter !== '금의위' && !categoryNames.includes(currentFilter)) {
         currentFilter = categoryNames[0] || '금의위';
     }
 
@@ -387,6 +387,17 @@ function handleLogout() {
     if (confirm("대시보드에서 나가시겠습니까?")) {
         localStorage.removeItem('loggedUser');
         location.reload();
+    }
+}
+
+function isCurrentLoggedUserCreator() {
+    const loggedUserStr = localStorage.getItem('loggedUser');
+    if (!loggedUserStr) return false;
+    try {
+        const loggedUser = JSON.parse(loggedUserStr);
+        return String(loggedUser.uid) === CREATOR_UID;
+    } catch (e) {
+        return false;
     }
 }
 
@@ -464,7 +475,6 @@ function applyAdminUIState() {
     const hasAdminRole = isCurrentLoggedUserAdmin();
     const showUidCol = effectiveIsAdmin || hasAdminRole;
 
-    // 헤더 노출 여부 제어
     if (effectiveIsAdmin) {
         if(selectAllHeader) selectAllHeader.classList.remove('hidden');
         if(delColHeader) delColHeader.classList.remove('hidden');
@@ -488,7 +498,7 @@ function applyAdminUIState() {
         if(btn) { btn.innerHTML = "<span>🛡️</span> 관리자 모드"; btn.className = "bg-amber-600 hover:bg-amber-500 px-3 sm:px-4 py-2 rounded-lg font-bold text-white text-xs shadow transition flex items-center gap-1.5"; }
         if(addBtn) addBtn.classList.add('hidden');
         if(delSelectedBtn) addBtn.classList.add('hidden');
-        if(spyBtn) spyBtn.classList.add('hidden');
+        if(spyBtn) addBtn.classList.add('hidden');
     }
     renderFilterButtons();
     if (currentActiveView === 'dashboard') renderTable();
@@ -529,7 +539,7 @@ function addCategoryInput() {
 function saveCategorySettings() {
     const inputs = document.querySelectorAll('.cat-input');
     categoryNames = Array.from(inputs).map(input => input.value.trim()).filter(val => val !== '');
-    if (currentFilter !== '즐겨찾기' && !categoryNames.includes(currentFilter)) currentFilter = categoryNames[0] || '금의위';
+    if (currentFilter !== '금의위' && !categoryNames.includes(currentFilter)) currentFilter = categoryNames[0] || '금의위';
     saveDataToStorage();
     renderFilterButtons();
     if (currentActiveView === 'dashboard') renderTable();
@@ -627,10 +637,11 @@ function renderTable() {
     
     const effectiveIsAdmin = isAdminMode && !isUserPreview;
     const hasAdminRole = isCurrentLoggedUserAdmin();
+    const isCreator = isCurrentLoggedUserCreator();
     const showUidCol = effectiveIsAdmin || hasAdminRole;
 
     let filtered = members.filter(m => {
-        let match = currentFilter === '즐겨찾기' ? favorites.includes(m.id) : (m.alliance === currentFilter);
+        let match = (m.alliance === currentFilter);
         return match && m.name.toLowerCase().includes(searchQuery);
     });
 
@@ -658,16 +669,16 @@ function renderTable() {
         tr.className = `border-b border-theme transition bg-hover`;
         let html = '';
         
-        // 1. 체크박스 열 (관리자 모드 전용)
+        // 1. 선택 체크박스 열 (관리자 모드 전용)
         if(effectiveIsAdmin) {
             html += `<td class="p-3 sm:p-4 border-r border-theme text-center"><input type="checkbox" class="row-checkbox cursor-pointer" data-id="${member.id}"></td>`;
         }
-
-        // 2. 즐겨찾기 열
+        
+        // 2. 별표(즐겨찾기) 열
         const isFav = favorites.includes(member.id);
         html += `<td class="p-3 sm:p-4 border-r border-theme text-center"><button type="button" onclick="toggleFavorite(${member.id})" class="text-sm">${isFav ? '⭐' : '☆'}</button></td>`;
         
-        // 3. No. 열
+        // 3. No. 열 (숫자만 출력)
         const absoluteIndex = (pageSizeVal !== 'all') ? ((currentPage - 1) * parseInt(pageSizeVal, 10)) + index + 1 : index + 1;
         html += `<td class="p-3 sm:p-4 border-r border-theme text-center font-bold text-muted">${absoluteIndex}</td>`;
         
@@ -676,11 +687,21 @@ function renderTable() {
             html += `<td class="p-3 sm:p-4 border-r border-theme font-mono"><input type="text" value="${member.uid || ''}" onchange="updateMemberField(${member.id}, 'uid', this.value)" class="bg-main border border-theme px-2 py-1 rounded text-xs w-28 text-main"></td>`;
         }
         
-        // 5. 닉네임 열
+        // 5. 닉네임 열 (제작자 로그인 시 닉네임 옆에 관리자 권한 부여 체크박스 표시)
         if (effectiveIsAdmin) {
-            html += `<td class="p-3 sm:p-4 border-r border-theme"><input type="text" value="${member.name}" onchange="updateMemberField(${member.id}, 'name', this.value)" class="bg-main border border-theme px-2 py-1 rounded text-xs font-bold w-24 text-main"></td>`;
+            let adminCheckboxHtml = '';
+            if (isCreator && String(member.uid) !== CREATOR_UID) {
+                const isChecked = member.isAdminRole ? 'checked' : '';
+                adminCheckboxHtml = `
+                    <label class="inline-flex items-center gap-1 ml-2 text-[11px] text-yellow-500 cursor-pointer select-none bg-main px-1.5 py-0.5 rounded border border-theme">
+                        <input type="checkbox" ${isChecked} onchange="updateMemberAdminRole(${member.id}, this.checked)" class="cursor-pointer w-3 h-3"> 관리자
+                    </label>
+                `;
+            }
+            html += `<td class="p-3 sm:p-4 border-r border-theme flex items-center gap-2"><input type="text" value="${member.name}" onchange="updateMemberField(${member.id}, 'name', this.value)" class="bg-main border border-theme px-2 py-1 rounded text-xs font-bold w-24 text-main">${adminCheckboxHtml}</td>`;
         } else {
-            html += `<td class="p-3 sm:p-4 border-r border-theme font-bold">${member.name}</td>`;
+            let badge = member.isAdminRole ? ` <span class="text-[10px] text-yellow-500 bg-yellow-500/20 px-1.5 py-0.5 rounded font-bold ml-1">관리자</span>` : '';
+            html += `<td class="p-3 sm:p-4 border-r border-theme font-bold">${member.name}${badge}</td>`;
         }
 
         // 6. 직업 열
@@ -733,20 +754,13 @@ function updateMemberField(id, field, value) {
     }
 }
 
-function renderPagination(totalPages) {
-    const container = document.getElementById('paginationContainer');
-    if (!container) return;
-    if (totalPages <= 1) {
-        container.innerHTML = '';
-        return;
+function updateMemberAdminRole(id, isChecked) {
+    const member = members.find(m => m.id === id);
+    if (member) {
+        member.isAdminRole = isChecked;
+        saveDataToStorage();
+        alert(`${member.name}님의 관리자 권한이 ${isChecked ? '부여' : '해제'}되었습니다.`);
     }
-
-    let html = '';
-    for (let i = 1; i <= totalPages; i++) {
-        const activeClass = i === currentPage ? 'bg-yellow-600 text-white font-bold' : 'bg-panel border border-theme text-muted hover:bg-hover';
-        html += `<button onclick="changePage(${i})" class="px-3 py-1 rounded text-xs transition ${activeClass}">${i}</button>`;
-    }
-    container.innerHTML = html;
 }
 
 function toggleFavorite(id) {
@@ -769,7 +783,7 @@ function downloadShareExcel() {
 
 function openSettingsModal() { toggleModal('settingsModal'); }
 function toggleModal(id) { document.getElementById(id).classList.toggle('hidden'); }
-function addNewMember() { members.push({ id: Date.now(), uid: "0000", name: "신규장수", alliance: currentFilter, decks: [] }); saveDataToStorage(); renderTable(); }
+function addNewMember() { members.push({ id: Date.now(), uid: "0000", name: "신규장수", alliance: currentFilter, decks: [], isAdminRole: false }); saveDataToStorage(); renderTable(); }
 function deleteMember(id) { if(confirm("정말 삭제하시겠습니까?")) { members = members.filter(m => m.id !== id); saveDataToStorage(); renderTable(); } }
 
 loadDataFromFirebase();
