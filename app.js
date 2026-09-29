@@ -908,6 +908,25 @@ function changePage(page) {
     renderTable();
 }
 
+function toggleSelectAll(selectAllCheckbox) {
+    const checkboxes = document.querySelectorAll('.row-checkbox');
+    checkboxes.forEach(cb => { cb.checked = selectAllCheckbox.checked; });
+}
+
+function deleteSelectedMembers() {
+    const selectedCheckboxes = document.querySelectorAll('.row-checkbox:checked');
+    if (selectedCheckboxes.length === 0) {
+        return alert("삭제할 대원을 선택해주세요.");
+    }
+    if (confirm(`선택한 ${selectedCheckboxes.length명의 대원을 정말 삭제하시겠습니까?`)) {
+        const idsToDelete = Array.from(selectedCheckboxes).map(cb => Number(cb.getAttribute('data-id')));
+        members = members.filter(m => !idsToDelete.includes(m.id));
+        saveDataToStorage();
+        renderTable();
+        alert("선택된 대원이 삭제되었습니다.");
+    }
+}
+
 function renderTable() {
     const tbody = document.getElementById('member-table-body');
     if(!tbody) return;
@@ -1020,7 +1039,7 @@ function renderTable() {
     });
 }
 
-// ✨ UID / 닉네임 / 직업 / 덱 순서의 엑셀 양식을 완벽히 지원하는 업로드 함수
+// ✨ UID / 닉네임 / 직업 / 덱 순서의 엑셀 양식을 완벽히 처리하는 업로드 함수
 function handleExcelUpload(event) {
     const file = event.target.files[0];
     if (!file) return;
@@ -1059,7 +1078,6 @@ function handleExcelUpload(event) {
                     }
                 }
 
-                // 컬럼명이 정확히 일치하지 않을 경우 순서(0: UID, 1: 닉네임, 2: 직업, 3: 덱) 기반으로 매칭 보완
                 const keys = Object.keys(row);
                 if (!uid && keys.length > 0) uid = String(row[keys[0]] || '').trim();
                 if (!name && keys.length > 1) name = String(row[keys[1]] || '').trim();
@@ -1077,10 +1095,8 @@ function handleExcelUpload(event) {
                     if (matchedCat) alliance = matchedCat;
                 }
 
-                // 덱 데이터가 텍스트나 배열 형태로 들어올 경우 파싱 처리 (필요에 따라 기본 빈 덱 구조 생성)
                 let decks = [];
                 if (rawDecks) {
-                    // 예시로 간단한 덱 구조가 문자열로 들어올 경우 대응 가능하도록 기본 구조 세팅
                     decks = [{ formation: '기형진', g1: rawDecks, t1_1: '', t1_2: '', t1_3: '', g2: '', t2_1: '', t2_2: '', t2_3: '', g3: '', t3_1: '', t3_2: '', t3_3: '' }];
                 }
 
