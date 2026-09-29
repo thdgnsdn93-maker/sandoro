@@ -147,7 +147,6 @@ function handleLogout() {
     }
 }
 
-// ✨ 관리자 권한을 가진 유저는 비밀번호 없이 바로 관리자 모드 진입
 function toggleAdminMode() {
     if (!isAdminMode) {
         if (isCurrentLoggedUserAdmin()) {
@@ -1123,7 +1122,8 @@ function renderTable() {
         const absoluteIndex = (pageSizeVal !== 'all') ? ((currentPage - 1) * parseInt(pageSizeVal, 10)) + index + 1 : index + 1;
         
         let indexCellContent = '';
-        if (effectiveIsAdmin) {
+        // ✨ 관리자 권한(hasAdminRole)이 있거나 관리자 모드일 때 인덱스 수정이 가능하도록 동기화
+        if (effectiveIsAdmin || hasAdminRole) {
             indexCellContent = `<input type="number" value="${absoluteIndex}" onchange="updateMemberCustomIndex(${member.id}, this.value)" class="w-12 text-center text-xs font-bold bg-main border border-theme py-1 rounded">`;
         } else {
             indexCellContent = `<span class="text-muted font-bold">${absoluteIndex}</span>`;
@@ -1153,10 +1153,25 @@ function renderTable() {
             nameCellContent = member.name;
         }
 
+        // ✨ 관리자 권한이 있는 경우 직업 및 소속도 셀렉트박스로 직접 수정 가능하게 동기화
+        let jobCellContent = '';
+        if (effectiveIsAdmin || hasAdminRole) {
+            jobCellContent = `<select onchange="updateMemberField(${member.id}, 'job', this.value)" class="text-xs bg-main border border-theme p-1 rounded">${jobOptions}</select>`;
+        } else {
+            jobCellContent = member.job || '-';
+        }
+
+        let allianceCellContent = '';
+        if (effectiveIsAdmin || hasAdminRole) {
+            allianceCellContent = `<select onchange="updateMemberField(${member.id}, 'alliance', this.value)" class="text-xs bg-main border border-theme p-1 rounded">${allianceOptions}</select>`;
+        } else {
+            allianceCellContent = `<span class="px-2.5 py-1 rounded-lg text-xs bg-panel border border-theme">${member.alliance}</span>`;
+        }
+
         html += `
             <td class="p-4 border-r border-theme font-bold">${nameCellContent}</td>
-            <td class="p-4 border-r border-theme text-muted">${effectiveIsAdmin ? `<select onchange="updateMemberField(${member.id}, 'job', this.value)" class="text-xs bg-main border border-theme p-1 rounded">${jobOptions}</select>` : (member.job || '-')}</td>
-            <td class="p-4 border-r border-theme">${effectiveIsAdmin ? `<select onchange="updateMemberField(${member.id}, 'alliance', this.value)" class="text-xs bg-main border border-theme p-1 rounded">${allianceOptions}</select>` : `<span class="px-2.5 py-1 rounded-lg text-xs bg-panel border border-theme">${member.alliance}</span>`}</td>
+            <td class="p-4 border-r border-theme text-muted">${jobCellContent}</td>
+            <td class="p-4 border-r border-theme">${allianceCellContent}</td>
         `;
 
         for(let i=0; i<5; i++) {
