@@ -190,7 +190,7 @@ function applyAdminUIState() {
         if(addBtn) addBtn.classList.add('hidden');
         if(delSelectedBtn) delSelectedBtn.classList.add('hidden');
         if(delHeader) delHeader.classList.add('hidden');
-        if(selectAllHeader) addBtn.classList.add('hidden');
+        if(selectAllHeader) selectAllHeader.classList.add('hidden');
         if(uidHeader) uidHeader.classList.add('hidden');
     }
     renderFilterButtons();
@@ -368,12 +368,10 @@ function openDeckModal(memberId, deckIndex) {
     toggleModal('deckEditModal');
 }
 
-// ✨ 완벽하게 정제된 툴팁 표시 함수 (마크다운 기호 및 고유전법 접두사 완벽 제거)
 function showTacticTooltip(tacticName) {
     if (isDeckEditUnlocked) return; 
     if (!tacticName) return;
     
-    // 입력된 텍스트에서 마크다운 기호와 '고유전법' 등의 단어를 완전히 제거하여 순수 전법 이름 추출
     let cleanName = tacticName.replace(/[-*#]/g, '').replace(/고유전법/g, '').replace(/고유\s*전법/g, '').replace(/[:：]/g, '').trim();
     let nameMatch = cleanName.match(/^([^(]+)/);
     if (nameMatch) cleanName = nameMatch[1].trim();
@@ -387,7 +385,6 @@ function showTacticTooltip(tacticName) {
 
     for (let i = 0; i < lines.length; i++) {
         let l = lines[i].trim();
-        // 도감 내 전법 라인 비교 시에도 마크다운과 접두사 제거 후 비교
         let plainLine = l.replace(/[-*#]/g, '').replace(/고유전법/g, '').replace(/고유\s*전법/g, '').replace(/[:：]/g, '').trim();
         
         if (l.includes('고유') && l.includes('전법')) {
@@ -517,6 +514,7 @@ function toggleDeckEditUnlock() {
     applyDeckUnlockUIState();
 }
 
+// ✨ 수정 멘트 ("🔓 수정" / "🔒 수정완료") 적용 함수
 function applyDeckUnlockUIState() {
     const statusLabel = document.getElementById('deckEditLockStatus');
     const unlockBtn = document.getElementById('deckUnlockBtn');
@@ -532,7 +530,7 @@ function applyDeckUnlockUIState() {
     if (isDeckEditUnlocked) {
         statusLabel.className = "text-xs bg-emerald-900/50 text-emerald-300 px-3 py-1 rounded border border-emerald-700";
         statusLabel.innerText = "🔓 수정 가능 상태";
-        unlockBtn.innerText = "🔒 잠그기";
+        unlockBtn.innerText = "🔒 수정완료";
         unlockBtn.className = "bg-red-700 hover:bg-red-600 text-white px-4 py-1.5 rounded-lg text-xs font-bold shadow transition";
         formationSelect.disabled = false;
 
@@ -548,7 +546,7 @@ function applyDeckUnlockUIState() {
     } else {
         statusLabel.className = "text-xs bg-red-900/50 text-red-300 px-3 py-1 rounded border border-red-700";
         statusLabel.innerText = "🔒 잠김 상태 (수정 버튼을 누르세요)";
-        unlockBtn.innerText = "🔓 수정 잠금해제";
+        unlockBtn.innerText = "🔓 수정";
         unlockBtn.className = "bg-amber-600 hover:bg-amber-500 text-white px-4 py-1.5 rounded-lg text-xs font-bold shadow transition";
         formationSelect.disabled = true;
 
@@ -628,7 +626,6 @@ function handleDeckInputSearch(slotNum, tacticType) {
     listContainer.classList.remove('hidden');
 }
 
-// ✨ 장수 선택 시 마크다운 기호와 '고유전법' 접두사를 완벽히 제거하여 오직 순수 전법 이름만 입력
 function selectDeckAutocompleteValue(slotNum, tacticType, name) {
     if (tacticType === 'g') {
         document.getElementById(`deckG${slotNum}`).value = name;
