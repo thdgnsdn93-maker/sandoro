@@ -188,9 +188,9 @@ function applyAdminUIState() {
             btn.className = "bg-amber-600 hover:bg-amber-500 px-4 py-2 rounded-lg font-bold text-white text-xs shadow transition flex items-center gap-1.5";
         }
         if(addBtn) addBtn.classList.add('hidden');
-        if(delSelectedBtn) addBtn.classList.add('hidden');
-        if(delHeader) addBtn.classList.add('hidden');
-        if(selectAllHeader) addBtn.classList.add('hidden');
+        if(delSelectedBtn) delSelectedBtn.classList.add('hidden');
+        if(delHeader) delHeader.classList.add('hidden');
+        if(selectAllHeader) selectAllHeader.classList.add('hidden');
         if(uidHeader) uidHeader.classList.add('hidden');
     }
     renderFilterButtons();
@@ -532,7 +532,6 @@ function applyDeckUnlockUIState() {
     }
 }
 
-// ✨ 공용 전법 및 장수 전법 자동 완성 검색 함수 (ID 정밀 매핑)
 function handleDeckInputSearch(slotNum, type) {
     if (!isDeckEditUnlocked) return;
 
@@ -584,6 +583,7 @@ function handleDeckInputSearch(slotNum, type) {
     listContainer.classList.remove('hidden');
 }
 
+// ✨ 고유 전법 및 공용 전법 선택 시 괄호/부가 설명/기호 없이 오직 순수 이름만 깔끔하게 추출되도록 수정된 함수
 function selectDeckAutocompleteValue(slotNum, type, name) {
     if (type === 'g') {
         document.getElementById(`deckG${slotNum}`).value = name;
@@ -598,7 +598,9 @@ function selectDeckAutocompleteValue(slotNum, type, name) {
             let descLines = foundGeneral.desc.split('<br>');
             let tacticLine = descLines.find(l => l.includes('고유전법') || l.includes('전법'));
             if (tacticLine) {
-                uniqueTactic = tacticLine.replace(/<[^>]*>?/gm, '').replace('고유전법:', '').trim();
+                let rawTacticText = tacticLine.replace(/<[^>]*>?/gm, '').replace(/고유전법[:：]/g, '').trim();
+                let cleanNameMatch = rawTacticText.match(/^([^(]+)/);
+                uniqueTactic = cleanNameMatch ? cleanNameMatch[1].trim() : rawTacticText;
             } else {
                 uniqueTactic = foundGeneral.title + " 고유전법";
             }
@@ -606,11 +608,13 @@ function selectDeckAutocompleteValue(slotNum, type, name) {
         document.getElementById(`deckT${slotNum}_1`).value = uniqueTactic;
 
     } else {
-        // ✨ 공용 전법 선택 시 순수 전법 이름만 깔끔하게 들어가도록 수정
+        let cleanNameMatch = name.match(/^([^(]+)/);
+        let cleanTacticName = cleanNameMatch ? cleanNameMatch[1].trim() : name;
+
         let targetInputId = `deckT${slotNum}_${type === 't2' ? '2' : '3'}`;
         let targetListId = `autocomplete-list-t${slotNum}_${type === 't2' ? '2' : '3'}`;
         
-        document.getElementById(targetInputId).value = name;
+        document.getElementById(targetInputId).value = cleanTacticName;
         document.getElementById(targetListId).classList.add('hidden');
     }
 
