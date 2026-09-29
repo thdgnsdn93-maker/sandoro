@@ -6,7 +6,7 @@ const ADMIN_PASSWORD = "0731";
 const CREATOR_UID = "20029059326"; // ✨ 제작자 UID 고정
 
 let categoryNames = ["금의위", "낙원(동맹)", "낙화", "고구려", "재야"];
-let currentFilter = '금의위'; // 전체 보기가 없으므로 첫 카테고리를 기본값으로 설정
+let currentFilter = '금의위';
 let searchQuery = '';
 let uploadedFiles = [];
 let currentDictTargetTab = 'formation';
@@ -897,7 +897,6 @@ function renderFilterButtons() {
     const container = document.getElementById('filter-buttons');
     const sidebarContainer = document.getElementById('sidebar-filter-buttons');
     
-    // 전체 보기 버튼은 생성하지 않음 (요청 반영)
     let html = '';
     let sidebarHtml = '';
     
@@ -1085,6 +1084,7 @@ function handleExcelUpload(event) {
             let seenUids = new Set();
             let seenNames = new Set();
             let duplicates = [];
+            let allianceChanges = [];
             let excelRowsData = [];
 
             jsonRows.forEach((row) => {
@@ -1130,7 +1130,7 @@ function handleExcelUpload(event) {
 
                 let job = AVAILABLE_JOBS.includes(rawJob) ? rawJob : "";
                 
-                // ✨ 카테고리 자동 분류 매핑 로직
+                // ✨ 카테고리 자동 분류
                 let alliance = "재야";
                 if (rawAlliance.includes("금의위")) {
                     alliance = "금의위";
@@ -1149,13 +1149,17 @@ function handleExcelUpload(event) {
                 excelRowsData.push({ uid, name, job, alliance, rawDecks });
             });
 
-            // 1. 업로드된 엑셀 데이터를 기존 members와 대조하여 갱신 또는 추가 (기존 덱은 유지)
+            // 1. 기존 명단과 대조하여 소속 변경 및 신규 추가 (기존 덱은 유지)
             excelRowsData.forEach(row => {
                 let existingMember = members.find(m => String(m.uid) === String(row.uid));
                 if (existingMember) {
+                    // 소속이 변경된 경우 감지하여 알림 목록에 추가
+                    if (existingMember.alliance !== row.alliance) {
+                        allianceChanges.push({ name: row.name, uid: row.uid, oldAlliance: existingMember.alliance, newAlliance: row.alliance });
+                    }
                     existingMember.name = row.name;
                     existingMember.job = row.job;
-                    existingMember.alliance = row.alliance; // 소속이 바뀌었으면 자동 반영
+                    existingMember.alliance = row.alliance;
                 } else {
                     let decks = [];
                     if (row.rawDecks && row.rawDecks !== row.alliance && !categoryNames.includes(row.rawDecks)) {
@@ -1172,9 +1176,10 @@ function handleExcelUpload(event) {
                 }
             });
 
-            // 2. ✨ 새 엑셀 명단에서 빠진(누락된) 기존 인원은 자동으로 '재야' 소속으로 이동
+            // 2. 엑셀 명단에서 빠진 기존 인원은 '재야' 소속으로 변경
             members.forEach(member => {
-                if (!uploadedUids.has(String(member.uid))) {
+                if (!uploadedUids.has(String(member.uid)) && member.alliance !== "재야") {
+                    allianceChanges.push({ name: member.name, uid: member.uid, oldAlliance: member.alliance, newAlliance: "재야 (탈퇴/누락)" });
                     member.alliance = "재야";
                 }
             });
@@ -1183,16 +1188,29 @@ function handleExcelUpload(event) {
             renderFilterButtons();
             renderTable();
 
-            if (duplicates.length > 0) {
+            // ✨ 변경되거나 중복되는 인원들을 관리자 알림 팝업창으로 표시
+            if (duplicates.length > 0 || allianceChanges.length > 0) {
                 let dupContainer = document.getElementById('duplicateListContainer');
-                let dupHtml = `<p class="font-bold text-amber-400 mb-2">총 ${duplicates.length}건의 중복 데이터가 감지되었습니다:</p>`;
-                duplicates.forEach(d => {
-                    dupHtml += `<div class="bg-panel p-2 rounded border border-theme flex justify-between"><span>닉네임: <strong>${d.name}</strong></span><span class="text-muted">UID: ${d.uid}</span></div>`;
-                });
-                dupContainer.innerHTML = dupHtml;
+                let alertHtml = '';
+
+                if (allianceChanges.length > 0) {
+                    alertHtml += `<p class="font-bold text-yellow-500 mb-1">🔄 소속 변경 / 재야 이동 인원 (${allianceChanges.length}명):</p>`;
+                    allianceChanges.forEach(ac => {
+                        alertHtml += `<div class="bg-panel p-2 rounded border border-theme flex justify-between mb-2"><span><strong>${ac.name}</strong> (${ac.uid})</span><span class="text-muted">${ac.oldAlliance} ➔ <strong class="text-yellow-400">${ac.newAlliance}</strong></span></div>`;
+                    });
+                }
+
+                if (duplicates.length > 0) {
+                    alertHtml += `<p class="font-bold text-amber-400 mb-1 mt-3">⚠️ 엑셀 내 중복 데이터 감지 (${duplicates.length}건):</p>`;
+                    duplicates.forEach(d => {
+                        alertHtml += `<div class="bg-panel p-2 rounded border border-theme flex justify-between mb-1"><span>닉네임: <strong>${d.name}</strong></span><span class="text-muted">UID: ${d.uid}</span></div>`;
+                    });
+                }
+
+                dupContainer.innerHTML = alertHtml;
                 toggleModal('duplicateAlertModal');
             } else {
-                alert("엑셀 데이터가 최신화되었습니다! (빠진 인원은 '재야' 소속으로 이동되었으며, 기존 대원들의 덱은 유지됩니다)");
+                alert("엑셀 데이터가 성공적으로 최신화되었습니다!");
             }
         } catch (err) {
             alert("엑셀 오류: " + err.message);
