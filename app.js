@@ -20,13 +20,13 @@ let memberWeekData = JSON.parse(localStorage.getItem('memberWeekData') || '[]');
 
 const GENERAL_DATABASE = {
     "조조": "난세의 간웅 (효과: 아군 전체 피해 감소 및 통솔 증가)",
-    "관우": "화하 진압 (효과: 적 전체 병기 피해 및 제어 상태 대상 탈주병 생성)[cite: 12]",
-    "제갈량": "초선차전 (효과: 심리 공격 수치 증가 및 책략 피해 반격)[cite: 12]",
-    "조운": "칠진칠출 (효과: 피신 확률 증가 및 용담 발동)[cite: 12]",
-    "초선": "폐월 (효과: 남성 무장 피해 감소 및 반사 병기 피해)[cite: 12]",
-    "장비": "만인지적 (효과: 적 전체 병기 피해 및 위협·공포 부여)[cite: 12]",
-    "여포": "무쌍의 용사 (효과: 전체 적군과 1회 일반 공격 교환 및 추가 병기 피해)[cite: 12]",
-    "주유": "기지의 승리 (효과: 이상 상태 감지 시 기지 발동)[cite: 12]"
+    "관우": "화하 진압 (효과: 적 전체 병기 피해 및 제어 상태 대상 탈주병 생성)",
+    "제갈량": "초선차전 (효과: 심리 공격 수치 증가 및 책략 피해 반격)",
+    "조운": "칠진칠출 (효과: 피신 확률 증가 및 용담 발동)",
+    "초선": "폐월 (효과: 남성 무장 피해 감소 및 반사 병기 피해)",
+    "장비": "만인지적 (효과: 적 전체 병기 피해 및 위협·공포 부여)",
+    "여포": "무쌍의 용사 (효과: 전체 적군과 1회 일반 공격 교환 및 추가 병기 피해)",
+    "주유": "기지의 승리 (효과: 이상 상태 감지 시 기지 발동)"
 };
 
 const COMMON_TACTICS_LIST = [
@@ -36,8 +36,8 @@ const COMMON_TACTICS_LIST = [
     "태평요술 (효과: 책략 피해 극대화 및 발동 확률 증가)"
 ];
 
-// 한자를 완전히 제거한 8대 진형 및 도감 데이터
-let DICT_DETAIL_DATA = {
+// 기본 도감 템플릿 (저장된 데이터가 없을 경우 사용)
+const DEFAULT_DICT_DATA = {
     formation: [
         { name: "일자진", type: "밸런스 분산형 / 전열 받는 피해 8% 감소", effect: "어그로가 3곳으로 균등 분산되는 기본 밸런스진" },
         { name: "기형진", type: "1탱+2딜 공격진 / 전열 받는 피해 6% 감소", effect: "강력한 1탱이 60% 피격을 견디고 후열 딜러가 12% 딜증으로 폭딜 투사" },
@@ -68,6 +68,9 @@ let DICT_DETAIL_DATA = {
         { name: "강공격", type: "추격 / 병기 / 40% | 적합: 방패/창/궁/기", effect: "일반 공격 후, 현재 공격 목표에게 60 ➔ 120%의 병기 피해를 즉시 추가로 줍니다" }
     ]
 };
+
+// 저장소 데이터 로드 (없을 경우 DEFAULT_DICT_DATA 사용)
+let DICT_DETAIL_DATA = JSON.parse(localStorage.getItem('dictDetailData')) || DEFAULT_DICT_DATA;
 
 function getTacticTooltip(skillName) {
     if (!skillName) return "";
@@ -227,7 +230,7 @@ function handleDictMarkdownUpload(event) {
 
                 if (trimmed.startsWith('###') || (trimmed.startsWith('- **') && !currentItem)) {
                     if (currentItem && currentItem.name) parsedItems.push(currentItem);
-                    let cleanName = trimmed.replace(/^[#\-*]+\s*/, '').replace(/\*\*/g, '').split(':')[0].trim();
+                    let cleanName = trimmed.replace(/^[#\-*]+\s*/, '').replace(/\*\*/g, '').split(':')[0].split('(')[0].trim();
                     currentItem = { name: cleanName, type: "상세 정보", effect: "" };
                 } else if (currentItem) {
                     if (trimmed.includes('특성') || trimmed.includes('발동률') || trimmed.includes('분류') || trimmed.includes('유형')) {
@@ -252,7 +255,7 @@ function handleDictMarkdownUpload(event) {
                 if (document.getElementById('dictModal') && !document.getElementById('dictModal').classList.contains('hidden')) {
                     switchDictTab(activeDictUploadKey);
                 }
-                alert(`📚 총 ${parsedItems.length}개 항목이 도감에 반영되었습니다!`);
+                alert(`📚 총 ${parsedItems.length}개 항목이 도감에 정확히 반영되었습니다!`);
             } else {
                 alert("⚠️ 마크다운 형식을 올바르게 읽지 못했습니다.");
             }
