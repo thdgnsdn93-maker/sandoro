@@ -213,9 +213,9 @@ function applyAdminUIState() {
             btn.className = "bg-amber-600 hover:bg-amber-500 px-4 py-2 rounded-lg font-bold text-white text-xs shadow transition flex items-center gap-1.5";
         }
         if(addBtn) addBtn.classList.add('hidden');
-        if(delSelectedBtn) delSelectedBtn.classList.add('hidden');
+        if(delSelectedBtn) addBtn.classList.add('hidden');
         if(delHeader) delHeader.classList.add('hidden');
-        if(selectAllHeader) selectAllHeader.classList.add('hidden');
+        if(selectAllHeader) delHeader.classList.add('hidden');
         if(uidHeader) uidHeader.classList.add('hidden');
     }
     renderFilterButtons();
@@ -336,45 +336,55 @@ function saveCategorySettings() {
     alert("카테고리 순서 및 설정이 성공적으로 저장되었습니다!");
 }
 
+let activeUploadAlliance = '금의위';
+
 function openDataUploadModal() {
     toggleModal('adminControlModal');
     
+    // ✨ 데이터 업로드 모달 내부에 각 맹별 업로드 버튼 영역 동적 생성
     let uploadModal = document.getElementById('dataUploadModal');
-    if (uploadModal && !document.getElementById('targetAllianceSelect')) {
+    if (uploadModal) {
         let modalBox = uploadModal.querySelector('div.bg-panel') || uploadModal.querySelector('div');
         if (modalBox) {
-            let selectDiv = document.createElement('div');
-            selectDiv.className = "mb-4 text-left";
-            let optionsHtml = '';
-            categoryNames.forEach(cat => {
-                optionsHtml += `<option value="${cat}" ${cat === currentFilter ? 'selected' : ''}>${cat}</option>`;
-            });
-            selectDiv.innerHTML = `
-                <label class="block text-xs font-bold text-muted mb-1.5">📌 업로드할 대상 연맹(카테고리) 선택</label>
-                <select id="targetAllianceSelect" class="w-full bg-main border border-theme px-3 py-2 rounded-lg text-xs text-main font-bold">
-                    ${optionsHtml}
-                </select>
-                <p class="text-[11px] text-yellow-500 mt-1">※ 선택한 연맹 파일에 없는 기존 인원은 자동으로 '재야'로 이동됩니다.</p>
-            `;
-            let fileInput = modalBox.querySelector('input[type="file"]');
-            if (fileInput && fileInput.parentElement) {
-                fileInput.parentElement.before(selectDiv);
-            } else {
-                modalBox.prepend(selectDiv);
+            let memberSection = modalBox.querySelector('#allianceUploadSection');
+            if (!memberSection) {
+                memberSection = document.createElement('div');
+                memberSection.id = 'allianceUploadSection';
+                memberSection.className = "bg-main p-4 rounded-xl border border-theme space-y-3 mb-4";
+                
+                let buttonsHtml = '';
+                categoryNames.forEach(cat => {
+                    buttonsHtml += `
+                    <div class="flex items-center justify-between bg-panel p-2.5 rounded-lg border border-theme">
+                        <span class="text-xs font-bold gold-text">⚔️ ${cat} 명단 업로드</span>
+                        <button onclick="triggerAllianceUpload('${cat}')" class="bg-emerald-700 hover:bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow transition">📁 파일 업로드</button>
+                    </div>`;
+                });
+
+                memberSection.innerHTML = `
+                    <p class="text-xs font-bold gold-text mb-1">👥 각 연맹별 맹원 현황 엑셀 업로드</p>
+                    <p class="text-[11px] text-muted mb-2">선택한 연맹 파일에 없는 기존 인원은 자동으로 '재야'로 이동됩니다.</p>
+                    <div class="space-y-2">${buttonsHtml}</div>
+                    <input type="file" id="allianceExcelInput" accept=".xlsx, .xls, .csv" class="hidden" onchange="handleAllianceExcelUpload(event)">
+                `;
+
+                // 기존 통합 업로드 버튼 영역 교체 또는 삽입
+                let oldBox = modalBox.querySelector('div.bg-main');
+                if (oldBox) {
+                    oldBox.replaceWith(memberSection);
+                } else {
+                    modalBox.prepend(memberSection);
+                }
             }
-        }
-    } else {
-        let sel = document.getElementById('targetAllianceSelect');
-        if (sel) {
-            let optionsHtml = '';
-            categoryNames.forEach(cat => {
-                optionsHtml += `<option value="${cat}" ${cat === currentFilter ? 'selected' : ''}>${cat}</option>`;
-            });
-            sel.innerHTML = optionsHtml;
         }
     }
 
     toggleModal('dataUploadModal');
+}
+
+function triggerAllianceUpload(allianceName) {
+    activeUploadAlliance = allianceName;
+    document.getElementById('allianceExcelInput').click();
 }
 
 function openAdminLogModal() {
@@ -1103,13 +1113,11 @@ function renderTable() {
     });
 }
 
-function handleExcelUpload(event) {
+function handleAllianceExcelUpload(event) {
     const file = event.target.files[0];
     if (!file) return;
 
-    const selectElem = document.getElementById('targetAllianceSelect');
-    const targetAlliance = selectElem ? selectElem.value : currentFilter;
-
+    const targetAlliance = activeUploadAlliance;
     const reader = new FileReader();
     reader.onload = function(e) {
         try {
@@ -1171,7 +1179,7 @@ function handleExcelUpload(event) {
 
             let allianceChanges = [];
 
-            // 1. 업로드된 파일에 있는 인원들을 선택한 연맹(targetAlliance)으로 등록 또는 갱신
+            // 1. 업로드된 파일에 있는 인원들을 선택한 맹으로 등록 또는 갱신
             excelRowsData.forEach(row => {
                 let existingMember = members.find(m => String(m.uid) === String(row.uid));
                 if (existingMember) {
@@ -1197,7 +1205,7 @@ function handleExcelUpload(event) {
                 }
             });
 
-            // 2. ✨ [핵심] 기존에 해당 연맹(targetAlliance)에 속해 있었으나 이번 업로드 파일에서 누락된 인원은 무조건 '재야'로 변경 처리!
+            // 2. ✨ 기존에 해당 맹에 있었으나 이번 업로드 파일에서 누락된 인원은 무조건 '재야'로 이동 처리
             members.forEach(member => {
                 if (member.alliance === targetAlliance && !uploadedUidsInThisFile.has(String(member.uid))) {
                     allianceChanges.push({ name: member.name, uid: member.uid, oldAlliance: targetAlliance, newAlliance: "재야 (명단 누락/탈퇴)" });
@@ -1230,7 +1238,7 @@ function handleExcelUpload(event) {
                 dupContainer.innerHTML = alertHtml;
                 toggleModal('duplicateAlertModal');
             } else {
-                alert(`[${targetAlliance}] 연맹 파일이 성공적으로 업데이트되었습니다!`);
+                alert(`[${targetAlliance}] 연맹 파일이 성공적으로 업로드 및 갱신되었습니다!`);
             }
         } catch (err) {
             alert("엑셀 오류: " + err.message);
