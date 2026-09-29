@@ -1080,7 +1080,6 @@ function handleExcelUpload(event) {
             
             if(jsonRows.length === 0) return alert("엑셀 파일에 데이터가 없습니다.");
 
-            let uploadedUids = new Set();
             let seenUids = new Set();
             let seenNames = new Set();
             let duplicates = [];
@@ -1130,10 +1129,8 @@ function handleExcelUpload(event) {
 
                 let job = AVAILABLE_JOBS.includes(rawJob) ? rawJob : "";
                 
-                // ✨ 업로드된 파일 형식(금의위, 낙원, 낙화, 고구려, 재야)의 소속 문자열 완벽 연동
-                let existingMatch = members.find(m => String(m.uid) === String(uid));
+                // ✨ 파일 내부 소속 표기(`금의위`, `낙원`, `낙화`, `고구려`, `재야`) 카테고리 매칭
                 let alliance = "";
-
                 if (rawAlliance.includes("금의위")) {
                     alliance = "금의위";
                 } else if (rawAlliance.includes("낙원")) {
@@ -1148,18 +1145,22 @@ function handleExcelUpload(event) {
                     let matchedCat = categoryNames.find(cat => rawAlliance === cat || rawAlliance.includes(cat) || cat.includes(rawAlliance));
                     if (matchedCat) {
                         alliance = matchedCat;
-                    } else if (existingMatch) {
-                        alliance = existingMatch.alliance; // 기존 인원 소속 보호
                     } else {
-                        alliance = "재야";
+                        // 엑셀 파일 이름(파일명)을 기반으로 기본 소속 유추 보완
+                        let fileName = file.name;
+                        if (fileName.includes("금의위")) alliance = "금의위";
+                        else if (fileName.includes("낙원")) alliance = "낙원(동맹)";
+                        else if (fileName.includes("낙화")) alliance = "낙화";
+                        else if (fileName.includes("고구려")) alliance = "고구려";
+                        else if (fileName.includes("무소속") || fileName.includes("미가입") || fileName.includes("재야")) alliance = "재야";
+                        else alliance = categoryNames[0];
                     }
                 }
 
-                uploadedUids.add(String(uid));
                 excelRowsData.push({ uid, name, job, alliance, rawDecks });
             });
 
-            // 1. 기존 명단과 대조하여 최신화 (실제로 소속이 바뀐 경우에만 변경 감지)
+            // ✨ [핵심 개선] 개별 연맹 파일 업로드 시 다른 연맹원이 재야로 빠지지 않도록 병합/업데이트 처리
             excelRowsData.forEach(row => {
                 let existingMember = members.find(m => String(m.uid) === String(row.uid));
                 if (existingMember) {
@@ -1185,16 +1186,6 @@ function handleExcelUpload(event) {
                 }
             });
 
-            // 2. ✨ 전체 명단 업로드 시에만 빠진 인원을 '재야'로 이동 (일부 파일 업로드 시 초기화 방지)
-            if (uploadedUids.size >= 50) {
-                members.forEach(member => {
-                    if (!uploadedUids.has(String(member.uid)) && member.alliance !== "재야") {
-                        allianceChanges.push({ name: member.name, uid: member.uid, oldAlliance: member.alliance, newAlliance: "재야 (탈퇴/누락)" });
-                        member.alliance = "재야";
-                    }
-                });
-            }
-
             saveDataToStorage();
             renderFilterButtons();
             renderTable();
@@ -1205,7 +1196,7 @@ function handleExcelUpload(event) {
                 let alertHtml = '';
 
                 if (allianceChanges.length > 0) {
-                    alertHtml += `<p class="font-bold text-yellow-500 mb-1">🔄 소속 변경 / 재야 이동 인원 (${allianceChanges.length}명):</p>`;
+                    alertHtml += `<p class="font-bold text-yellow-500 mb-1">🔄 소속 변경 인원 (${allianceChanges.length}명):</p>`;
                     allianceChanges.forEach(ac => {
                         alertHtml += `<div class="bg-panel p-2 rounded border border-theme flex justify-between mb-2"><span><strong>${ac.name}</strong> (${ac.uid})</span><span class="text-muted">${ac.oldAlliance} ➔ <strong class="text-yellow-400">${ac.newAlliance}</strong></span></div>`;
                     });
