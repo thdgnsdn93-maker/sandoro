@@ -18,7 +18,7 @@ let members = [];
 let DICT_CONTENTS = {
     formation: `# 1. 진형 및 병종상성 대도감\n## 진형\n### 기형진\n- **특성**: 기병 피해 증가 및 방어 상승\n### 일자진\n- **특성**: 전열 피해 8% 감소\n### 학익진\n- **특성**: 원거리 및 책략 피해 상승\n### 어린진\n- **특성**: 돌격 및 선봉 전투력 극대화\n### 팔괘진\n- **특성**: 진형 전체 책략 방어 및 회복`,
     synergy: `# 2. 각 장수 인연보너스 대도감\n## 도원결의\n### 구성원\n- **대상**: 유비, 관우, 장비\n- **인연 효과**: 3번째 턴 행동 전 아군 전체 디버프 일괄 제거\n## 오호상장\n### 구성원\n- **대상**: 관우, 장비, 조운, 마초, 황충\n- **인연 효과**: 회심(치명타) 피해 +10%`,
-    generalTactic: `# 3. 장수 전법정리 대도감\n## 오나라\n### 조운\n- **고유전법**: 칠진칠출\n### 유비\n- 고유 전법: 백성과 함께 (지휘 / 치유 | 발동률 100%)\n-\n전법 상세 효과: 전투 시작 시, 전체 아군의 통솔이 18포인트 증가합니다(지력의 영향 받음). 매 턴 종료 시, 전체 아군의 병력을 회복시키며(치유율 100%, 지력의 영향 받음), 현재 병력이 가장 낮은 아군 단일 목표의 디버프 상태를 1개 제거하고 해당 목표의 병력을 1회 추가 회복시킵니다(치유율 90%, 지력의 영향 받음).`,
+    generalTactic: `# 3. 장수 전법정리 대도감\n## 오나라\n### 유비\n- 고유 전법: 백성과 함께 (지휘 / 치유 | 발동률 100%)\n-\n전법 상세 효과: 전투 시작 시, 전체 아군의 통솔이 18포인트 증가합니다(지력의 영향 받음). 매 턴 종료 시, 전체 아군의 병력을 회복시키며(치유율 100%, 지력의 영향 받음), 현재 병력이 가장 낮은 아군 단일 목표의 디버프 상태를 1개 제거하고 해당 목표의 병력을 1회 추가 회복시킵니다(치유율 90%, 지력의 영향 받음).\n### 조운\n- 고유 전법: 칠진칠출 (액티브 / 병刃 | 발동률 45%)\n-\n전법 상세 효과: 적군 단일에게 병刃 피해를 줍니다.`,
     commonTactic: `# 4. 공용 전법정리 대도감\n## 지휘 전법\n### 격려\n- **효과**: 우군 무력 증가\n### 허점 공략\n- **효과**: 방어 감소\n### 청낭 치료\n- **효과**: 회복`
 };
 
@@ -188,8 +188,8 @@ function applyAdminUIState() {
             btn.className = "bg-amber-600 hover:bg-amber-500 px-4 py-2 rounded-lg font-bold text-white text-xs shadow transition flex items-center gap-1.5";
         }
         if(addBtn) addBtn.classList.add('hidden');
-        if(delSelectedBtn) addBtn.classList.add('hidden');
-        if(delHeader) addBtn.classList.add('hidden');
+        if(delSelectedBtn) delSelectedBtn.classList.add('hidden');
+        if(delHeader) delHeader.classList.add('hidden');
         if(selectAllHeader) addBtn.classList.add('hidden');
         if(uidHeader) uidHeader.classList.add('hidden');
     }
@@ -368,15 +368,33 @@ function openDeckModal(memberId, deckIndex) {
     toggleModal('deckEditModal');
 }
 
-// ✨ 잠금 상태(수정 모드 아님)일 때 마우스 오버 시 툴팁 표시
+// ✨ 툴팁 표시 함수 (장수 고유전법 및 공용전법 모두 완벽하게 매칭되도록 개선)
 function showTacticTooltip(tacticName) {
     if (isDeckEditUnlocked) return; 
     if (!tacticName) return;
     let cleanName = tacticName.replace(/고유전법[:：]/g, '').trim();
 
     let allDictTexts = (DICT_CONTENTS['commonTactic'] || "") + "\n" + (DICT_CONTENTS['generalTactic'] || "");
+    
+    // 장수 고유전법 텍스트에서 전법 이름과 설명을 파싱하여 툴팁용 데이터 구축
     let parsedTactics = parseMarkdownByTarget(allDictTexts);
-    let found = parsedTactics.find(t => t.title.toLowerCase() === cleanName.toLowerCase());
+    
+    // 장수 도감 데이터의 경우 제목이 장수 이름이므로, 전법 이름으로도 찾을 수 있도록 별도 분리 파싱
+    let generalText = DICT_CONTENTS['generalTactic'] || "";
+    let genLines = generalText.split('\n');
+    let extraTactics = [];
+    genLines.forEach(line => {
+        if (line.includes('고유 전법:')) {
+            let parts = line.replace('- 고유 전법:', '').trim();
+            let nameMatch = parts.match(/^([^(]+)/);
+            if (nameMatch) {
+                extraTactics.push({ title: nameMatch[1].trim(), desc: parts });
+            }
+        }
+    });
+
+    let allCombined = [...parsedTactics, ...extraTactics];
+    let found = allCombined.find(t => t.title.toLowerCase() === cleanName.toLowerCase());
 
     let tooltipElem = document.getElementById('globalTacticTooltip');
     if (!tooltipElem) {
@@ -532,7 +550,7 @@ function applyDeckUnlockUIState() {
     }
 }
 
-// ✨ 장수 및 공용 전법 검색 입력 처리
+// ✨ 장수 및 공용 전법 자동완성 검색 처리
 function handleDeckInputSearch(slotNum, tacticType) {
     if (!isDeckEditUnlocked) return;
 
@@ -561,8 +579,13 @@ function handleDeckInputSearch(slotNum, tacticType) {
     let sourceList = [];
     if (tacticType === 'g') {
         const rawText = DICT_CONTENTS['generalTactic'] || "";
-        let parsed = parseMarkdownByTarget(rawText);
-        parsed.forEach(p => sourceList.push(p.title));
+        let lines = rawText.split('\n');
+        lines.forEach(line => {
+            let trimmed = line.trim();
+            if (trimmed.startsWith('### ')) {
+                sourceList.push(trimmed.replace('### ', '').trim());
+            }
+        });
     } else {
         const rawText = DICT_CONTENTS['commonTactic'] || "";
         let parsed = parseMarkdownByTarget(rawText);
@@ -584,32 +607,35 @@ function handleDeckInputSearch(slotNum, tacticType) {
     listContainer.classList.remove('hidden');
 }
 
-// ✨ 고유 전법 선택 시 `- 고유 전법:` 수식어를 완벽하게 제거하고 오직 순수 전법 이름만 깔끔하게 추출
+// ✨ 장수 선택 시 고유 전법 이름을 정확히 추출하여 1번 전법란에 오직 순수 전법 이름만 입력
 function selectDeckAutocompleteValue(slotNum, tacticType, name) {
     if (tacticType === 'g') {
         document.getElementById(`deckG${slotNum}`).value = name;
         document.getElementById(`autocomplete-list-g${slotNum}`).classList.add('hidden');
 
         const generalText = DICT_CONTENTS['generalTactic'] || "";
-        let parsedGenerals = parseMarkdownByTarget(generalText);
-        let foundGeneral = parsedGenerals.find(p => p.title === name);
-        
+        let lines = generalText.split('\n');
         let uniqueTactic = "고유전법 미등록";
-        if (foundGeneral) {
-            let descLines = foundGeneral.desc.split('<br>');
-            let tacticLine = descLines.find(l => l.includes('고유전법') || l.includes('전법') || l.includes('고유 전법'));
-            if (tacticLine) {
-                // "고유 전법: 백성과 함께 (지휘 / 치유 ...)" 형태에서 전법 이름만 추출
-                let rawText = tacticLine.replace(/<[^>]*>?/gm, '').trim();
-                let match = rawText.match(/(?:고유\s*전법[:：]?)\s*([^(]+)/);
-                if (match && match[1]) {
-                    uniqueTactic = match[1].trim();
-                } else {
-                    let cleanMatch = rawText.replace(/고유\s*전법[:：]?/g, '').trim().match(/^([^(]+)/);
-                    uniqueTactic = cleanMatch ? cleanMatch[1].trim() : rawText;
+        
+        let foundGeneral = false;
+        for (let i = 0; i < lines.length; i++) {
+            let l = lines[i].trim();
+            if (l.startsWith('### ') && l.replace('### ', '').trim() === name) {
+                foundGeneral = true;
+                continue;
+            }
+            if (foundGeneral) {
+                if (l.startsWith('### ')) break; // 다음 장수로 넘어가면 중단
+                if (l.includes('고유 전법:')) {
+                    let parts = l.replace('- 고유 전법:', '').trim();
+                    let match = parts.match(/^([^(]+)/);
+                    if (match && match[1]) {
+                        uniqueTactic = match[1].trim();
+                    } else {
+                        uniqueTactic = parts;
+                    }
+                    break;
                 }
-            } else {
-                uniqueTactic = foundGeneral.title + " 고유전법";
             }
         }
         document.getElementById(`deckT${slotNum}_1`).value = uniqueTactic;
