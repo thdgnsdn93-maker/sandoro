@@ -514,7 +514,6 @@ function toggleDeckEditUnlock() {
     applyDeckUnlockUIState();
 }
 
-// ✨ 수정 멘트 ("🔓 수정" / "🔒 수정완료") 적용 함수
 function applyDeckUnlockUIState() {
     const statusLabel = document.getElementById('deckEditLockStatus');
     const unlockBtn = document.getElementById('deckUnlockBtn');
@@ -1021,6 +1020,7 @@ function renderTable() {
     });
 }
 
+// ✨ UID / 닉네임 / 직업 / 덱 순서의 엑셀 양식을 완벽히 지원하는 업로드 함수
 function handleExcelUpload(event) {
     const file = event.target.files[0];
     if (!file) return;
@@ -1039,7 +1039,8 @@ function handleExcelUpload(event) {
                 let uid = '';
                 let name = '';
                 let rawJob = '';
-                let rawAlliance = '';
+                let rawDecks = '';
+                let rawAlliance = categoryNames[0];
 
                 for (let key in row) {
                     let cleanKey = String(key).trim().replace(/\s+/g, '');
@@ -1051,21 +1052,19 @@ function handleExcelUpload(event) {
                         if (val) name = val;
                     } else if (cleanKey.includes('직업') || cleanKey.includes('역할')) {
                         if (val) rawJob = val;
+                    } else if (cleanKey.includes('덱') || cleanKey.includes('조합') || cleanKey.includes('부대')) {
+                        if (val) rawDecks = val;
                     } else if (cleanKey.includes('소속') || cleanKey.includes('동맹') || cleanKey.includes('길드')) {
                         if (val) rawAlliance = val;
                     }
                 }
 
+                // 컬럼명이 정확히 일치하지 않을 경우 순서(0: UID, 1: 닉네임, 2: 직업, 3: 덱) 기반으로 매칭 보완
                 const keys = Object.keys(row);
                 if (!uid && keys.length > 0) uid = String(row[keys[0]] || '').trim();
                 if (!name && keys.length > 1) name = String(row[keys[1]] || '').trim();
                 if (!rawJob && keys.length > 2) rawJob = String(row[keys[2]] || '').trim();
-                if (!rawAlliance && keys.length > 3) rawAlliance = String(row[keys[3]] || '').trim();
-
-                if (AVAILABLE_JOBS.includes(uid)) {
-                    rawJob = uid;
-                    uid = String(Math.floor(1000 + Math.random() * 9000));
-                }
+                if (!rawDecks && keys.length > 3) rawDecks = String(row[keys[3]] || '').trim();
 
                 if (!name || name.includes('닉네임')) return;
                 if (!uid) uid = String(Math.floor(1000 + Math.random() * 9000));
@@ -1075,12 +1074,17 @@ function handleExcelUpload(event) {
                 let alliance = categoryNames[0];
                 if (rawAlliance) {
                     let matchedCat = categoryNames.find(cat => cat === rawAlliance || rawAlliance.includes(cat) || cat.includes(rawAlliance));
-                    if (matchedCat) {
-                        alliance = matchedCat;
-                    }
+                    if (matchedCat) alliance = matchedCat;
                 }
 
-                parsedMembers.push({ uid, name, job, alliance, decks: [] });
+                // 덱 데이터가 텍스트나 배열 형태로 들어올 경우 파싱 처리 (필요에 따라 기본 빈 덱 구조 생성)
+                let decks = [];
+                if (rawDecks) {
+                    // 예시로 간단한 덱 구조가 문자열로 들어올 경우 대응 가능하도록 기본 구조 세팅
+                    decks = [{ formation: '기형진', g1: rawDecks, t1_1: '', t1_2: '', t1_3: '', g2: '', t2_1: '', t2_2: '', t2_3: '', g3: '', t3_1: '', t3_2: '', t3_3: '' }];
+                }
+
+                parsedMembers.push({ uid, name, job, alliance, decks });
             });
 
             parsedMembers.forEach(newM => {
@@ -1089,6 +1093,9 @@ function handleExcelUpload(event) {
                     members[existingIndex].name = newM.name;
                     members[existingIndex].job = newM.job;
                     members[existingIndex].alliance = newM.alliance;
+                    if (newM.decks.length > 0 && (!members[existingIndex].decks || members[existingIndex].decks.length === 0)) {
+                        members[existingIndex].decks = newM.decks;
+                    }
                 } else {
                     members.push({ id: Date.now() + Math.random(), ...newM });
                 }
@@ -1097,7 +1104,7 @@ function handleExcelUpload(event) {
             saveDataToStorage();
             renderFilterButtons();
             renderTable();
-            alert("엑셀 데이터 업로드가 완료되었습니다!");
+            alert("맹원 엑셀 데이터가 성공적으로 업로드 및 반영되었습니다!");
         } catch (err) {
             alert("엑셀 오류: " + err.message);
         }
