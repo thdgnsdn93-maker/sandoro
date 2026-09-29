@@ -54,7 +54,7 @@ function switchPageView(viewName) {
     }
 }
 
-// 엑셀 명단 업로드 파싱 로직 (UID, 닉네임, 직업만 갱신 및 덱 유지)
+// 일반 연맹 명단 업로드 파싱 로직 (해당 카테고리 지정 가능, 덱 보존)
 function handleAllianceExcelUpload(event) {
     const file = event.target.files[0];
     if (!file) return;
@@ -102,7 +102,7 @@ function handleAllianceExcelUpload(event) {
             });
 
             saveDataToStorage();
-            alert(`👥 ${allianceToAssign} 인원 엑셀 데이터 반영 완료! (${members.length}명 보유)`);
+            alert(`👥 ${allianceToAssign} 인원 엑셀 데이터 반영 완료! (${members.length}명 보유)[cite: 7]`);
             renderTable();
             toggleModal('dataUploadModal');
         } catch (err) {
@@ -113,7 +113,7 @@ function handleAllianceExcelUpload(event) {
     reader.readAsArrayBuffer(file);
 }
 
-// 주간활동 리포트 연동 시 통계룸 인원은 '금의위'로 포함시키고 UID/닉네임/직업만 동기화, 누락 인원은 '재야'로 변경
+// 주간활동 리포트 연동 로직 (금의위만 연동, 타 카테고리는 영향 없음, 덱 보존 및 누락 시 '재야'로 변경)
 function handleMemberWeekExcelUpload(event) {
     const file = event.target.files[0];
     if (!file) return;
@@ -144,7 +144,7 @@ function handleMemberWeekExcelUpload(event) {
 
                 let existingMember = members.find(m => String(m.uid) === uidVal);
                 if (existingMember) {
-                    // 기존 덱은 그대로 유지하고 UID, 닉네임, 직업 데이터 및 소속을 금의위로 조정
+                    // 기존 멤버인 경우 덱은 유지하고 UID, 닉네임, 직업 갱신 및 소속을 금의위로 조정
                     existingMember.name = nameVal;
                     if (jobVal) existingMember.job = jobVal;
                     existingMember.alliance = '금의위';
@@ -177,16 +177,16 @@ function handleMemberWeekExcelUpload(event) {
                 };
             });
 
-            // 주간활동 통계 룸 데이터에 누락된 인원은 '재야' 소속으로 변경
+            // 기존에 '금의위' 소속이었으나 이번 통계룸 데이터에서 누락된 인원만 '재야'로 변경 (낙원, 낙화, 고구려 등 타 카테고리는 보존)
             members.forEach(m => {
-                if (m.uid && !uploadedUids.has(String(m.uid))) {
+                if (m.alliance === '금의위' && m.uid && !uploadedUids.has(String(m.uid))) {
                     m.alliance = '재야';
                 }
             });
 
             saveDataToStorage();
             localStorage.setItem('memberWeekData', JSON.stringify(memberWeekData));
-            alert(`📊 주간활동 데이터 ${memberWeekData.length}건 반영 완료! (통계룸 인원 전원 금의위 포함, 누락 인원은 '재야'로 변경됨)`);
+            alert(`📊 금의위 주간활동 데이터 ${memberWeekData.length}건 반영 완료! (통계 누락 금의위 인원은 '재야'로 변경됨)[cite: 7]`);
             
             if (currentActiveView === 'stats') {
                 renderStatsTable();
@@ -266,7 +266,7 @@ function renderStatsTable() {
     }
 
     if (filtered.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="10" class="p-8 text-center text-muted">등록된 주간활동 데이터가 없습니다. 관리자 제어판에서 엑셀 파일을 업로드해주세요.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="10" class="p-8 text-center text-muted">등록된 주간활동 데이터가 없습니다. 관리자 제어판에서 엑셀 파일을 업로드해주세요.[cite: 7]</td></tr>`;
         return;
     }
 
@@ -570,7 +570,7 @@ function applyAdminUIState() {
         if(btn) { btn.innerHTML = "<span>🛡️</span> 제어판"; btn.className = "bg-red-800 hover:bg-red-700 px-3 py-2 rounded-lg font-bold text-white text-xs shadow transition flex items-center gap-1.5"; }
         if(addBtn) addBtn.classList.remove('hidden');
         if(delSelectedBtn) addBtn.classList.remove('hidden');
-        if(spyBtn) spyBtn.classList.remove('hidden');
+        if(spyBtn) addBtn.classList.remove('hidden');
     } else {
         if(btn) { btn.innerHTML = "<span>🛡️</span> 관리자 모드"; btn.className = "bg-amber-600 hover:bg-amber-500 px-3 sm:px-4 py-2 rounded-lg font-bold text-white text-xs shadow transition flex items-center gap-1.5"; }
         if(addBtn) addBtn.classList.add('hidden');
