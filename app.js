@@ -35,7 +35,6 @@ function toggleSubMenu(menuId) {
 }
 
 async function loadDataFromFirebase() {
-    // 1. 파이어베이스가 연결되어 있다면 파이어베이스 데이터를 최우선으로 로드
     if (window.firebaseDB) {
         const { db, doc, getDoc } = window.firebaseDB;
         try {
@@ -46,7 +45,6 @@ async function loadDataFromFirebase() {
                 if (data.categoryNames) categoryNames = data.categoryNames;
                 if (data.DICT_CONTENTS) DICT_CONTENTS = data.DICT_CONTENTS;
                 
-                // 로컬 스토리지도 최신 상태로 동기화
                 saveDataToStorage();
                 renderFilterButtons();
                 renderTable();
@@ -57,7 +55,6 @@ async function loadDataFromFirebase() {
         }
     }
 
-    // 2. 파이어베이스 연결 전이거나 실패한 경우에만 로컬 스토리지 사용
     const localMembers = localStorage.getItem('gameMembers');
     const localCategories = localStorage.getItem('categoryNames');
     const localDict = localStorage.getItem('dictContents');
@@ -153,6 +150,7 @@ function toggleUserPreview() {
     }
     toggleModal('adminControlModal');
     renderTable();
+    updateDictAdminUI();
     alert(isUserPreview ? "👀 일반 유저 시점 미리보기로 전환되었습니다." : "🛡️ 관리자 시점으로 복귀했습니다.");
 }
 
@@ -190,13 +188,41 @@ function applyAdminUIState() {
             btn.className = "bg-amber-600 hover:bg-amber-500 px-4 py-2 rounded-lg font-bold text-white text-xs shadow transition flex items-center gap-1.5";
         }
         if(addBtn) addBtn.classList.add('hidden');
-        if(delSelectedBtn) delSelectedBtn.classList.add('hidden');
-        if(delHeader) delHeader.classList.add('hidden');
-        if(selectAllHeader) selectAllHeader.classList.add('hidden');
+        if(delSelectedBtn) addBtn.classList.add('hidden');
+        if(delHeader) addBtn.classList.add('hidden');
+        if(selectAllHeader) addBtn.classList.add('hidden');
         if(uidHeader) uidHeader.classList.add('hidden');
     }
     renderFilterButtons();
     renderTable();
+    updateDictAdminUI();
+}
+
+function updateDictAdminUI() {
+    const editBtn = document.getElementById('editDictBtn');
+    if (!editBtn) return;
+    const effectiveIsAdmin = isAdminMode && !isUserPreview;
+    if (effectiveIsAdmin) {
+        editBtn.classList.remove('hidden');
+    } else {
+        editBtn.classList.add('hidden');
+    }
+}
+
+function openDictEditModal() {
+    const rawText = DICT_CONTENTS[currentDictTargetTab] || "";
+    document.getElementById('dictEditTextarea').value = rawText;
+    toggleModal('dictEditModal');
+}
+
+function saveDictContent() {
+    const updatedText = document.getElementById('dictEditTextarea').value;
+    DICT_CONTENTS[currentDictTargetTab] = updatedText;
+    
+    saveDataToStorage();
+    switchDictTab(currentDictTargetTab);
+    toggleModal('dictEditModal');
+    alert("도감 내용이 성공적으로 수정 및 저장되었습니다!");
 }
 
 function openCategoryModal() {
@@ -526,6 +552,8 @@ function switchDictTab(tabKey) {
         document.getElementById('dictDetailTitle').innerText = "내용 없음";
         document.getElementById('dictDetailDesc').innerText = "등록된 데이터가 없습니다.";
     }
+
+    updateDictAdminUI();
 }
 
 function parseMarkdownByTarget(text) {
