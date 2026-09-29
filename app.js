@@ -188,8 +188,8 @@ function applyAdminUIState() {
             btn.className = "bg-amber-600 hover:bg-amber-500 px-4 py-2 rounded-lg font-bold text-white text-xs shadow transition flex items-center gap-1.5";
         }
         if(addBtn) addBtn.classList.add('hidden');
-        if(delSelectedBtn) delSelectedBtn.classList.add('hidden');
-        if(delHeader) delHeader.classList.add('hidden');
+        if(delSelectedBtn) addBtn.classList.add('hidden');
+        if(delHeader) addBtn.classList.add('hidden');
         if(selectAllHeader) addBtn.classList.add('hidden');
         if(uidHeader) uidHeader.classList.add('hidden');
     }
@@ -368,33 +368,45 @@ function openDeckModal(memberId, deckIndex) {
     toggleModal('deckEditModal');
 }
 
-// ✨ 툴팁 표시 함수 (장수 고유전법 및 공용전법 모두 완벽하게 매칭되도록 개선)
+// ✨ 툴팁 표시 함수 (장수 이름이 아닌 순수 전법 이름과 상세 효과만 깔끔하게 출력)
 function showTacticTooltip(tacticName) {
     if (isDeckEditUnlocked) return; 
     if (!tacticName) return;
     let cleanName = tacticName.replace(/고유전법[:：]/g, '').trim();
 
     let allDictTexts = (DICT_CONTENTS['commonTactic'] || "") + "\n" + (DICT_CONTENTS['generalTactic'] || "");
+    let lines = allDictTexts.split('\n');
     
-    // 장수 고유전법 텍스트에서 전법 이름과 설명을 파싱하여 툴팁용 데이터 구축
-    let parsedTactics = parseMarkdownByTarget(allDictTexts);
-    
-    // 장수 도감 데이터의 경우 제목이 장수 이름이므로, 전법 이름으로도 찾을 수 있도록 별도 분리 파싱
-    let generalText = DICT_CONTENTS['generalTactic'] || "";
-    let genLines = generalText.split('\n');
-    let extraTactics = [];
-    genLines.forEach(line => {
-        if (line.includes('고유 전법:')) {
-            let parts = line.replace('- 고유 전법:', '').trim();
+    let foundTitle = "";
+    let foundDescLines = [];
+    let capturing = false;
+
+    for (let i = 0; i < lines.length; i++) {
+        let l = lines[i].trim();
+        if (l.includes('고유 전법:')) {
+            let parts = l.replace('- 고유 전법:', '').trim();
             let nameMatch = parts.match(/^([^(]+)/);
-            if (nameMatch) {
-                extraTactics.push({ title: nameMatch[1].trim(), desc: parts });
+            let tName = nameMatch ? nameMatch[1].trim() : parts;
+            if (tName.toLowerCase() === cleanName.toLowerCase()) {
+                foundTitle = parts;
+                capturing = true;
+                continue;
+            }
+        } else if (l.startsWith('### ') && l.replace('### ', '').trim().toLowerCase() === cleanName.toLowerCase()) {
+            foundTitle = l.replace('### ', '').trim();
+            capturing = true;
+            continue;
+        }
+
+        if (capturing) {
+            if (l.startsWith('### ') || l.includes('고유 전법:') || l.startsWith('## ')) {
+                break;
+            }
+            if (l && l !== '-') {
+                foundDescLines.push(l);
             }
         }
-    });
-
-    let allCombined = [...parsedTactics, ...extraTactics];
-    let found = allCombined.find(t => t.title.toLowerCase() === cleanName.toLowerCase());
+    }
 
     let tooltipElem = document.getElementById('globalTacticTooltip');
     if (!tooltipElem) {
@@ -404,10 +416,18 @@ function showTacticTooltip(tacticName) {
         document.body.appendChild(tooltipElem);
     }
 
-    if (found) {
-        tooltipElem.innerHTML = `<strong class="gold-text block mb-1">📜 ${found.title}</strong>${found.desc}`;
+    if (foundTitle) {
+        let descHtml = foundDescLines.join('<br>').replace(/\*\*(.*?)\*\*/g, '<strong class="gold-text">$1</strong>');
+        tooltipElem.innerHTML = `<strong class="gold-text block mb-1">📜 ${foundTitle}</strong>${descHtml}`;
     } else {
-        tooltipElem.innerHTML = `<strong class="gold-text block mb-1">📜 ${cleanName}</strong>등록된 전법 효과가 없습니다.`;
+        // 공용 전법 파싱 결과에서 검색
+        let parsedTactics = parseMarkdownByTarget(allDictTexts);
+        let foundCommon = parsedTactics.find(t => t.title.toLowerCase() === cleanName.toLowerCase());
+        if (foundCommon) {
+            tooltipElem.innerHTML = `<strong class="gold-text block mb-1">📜 ${foundCommon.title}</strong>${foundCommon.desc}`;
+        } else {
+            tooltipElem.innerHTML = `<strong class="gold-text block mb-1">📜 ${cleanName}</strong>등록된 전법 효과가 없습니다.`;
+        }
     }
 
     tooltipElem.style.display = 'block';
@@ -550,7 +570,6 @@ function applyDeckUnlockUIState() {
     }
 }
 
-// ✨ 장수 및 공용 전법 자동완성 검색 처리
 function handleDeckInputSearch(slotNum, tacticType) {
     if (!isDeckEditUnlocked) return;
 
@@ -607,7 +626,6 @@ function handleDeckInputSearch(slotNum, tacticType) {
     listContainer.classList.remove('hidden');
 }
 
-// ✨ 장수 선택 시 고유 전법 이름을 정확히 추출하여 1번 전법란에 오직 순수 전법 이름만 입력
 function selectDeckAutocompleteValue(slotNum, tacticType, name) {
     if (tacticType === 'g') {
         document.getElementById(`deckG${slotNum}`).value = name;
@@ -625,7 +643,7 @@ function selectDeckAutocompleteValue(slotNum, tacticType, name) {
                 continue;
             }
             if (foundGeneral) {
-                if (l.startsWith('### ')) break; // 다음 장수로 넘어가면 중단
+                if (l.startsWith('### ')) break;
                 if (l.includes('고유 전법:')) {
                     let parts = l.replace('- 고유 전법:', '').trim();
                     let match = parts.match(/^([^(]+)/);
