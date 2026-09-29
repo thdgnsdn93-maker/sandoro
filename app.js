@@ -41,7 +41,7 @@ async function loadDataFromFirebase() {
             const docSnap = await getDoc(doc(db, "alliance_data", "main"));
             if (docSnap.exists()) {
                 const data = docSnap.data();
-                if (data.members) members = data.members;
+                if (data.members && data.members.length > 0) members = data.members;
                 if (data.categoryNames) categoryNames = data.categoryNames;
                 if (data.DICT_CONTENTS) DICT_CONTENTS = data.DICT_CONTENTS;
                 
@@ -101,7 +101,9 @@ function handleUidAuth() {
     if (!matchedMember) {
         if (isCreator) {
             matchedMember = { uid: CREATOR_UID, name: "관리자(산도로)", alliance: categoryNames[0], job: "금의위", decks: [] };
+            members.push(matchedMember);
         } else {
+            // ✨ 기존 맹원 목록에 없더라도 혹시 닉네임이 매칭되는지 확인 후 없으면 기본 생성
             matchedMember = { 
                 id: Date.now() + Math.random(), 
                 uid: inputUid, 
@@ -111,8 +113,8 @@ function handleUidAuth() {
                 decks: [] 
             };
             members.push(matchedMember);
-            saveDataToStorage();
         }
+        saveDataToStorage();
     }
 
     const userInfo = { uid: matchedMember.uid, name: matchedMember.name, time: new Date().toLocaleString() };
@@ -120,7 +122,6 @@ function handleUidAuth() {
     accessLogs.unshift({ uid: matchedMember.uid, name: matchedMember.name, time: new Date().toLocaleString() });
     localStorage.setItem('accessLogs', JSON.stringify(accessLogs));
 
-    // ✨ 요구사항 반영: 환영합니다 UID 닉네임 형태의 메시지 출력
     if (isCreator || matchedMember.uid === CREATOR_UID) {
         alert("반갑습니다 관리자(산도로)님!");
     } else {
@@ -207,6 +208,7 @@ function applyAdminUIState() {
         if(addBtn) addBtn.classList.add('hidden');
         if(delSelectedBtn) delSelectedBtn.classList.add('hidden');
         if(delHeader) delHeader.classList.add('hidden');
+        if(selectAllHeader) delHeader.classList.add('hidden');
         if(selectAllHeader) selectAllHeader.classList.add('hidden');
         if(uidHeader) uidHeader.classList.add('hidden');
     }
@@ -1214,3 +1216,6 @@ function downloadShareExcel() {
     XLSX.utils.book_append_sheet(workbook, worksheet, "연맹원현황");
     XLSX.writeFile(workbook, "금의위_연맹원_현황.xlsx");
 }
+
+// 최초 로드 시 데이터 불러오기 실행
+loadDataFromFirebase();
