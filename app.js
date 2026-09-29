@@ -103,7 +103,6 @@ function handleUidAuth() {
             matchedMember = { uid: CREATOR_UID, name: "관리자(산도로)", alliance: categoryNames[0], job: "금의위", decks: [] };
             members.push(matchedMember);
         } else {
-            // ✨ 기존 맹원 목록에 없더라도 혹시 닉네임이 매칭되는지 확인 후 없으면 기본 생성
             matchedMember = { 
                 id: Date.now() + Math.random(), 
                 uid: inputUid, 
@@ -208,7 +207,6 @@ function applyAdminUIState() {
         if(addBtn) addBtn.classList.add('hidden');
         if(delSelectedBtn) delSelectedBtn.classList.add('hidden');
         if(delHeader) delHeader.classList.add('hidden');
-        if(selectAllHeader) delHeader.classList.add('hidden');
         if(selectAllHeader) selectAllHeader.classList.add('hidden');
         if(uidHeader) uidHeader.classList.add('hidden');
     }
@@ -1071,7 +1069,7 @@ function handleExcelUpload(event) {
             
             if(jsonRows.length === 0) return alert("엑셀 파일에 데이터가 없습니다.");
 
-            let newParsedMembers = [];
+            let updatedMembers = [];
             let seenUids = new Set();
             let seenNames = new Set();
             let duplicates = [];
@@ -1125,22 +1123,34 @@ function handleExcelUpload(event) {
                     if (matchedCat) alliance = matchedCat;
                 }
 
-                let decks = [];
-                if (rawDecks && rawDecks !== alliance && !categoryNames.includes(rawDecks)) {
-                    decks = [{ formation: '기형진', g1: rawDecks, t1_1: '', t1_2: '', t1_3: '', g2: '', t2_1: '', t2_2: '', t2_3: '', g3: '', t3_1: '', t3_2: '', t3_3: '' }];
-                }
+                // ✨ 기존에 등록된 대원인지 UID 기준으로 확인
+                let existingMember = members.find(m => String(m.uid) === String(uid));
 
-                newParsedMembers.push({ 
-                    id: Date.now() + Math.random(), 
-                    uid, 
-                    name, 
-                    job, 
-                    alliance, 
-                    decks 
-                });
+                if (existingMember) {
+                    // 기존 대원이 있으면 닉네임, 직업, 소속 등 최신화 반영하되 기존에 저장했던 덱(decks) 정보는 그대로 유지!
+                    existingMember.name = name;
+                    existingMember.job = job;
+                    existingMember.alliance = alliance;
+                    updatedMembers.push(existingMember);
+                } else {
+                    // 신규 대원인 경우 새로 추가
+                    let decks = [];
+                    if (rawDecks && rawDecks !== alliance && !categoryNames.includes(rawDecks)) {
+                        decks = [{ formation: '기형진', g1: rawDecks, t1_1: '', t1_2: '', t1_3: '', g2: '', t2_1: '', t2_2: '', t2_3: '', g3: '', t3_1: '', t3_2: '', t3_3: '' }];
+                    }
+                    updatedMembers.push({ 
+                        id: Date.now() + Math.random(), 
+                        uid, 
+                        name, 
+                        job, 
+                        alliance, 
+                        decks 
+                    });
+                }
             });
 
-            members = newParsedMembers;
+            // 엑셀 명단에 빠진 기존 인원은 탈퇴 처리 (제외되거나, 필요 시 '재야' 소속 등으로 변경 가능. 현재는 엑셀에 있는 인원 위주로 최신화)
+            members = updatedMembers;
             saveDataToStorage();
             renderFilterButtons();
             renderTable();
@@ -1154,7 +1164,7 @@ function handleExcelUpload(event) {
                 dupContainer.innerHTML = dupHtml;
                 toggleModal('duplicateAlertModal');
             } else {
-                alert("엑셀 데이터로 완전히 덮어씌워졌습니다!");
+                alert("엑셀 명단이 최신화되었습니다! (기존 대원들의 덱 편성은 안전하게 유지됩니다)");
             }
         } catch (err) {
             alert("엑셀 오류: " + err.message);
