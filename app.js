@@ -11,6 +11,7 @@ let currentFilter = '금의위';
 let searchQuery = '';
 let currentDictTargetTab = 'formation';
 let currentActiveView = 'dashboard';
+let activeDictUploadKey = 'formation';
 
 let favorites = JSON.parse(localStorage.getItem('userFavorites') || '[]');
 let accessLogs = JSON.parse(localStorage.getItem('accessLogs') || '[]');
@@ -19,10 +20,10 @@ let members = [];
 let memberWeekData = JSON.parse(localStorage.getItem('memberWeekData') || '[]');
 
 let DICT_CONTENTS = {
-    formation: `# 1. 진형 및 병종상성 대도감`,
-    synergy: `# 2. 각 장수 인연보너스 대도감`,
-    generalTactic: `# 3. 장수 전법정리 대도감`,
-    commonTactic: `# 4. 공용 전법정리 대도감`
+    formation: `# 1. 진형 및 병종상성 대도감\n\n- 기병은 창병에게 강하고, 창병은 궁병에게 강하며, 궁병은 기병에게 강합니다.\n- 진형에 따라 부대의 공격력, 방어력, 이동 속도 보너스가 다르게 적용됩니다.`,
+    synergy: `# 2. 무장 인연 보너스 대도감\n\n- 오호대장군, 위나라 오자량장 등 역사적 인연 장수들을 함께 배치 시 추가 능력치 버프가 활성화됩니다.`,
+    generalTactic: `# 3. 무장고유전법 대도감\n\n- 고유 전법은 각 장수 고유의 강력한 스킬로 전투의 승패를 좌우합니다.\n- 전법 레벨업을 통해 발동 확률 및 피해량을 극대화할 수 있습니다.`,
+    commonTactic: `# 4. 공용전법 대도감\n\n- 모든 장수에게 계승 및 장착이 가능한 범용 전법 모음입니다.\n- 주력 부대의 역할군에 맞춰 알맞은 공용 전법을 조합하세요.`
 };
 
 function getDisplayCategoryName(cat) {
@@ -59,7 +60,106 @@ function switchPageView(viewName) {
     }
 }
 
-// 일반 연맹 명단 업로드 파싱 로직 (덱 보존 및 닉네임 인식 강화)
+// 📚 정보일람 도감 탭 전환 함수
+function switchDictTab(tabKey) {
+    currentDictTargetTab = tabKey;
+    const tabs = ['formation', 'synergy', 'generalTactic', 'commonTactic'];
+    tabs.forEach(t => {
+        const btn = document.getElementById(`dictTab-${t}`);
+        if (btn) {
+            if (t === tabKey) {
+                btn.className = "px-3 py-1.5 rounded-lg text-xs font-bold bg-amber-600 text-white shadow";
+            } else {
+                btn.className = "px-3 py-1.5 rounded-lg text-xs font-bold bg-main text-muted hover:bg-hover";
+            }
+        }
+    });
+
+    const contentArea = document.getElementById('dictContentArea');
+    if (contentArea) {
+        const text = DICT_CONTENTS[tabKey] || "등록된 내용이 없습니다.";
+        contentArea.innerHTML = `<div class="whitespace-pre-line leading-relaxed">${text}</div>`;
+    }
+}
+
+// ⚔️ 덱 설정 모달 관련 함수
+let currentEditingMemberId = null;
+let currentEditingDeckIdx = 0;
+
+function openDeckModal(memberId, deckIdx) {
+    const member = members.find(m => m.id === memberId);
+    if (!member) return;
+
+    currentEditingMemberId = memberId;
+    currentEditingDeckIdx = deckIdx;
+
+    const titleEl = document.getElementById('deckModalTitle');
+    if (titleEl) titleEl.innerText = `⚔️ ${member.name} - 보유덱 ${deckIdx + 1} 설정`;
+
+    const deck = (member.decks && member.decks[deckIdx]) || { g1: '', g2: '', g3: '' };
+    document.getElementById('deckGen1').value = deck.g1 || '';
+    document.getElementById('deckGen2').value = deck.g2 || '';
+    document.getElementById('deckGen3').value = deck.g3 || '';
+
+    toggleModal('deckModal');
+}
+
+function saveDeckData() {
+    const member = members.find(m => m.id === currentEditingMemberId);
+    if (!member) return;
+
+    if (!member.decks) member.decks = [];
+    
+    member.decks[currentEditingDeckIdx] = {
+        g1: document.getElementById('deckGen1').value.trim(),
+        g2: document.getElementById('deckGen2').value.trim(),
+        g3: document.getElementById('deckGen3').value.trim()
+    };
+
+    saveDataToStorage();
+    renderTable();
+    toggleModal('deckModal');
+}
+
+// ✨ 도감 마크다운 파일 업로드 처리 함수
+function handleDictMarkdownUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const content = e.target.result;
+            if (!content.trim()) {
+                return alert("업로드한 파일에 내용이 없습니다.");
+            }
+
+            DICT_CONTENTS[activeDictUploadKey] = content;
+            saveDataToStorage();
+
+            const dictNames = {
+                formation: '진형 및 병종상성',
+                synergy: '무장 인연 보너스',
+                generalTactic: '무장고유전법',
+                commonTactic: '공용전법'
+            };
+
+            alert(`📚 [${dictNames[activeDictUploadKey]}] 도감 마크다운 업로드 및 반영 완료!`);
+            
+            if (!document.getElementById('dictModal').classList.contains('hidden')) {
+                switchDictTab(currentDictTargetTab);
+            }
+            
+            toggleModal('dataUploadModal');
+        } catch (err) {
+            alert("마크다운 파일 읽기 오류: " + err.message);
+        }
+        event.target.value = '';
+    };
+    reader.readAsText(file, "UTF-8");
+}
+
+// 일반 연맹 명단 업로드 파싱 로직
 function handleAllianceExcelUpload(event) {
     const file = event.target.files[0];
     if (!file) return;
@@ -126,7 +226,7 @@ function handleAllianceExcelUpload(event) {
     reader.readAsArrayBuffer(file);
 }
 
-// 주간활동 리포트 연동 로직 (금의위만 연동, 누락 시 '재야'로 변경, 덱 보존)
+// 주간활동 리포트 연동 로직
 function handleMemberWeekExcelUpload(event) {
     const file = event.target.files[0];
     if (!file) return;
@@ -204,7 +304,7 @@ function handleMemberWeekExcelUpload(event) {
 
             saveDataToStorage();
             localStorage.setItem('memberWeekData', JSON.stringify(memberWeekData));
-            alert(`📊 금의위 주간활동 데이터 ${memberWeekData.length}건 반영 완료! (통계 누락 금의위 인원은 '재야'로 변경됨)`);
+            alert(`📊 금의위 주간활동 데이터 ${memberWeekData.length}건 반영 완료!`);
             
             if (currentActiveView === 'stats') {
                 renderStatsTable();
@@ -291,10 +391,7 @@ function renderStatsTable() {
             const mRank = mhoonSorted.findIndex(item => item.uid === m.uid);
             const cRank = contribSorted.findIndex(item => item.uid === m.uid);
             const sRank = siegeSorted.findIndex(item => item.uid === m.uid);
-            return {
-                ...m,
-                avgRank: (mRank + cRank + sRank) / 3
-            };
+            return { ...m, avgRank: (mRank + cRank + sRank) / 3 };
         });
         evaluated.sort((a, b) => b.avgRank - a.avgRank);
 
@@ -311,7 +408,7 @@ function renderStatsTable() {
     }
 
     if (filtered.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="10" class="p-8 text-center text-muted">등록된 주간활동 데이터가 없습니다. 관리자 제어판에서 엑셀 파일을 업로드해주세요.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="10" class="p-8 text-center text-muted">등록된 주간활동 데이터가 없습니다.</td></tr>`;
         return;
     }
 
@@ -379,7 +476,7 @@ function runSpyCheck() {
     } else {
         let html = '';
         suspicious.forEach(m => {
-            html += `<div class="bg-panel p-2 rounded border border-orange-500/30 flex justify-between"><span class="text-main font-bold">${m.name}</span><span class="text-orange-400">사유: UID 미확인 (${m.uid || '없음'})</span></div>`;
+            html += `<div class="bg-panel p-2 rounded border border-orange-500/30 flex justify-between"><span class="text-main font-bold">${m.name}</span><span class="text-orange-400">사유: UID 미확인</span></div>`;
         });
         suspiciousBox.innerHTML = html;
     }
@@ -508,7 +605,6 @@ function handleUidAuth() {
     loadDataFromFirebase();
 }
 
-// 🛡 [수정] 나가기(로그아웃) 시 브라우저를 깔끔하게 새로고침하여 로그인 오버레이창이 확실하게 뜨도록 처리
 function handleLogout() {
     if (confirm("대시보드에서 나가시겠습니까?")) {
         localStorage.removeItem('loggedUser');
@@ -522,9 +618,7 @@ function isCurrentLoggedUserCreator() {
     try {
         const loggedUser = JSON.parse(loggedUserStr);
         return String(loggedUser.uid) === CREATOR_UID;
-    } catch (e) {
-        return false;
-    }
+    } catch (e) { return false; }
 }
 
 function isCurrentLoggedUserAdmin() {
@@ -535,9 +629,7 @@ function isCurrentLoggedUserAdmin() {
         if (String(loggedUser.uid) === CREATOR_UID) return true;
         const member = members.find(m => String(m.uid) === String(loggedUser.uid));
         return member && (member.isAdminRole === true || String(member.uid) === CREATOR_UID);
-    } catch (e) {
-        return false;
-    }
+    } catch (e) { return false; }
 }
 
 function isCurrentLoggedUserGeumuiwi() {
@@ -548,9 +640,7 @@ function isCurrentLoggedUserGeumuiwi() {
         if (String(loggedUser.uid) === CREATOR_UID) return true;
         const member = members.find(m => String(m.uid) === String(loggedUser.uid));
         return member && member.alliance === '금의위';
-    } catch (e) {
-        return false;
-    }
+    } catch (e) { return false; }
 }
 
 function toggleAdminMode() {

@@ -37,14 +37,14 @@
         </div>
     </div>
 
-    <!-- 🛡 관리자 제어판 모달 (업로드 센터 및 카테고리 편집 버튼 포함) -->
+    <!-- 🛡 관리자 제어판 모달 -->
     <div id="adminControlModal" class="hidden fixed inset-0 modal-bg flex items-center justify-center z-50 p-4">
         <div class="bg-panel border-2 gold-border rounded-xl shadow-2xl w-full max-w-md p-6 relative">
             <button onclick="toggleModal('adminControlModal')" class="absolute top-4 right-4 p-2 rounded-lg border border-theme bg-panel hover:bg-hover text-muted text-xl font-bold transition">&times;</button>
             <h2 class="text-2xl font-bold gold-text mb-4 flex items-center gap-2">🛡 관리자 제어판</h2>
             <div class="space-y-3">
                 <button onclick="openCategoryModal()" class="w-full bg-blue-700 hover:bg-blue-600 text-white py-3 rounded-lg text-sm font-bold shadow transition">📁 카테고리 편집</button>
-                <button onclick="openDataUploadModal()" class="w-full bg-emerald-700 hover:bg-emerald-600 text-white py-3 rounded-lg text-sm font-bold shadow transition">📤 데이터 업로드 센터 (연맹 명단 / 주간 통계)</button>
+                <button onclick="openDataUploadModal()" class="w-full bg-emerald-700 hover:bg-emerald-600 text-white py-3 rounded-lg text-sm font-bold shadow transition">📤 데이터 업로드 센터 (연맹 명단 / 주간 통계 / 도감)</button>
                 <button onclick="downloadShareExcel()" class="w-full bg-teal-700 hover:bg-teal-600 text-white py-3 rounded-lg text-sm font-bold shadow transition">📥 엑셀 다운로드 (백업/공유)</button>
                 <button onclick="openAdminLogModal()" class="w-full bg-gray-700 hover:bg-gray-600 text-white py-3 rounded-lg text-sm font-bold shadow transition">📋 접속자 로그 확인</button>
                 <button onclick="toggleUserPreview()" id="previewToggleBtn" class="w-full bg-amber-700 hover:bg-amber-600 text-white py-3 rounded-lg text-sm font-bold shadow transition">👀 일반 유저 시점 미리보기</button>
@@ -93,7 +93,7 @@
         </div>
     </div>
 
-    <!-- 📤 데이터 업로드 센터 모달 (동적 연맹별 업로드 버튼 영역 포함) -->
+    <!-- 📤 데이터 업로드 센터 모달 (도감 마크다운 업로드 버튼 추가됨) -->
     <div id="dataUploadModal" class="hidden fixed inset-0 modal-bg flex items-center justify-center z-50 p-4">
         <div class="bg-panel border-2 gold-border rounded-xl shadow-2xl w-full max-w-md p-6 relative max-h-[90vh] overflow-y-auto">
             <button onclick="openAdminControlFromSub('dataUploadModal')" class="absolute top-4 right-4 p-2 rounded-lg border border-theme bg-panel text-xl font-bold">&times;</button>
@@ -105,7 +105,16 @@
                 </div>
                 <div class="bg-main p-4 rounded-xl border border-theme space-y-2.5">
                     <p class="text-xs font-bold gold-text">📊 금의위 맹원 주간활동 리포트 (엑셀)</p>
-                    <button onclick="document.getElementById('memberWeekExcelInput').click();" class="w-full bg-teal-700 text-white py-2 rounded text-xs font-bold">📊 주간활동 데이터 업로드</button>
+                    <button onclick="document.getElementById('memberWeekExcelInput').click();" class="w-full bg-teal-700 hover:bg-teal-600 text-white py-2 rounded text-xs font-bold transition">📊 주간활동 데이터 업로드</button>
+                </div>
+                <div class="bg-main p-4 rounded-xl border border-theme space-y-2.5">
+                    <p class="text-xs font-bold gold-text">📚 도감 마크다운(.md / .txt) 업로드</p>
+                    <div class="grid grid-cols-2 gap-2 pt-1">
+                        <button onclick="activeDictUploadKey='formation'; document.getElementById('dictMarkdownInput').click();" class="bg-indigo-700 hover:bg-indigo-600 text-white py-2 px-2 rounded text-xs font-bold transition">⚔️ 진형 및 상성</button>
+                        <button onclick="activeDictUploadKey='synergy'; document.getElementById('dictMarkdownInput').click();" class="bg-indigo-700 hover:bg-indigo-600 text-white py-2 px-2 rounded text-xs font-bold transition">🤝 무장 인연</button>
+                        <button onclick="activeDictUploadKey='generalTactic'; document.getElementById('dictMarkdownInput').click();" class="bg-indigo-700 hover:bg-indigo-600 text-white py-2 px-2 rounded text-xs font-bold transition">🛡️ 무장고유전법</button>
+                        <button onclick="activeDictUploadKey='commonTactic'; document.getElementById('dictMarkdownInput').click();" class="bg-indigo-700 hover:bg-indigo-600 text-white py-2 px-2 rounded text-xs font-bold transition">📜 공용전법</button>
+                    </div>
                 </div>
             </div>
             <div class="mt-6 flex justify-end">
@@ -114,9 +123,10 @@
         </div>
     </div>
 
-    <!-- 숨겨진 엑셀 업로드 파일 인풋들 -->
+    <!-- 숨겨진 파일 업로드 인풋들 -->
     <input type="file" id="allianceExcelInput" accept=".xlsx, .xls, .csv" class="hidden" onchange="handleAllianceExcelUpload(event)">
     <input type="file" id="memberWeekExcelInput" accept=".xlsx, .xls, .csv" class="hidden" onchange="handleMemberWeekExcelUpload(event)">
+    <input type="file" id="dictMarkdownInput" accept=".md, .txt" class="hidden" onchange="handleDictMarkdownUpload(event)">
 
     <!-- 📋 접속자 로그 모달 -->
     <div id="adminLogModal" class="hidden fixed inset-0 modal-bg flex items-center justify-center z-50 p-4">
@@ -161,11 +171,11 @@
         <div class="bg-panel border-2 gold-border rounded-xl shadow-2xl w-full max-w-3xl p-6 relative max-h-[90vh] flex flex-col">
             <button onclick="toggleModal('dictModal')" class="absolute top-4 right-4 p-2 rounded-lg border border-theme bg-panel text-xl font-bold">&times;</button>
             <h2 class="text-xl font-bold gold-text mb-4">📚 정보일람 대도감</h2>
-            <div class="flex gap-2 border-b border-theme pb-2 mb-4">
+            <div class="flex flex-wrap gap-2 border-b border-theme pb-2 mb-4">
                 <button onclick="switchDictTab('formation')" id="dictTab-formation" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-amber-600 text-white">1. 진형 및 상성</button>
-                <button onclick="switchDictTab('synergy')" id="dictTab-synergy" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-main text-muted">2. 장수 인연</button>
-                <button onclick="switchDictTab('generalTactic')" id="dictTab-generalTactic" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-main text-muted">3. 장수 전법</button>
-                <button onclick="switchDictTab('commonTactic')" id="dictTab-commonTactic" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-main text-muted">4. 공용 전법</button>
+                <button onclick="switchDictTab('synergy')" id="dictTab-synergy" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-main text-muted">2. 무장 인연</button>
+                <button onclick="switchDictTab('generalTactic')" id="dictTab-generalTactic" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-main text-muted">3. 무장고유전법</button>
+                <button onclick="switchDictTab('commonTactic')" id="dictTab-commonTactic" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-main text-muted">4. 공용전법</button>
             </div>
             <div id="dictContentArea" class="flex-1 overflow-y-auto bg-main p-4 rounded-xl border border-theme text-xs sm:text-sm text-main space-y-2">
                 <!-- 도감 내용 렌더링 영역 -->
@@ -208,9 +218,9 @@
                     <div id="infoSubMenu" class="space-y-1 pl-2">
                         <nav class="space-y-1">
                             <a href="#" onclick="openDictTabWithScroll('formation'); toggleMobileDrawer(); return false;" class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium text-muted hover:bg-hover hover:text-main transition"><span>⚔</span> 1. 진형 및 상성</a>
-                            <a href="#" onclick="openDictTabWithScroll('synergy'); toggleMobileDrawer(); return false;" class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium text-muted hover:bg-hover hover:text-main transition"><span>🤝</span> 2. 장수 인연</a>
-                            <a href="#" onclick="openDictTabWithScroll('generalTactic'); toggleMobileDrawer(); return false;" class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium text-muted hover:bg-hover hover:text-main transition"><span>🛡</span> 3. 장수 전법</a>
-                            <a href="#" onclick="openDictTabWithScroll('commonTactic'); toggleMobileDrawer(); return false;" class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium text-muted hover:bg-hover hover:text-main transition"><span>📜</span> 4. 공용 전법</a>
+                            <a href="#" onclick="openDictTabWithScroll('synergy'); toggleMobileDrawer(); return false;" class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium text-muted hover:bg-hover hover:text-main transition"><span>🤝</span> 2. 무장 인연</a>
+                            <a href="#" onclick="openDictTabWithScroll('generalTactic'); toggleMobileDrawer(); return false;" class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium text-muted hover:bg-hover hover:text-main transition"><span>🛡</span> 3. 무장고유전법</a>
+                            <a href="#" onclick="openDictTabWithScroll('commonTactic'); toggleMobileDrawer(); return false;" class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium text-muted hover:bg-hover hover:text-main transition"><span>📜</span> 4. 공용전법</a>
                         </nav>
                     </div>
                 </div>
@@ -239,7 +249,6 @@
                 <button onclick="addNewMember()" id="addMemberBtn" class="hidden bg-emerald-700 hover:bg-emerald-600 px-3 py-2 rounded-lg font-bold text-white text-xs shadow transition">+ 인원 추가</button>
                 <button onclick="deleteSelectedMembers()" id="delSelectedBtn" class="hidden bg-red-800 hover:bg-red-700 px-3 py-2 rounded-lg font-bold text-white text-xs shadow transition">🗑️ 선택 삭제</button>
                 
-                <!-- 🕵️ 스파이 확인 버튼 (관리자 전용) -->
                 <button onclick="runSpyCheck()" id="spyCheckBtn" class="hidden bg-purple-700 hover:bg-purple-600 px-3 py-2 rounded-lg font-bold text-white text-xs shadow transition flex items-center gap-1.5 border border-purple-500/50"><span>🕵️</span> 스파이/중복 검사</button>
 
                 <button onclick="toggleAdminMode()" id="editModeBtn" class="bg-amber-600 hover:bg-amber-500 px-3 sm:px-4 py-2 rounded-lg font-bold text-white text-xs shadow transition flex items-center gap-1.5"><span>🛡</span> 관리자 모드</button>
