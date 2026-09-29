@@ -188,9 +188,9 @@ function applyAdminUIState() {
             btn.className = "bg-amber-600 hover:bg-amber-500 px-4 py-2 rounded-lg font-bold text-white text-xs shadow transition flex items-center gap-1.5";
         }
         if(addBtn) addBtn.classList.add('hidden');
-        if(delSelectedBtn) addBtn.classList.add('hidden');
-        if(delHeader) addBtn.classList.add('hidden');
-        if(selectAllHeader) addBtn.classList.add('hidden');
+        if(delSelectedBtn) delSelectedBtn.classList.add('hidden');
+        if(delHeader) delHeader.classList.add('hidden');
+        if(selectAllHeader) selectAllHeader.classList.add('hidden');
         if(uidHeader) uidHeader.classList.add('hidden');
     }
     renderFilterButtons();
@@ -368,7 +368,7 @@ function openDeckModal(memberId, deckIndex) {
     toggleModal('deckEditModal');
 }
 
-// ✨ 툴팁 표시 함수 (장수 이름이 아닌 순수 전법 이름과 상세 효과만 깔끔하게 출력)
+// ✨ 툴팁 표시 함수
 function showTacticTooltip(tacticName) {
     if (isDeckEditUnlocked) return; 
     if (!tacticName) return;
@@ -384,7 +384,7 @@ function showTacticTooltip(tacticName) {
     for (let i = 0; i < lines.length; i++) {
         let l = lines[i].trim();
         if (l.includes('고유 전법:')) {
-            let parts = l.replace('- 고유 전법:', '').trim();
+            let parts = l.replace(/-\s*고유\s*전법[:：]?/, '').trim();
             let nameMatch = parts.match(/^([^(]+)/);
             let tName = nameMatch ? nameMatch[1].trim() : parts;
             if (tName.toLowerCase() === cleanName.toLowerCase()) {
@@ -420,7 +420,6 @@ function showTacticTooltip(tacticName) {
         let descHtml = foundDescLines.join('<br>').replace(/\*\*(.*?)\*\*/g, '<strong class="gold-text">$1</strong>');
         tooltipElem.innerHTML = `<strong class="gold-text block mb-1">📜 ${foundTitle}</strong>${descHtml}`;
     } else {
-        // 공용 전법 파싱 결과에서 검색
         let parsedTactics = parseMarkdownByTarget(allDictTexts);
         let foundCommon = parsedTactics.find(t => t.title.toLowerCase() === cleanName.toLowerCase());
         if (foundCommon) {
@@ -626,6 +625,7 @@ function handleDeckInputSearch(slotNum, tacticType) {
     listContainer.classList.remove('hidden');
 }
 
+// ✨ 장수 선택 시 고유 전법 이름을 정확하게 추출하도록 수정된 함수
 function selectDeckAutocompleteValue(slotNum, tacticType, name) {
     if (tacticType === 'g') {
         document.getElementById(`deckG${slotNum}`).value = name;
@@ -644,8 +644,9 @@ function selectDeckAutocompleteValue(slotNum, tacticType, name) {
             }
             if (foundGeneral) {
                 if (l.startsWith('### ')) break;
-                if (l.includes('고유 전법:')) {
-                    let parts = l.replace('- 고유 전법:', '').trim();
+                // '고유 전법:' 또는 '고유전법:' 패턴 유연하게 탐색
+                if (l.includes('고유') && l.includes('전법')) {
+                    let parts = l.replace(/-\s*고유\s*전법[:：]?/, '').trim();
                     let match = parts.match(/^([^(]+)/);
                     if (match && match[1]) {
                         uniqueTactic = match[1].trim();
