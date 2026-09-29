@@ -72,7 +72,6 @@ function handleAllianceExcelUpload(event) {
             const allianceToAssign = activeUploadAlliance || categoryNames[0];
 
             jsonRows.forEach((row, idx) => {
-                // 키값의 공백 및 대소문자 차이를 흡수하여 정확한 데이터 추출
                 let rawRow = {};
                 Object.keys(row).forEach(k => {
                     rawRow[k.trim().toLowerCase().replace(/\s+/g, '')] = String(row[k]).trim();
@@ -740,9 +739,9 @@ function renderTable() {
         const absoluteIndex = (pageSizeVal !== 'all') ? ((currentPage - 1) * parseInt(pageSizeVal, 10)) + index + 1 : index + 1;
         html += `<td class="p-3 sm:p-4 border-r border-theme text-center font-bold text-muted">${absoluteIndex}</td>`;
         
-        // 3. UID 열
+        // 3. UID 열 (관리자/권한자여도 수정 불가능한 읽기 전용 텍스트로 잠금 처리)
         if (showUidCol) {
-            html += `<td class="p-3 sm:p-4 border-r border-theme font-mono"><input type="text" value="${member.uid || ''}" onchange="updateMemberField(${member.id}, 'uid', this.value)" class="bg-main border border-theme px-2 py-1 rounded text-xs w-28 text-main"></td>`;
+            html += `<td class="p-3 sm:p-4 border-r border-theme font-mono text-muted select-all">${member.uid || '-'}</td>`;
         }
         
         // 4. 닉네임 열 (제작자 로그인 시 닉네임 옆에 관리자 권한 부여 체크박스 표시)
