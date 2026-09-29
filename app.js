@@ -36,7 +36,7 @@ const COMMON_TACTICS_LIST = [
     "태평요술 (효과: 책략 피해 극대화 및 발동 확률 증가)"
 ];
 
-// 기본 도감 템플릿 (저장된 데이터가 없을 경우 사용)
+// 기본 도감 템플릿
 const DEFAULT_DICT_DATA = {
     formation: [
         { name: "일자진", type: "밸런스 분산형 / 전열 받는 피해 8% 감소", effect: "어그로가 3곳으로 균등 분산되는 기본 밸런스진" },
@@ -69,7 +69,6 @@ const DEFAULT_DICT_DATA = {
     ]
 };
 
-// 저장소 데이터 로드 (없을 경우 DEFAULT_DICT_DATA 사용)
 let DICT_DETAIL_DATA = JSON.parse(localStorage.getItem('dictDetailData')) || DEFAULT_DICT_DATA;
 
 function getTacticTooltip(skillName) {
@@ -83,7 +82,6 @@ function getTacticTooltip(skillName) {
     return `전법명: ${skillName}`;
 }
 
-// 진형 보너스 및 장수 인연 보너스를 하단 안내 칸에 실시간 동적 표시
 function updateFormationAndSynergyBonusText() {
     const formationSelect = document.getElementById('deckFormationSelect');
     const selectedFormationName = formationSelect ? formationSelect.value : '일자진';
@@ -209,6 +207,7 @@ function showDictDetail(item) {
     `;
 }
 
+// 📌 마크다운 도감 파일 완벽 정밀 파서 (항목별 1:1 분리)
 function handleDictMarkdownUpload(event) {
     const file = event.target.files[0];
     if (!file) return;
@@ -226,28 +225,42 @@ function handleDictMarkdownUpload(event) {
             lines.forEach(line => {
                 let trimmed = line.trim();
                 if (!trimmed) return;
-                if (trimmed.startsWith('#') || trimmed.startsWith('>') || trimmed.startsWith('---')) return;
 
-                if (trimmed.startsWith('###') || (trimmed.startsWith('- **') && !currentItem)) {
-                    if (currentItem && currentItem.name) parsedItems.push(currentItem);
-                    let cleanName = trimmed.replace(/^[#\-*]+\s*/, '').replace(/\*\*/g, '').split(':')[0].split('(')[0].trim();
-                    currentItem = { name: cleanName, type: "상세 정보", effect: "" };
+                // 새로운 항목 시작 조건 (### 헤더, 번호 매기기, 또는 볼드 처리된 항목명)
+                if (trimmed.startsWith('###') || trimmed.match(/^[0-9]+\.\s+/) || trimmed.startsWith('- **') || trimmed.startsWith('**')) {
+                    if (currentItem && currentItem.name) {
+                        parsedItems.push(currentItem);
+                    }
+                    let cleanName = trimmed
+                        .replace(/^[#\-*0-9.\s]+/, '')
+                        .replace(/\*\*/g, '')
+                        .split(':')[0]
+                        .split('(')[0]
+                        .trim();
+
+                    currentItem = { name: cleanName, type: "상세 특성 정보", effect: "" };
                 } else if (currentItem) {
-                    if (trimmed.includes('특성') || trimmed.includes('발동률') || trimmed.includes('분류') || trimmed.includes('유형')) {
-                        if (currentItem.type === "상세 정보") currentItem.type = trimmed.replace(/^[#\-*]+\s*/, '').replace(/\*\*/g, '').trim();
-                        else currentItem.effect += (currentItem.effect ? " " : "") + trimmed.replace(/^[#\-*]+\s*/, '').replace(/\*\*/g, '').trim();
+                    // 특성/유형과 상세 효과 분리 감지
+                    if (trimmed.includes('특성') || trimmed.includes('발동률') || trimmed.includes('분류') || trimmed.includes('유형') || trimmed.includes('효과')) {
+                        if (currentItem.type === "상세 특성 정보" && !trimmed.startsWith('상세')) {
+                            currentItem.type = trimmed.replace(/^[#\-*]+\s*/, '').replace(/\*\*/g, '').trim();
+                        } else {
+                            currentItem.effect += (currentItem.effect ? " " : "") + trimmed.replace(/^[#\-*]+\s*/, '').replace(/\*\*/g, '').trim();
+                        }
                     } else {
                         currentItem.effect += (currentItem.effect ? " " : "") + trimmed.replace(/^[#\-*]+\s*/, '').replace(/\*\*/g, '').trim();
                     }
                 }
             });
 
-            if (currentItem && currentItem.name) parsedItems.push(currentItem);
+            if (currentItem && currentItem.name) {
+                parsedItems.push(currentItem);
+            }
 
             if (parsedItems.length > 0) {
                 DICT_DETAIL_DATA[activeDictUploadKey] = parsedItems.map(item => ({
                     name: item.name,
-                    type: item.type || "특성 / 발동률",
+                    type: item.type || "특성 / 발동률 정보",
                     effect: item.effect || "상세 효과 내용"
                 }));
 
@@ -255,7 +268,7 @@ function handleDictMarkdownUpload(event) {
                 if (document.getElementById('dictModal') && !document.getElementById('dictModal').classList.contains('hidden')) {
                     switchDictTab(activeDictUploadKey);
                 }
-                alert(`📚 총 ${parsedItems.length}개 항목이 도감에 정확히 반영되었습니다!`);
+                alert(`📚 총 ${parsedItems.length}개 항목이 개수별로 정확히 분리되어 도감에 반영되었습니다!`);
             } else {
                 alert("⚠️ 마크다운 형식을 올바르게 읽지 못했습니다.");
             }
