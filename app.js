@@ -16,7 +16,7 @@ const AVAILABLE_JOBS = ["진군", "신행", "기좌", "병참", "천공", "청�
 let members = [];
 
 let DICT_CONTENTS = {
-    formation: `# 1. 진형 및 병종상성 대도감\n## 진형\n### 기형진\n- **특성**: 기병 피해 증가 및 방어 상승\n### 일자진\n- **특성**: 전열 피해 8% 감소`,
+    formation: `# 1. 진형 및 병종상성 대도감\n## 진형\n### 기형진\n- **특성**: 기병 피해 증가 및 방어 상승\n### 일자진\n- **특성**: 전열 피해 8% 감소\n### 학익진\n- **특성**: 원거리 및 책략 피해 상승\n### 어린진\n- **특성**: 돌격 및 선봉 전투력 극대화\n### 팔괘진\n- **특성**: 진형 전체 책략 방어 및 회복`,
     synergy: `# 2. 각 장수 인연보너스 대도감\n## 하북 정장\n### 구성원\n- **대상**: 안량, 문추, 장합`,
     generalTactic: `# 3. 장수 전법정리 대도감\n## 오나라\n### 조운\n- **고유전법**: 칠진칠출\n### 유비\n- **고유전법**: 백성과 함께\n### 초선\n- **고유전법**: 폐월`,
     commonTactic: `# 4. 공용 전법정리 대도감\n## 지휘 전법\n### 격려\n- **효과**: 우군 무력 증가\n### 허점 공략\n- **효과**: 방어 감소\n### 청낭 치료\n- **효과**: 회복`
@@ -188,9 +188,9 @@ function applyAdminUIState() {
             btn.className = "bg-amber-600 hover:bg-amber-500 px-4 py-2 rounded-lg font-bold text-white text-xs shadow transition flex items-center gap-1.5";
         }
         if(addBtn) addBtn.classList.add('hidden');
-        if(delSelectedBtn) addBtn.classList.add('hidden');
-        if(delHeader) addBtn.classList.add('hidden');
-        if(selectAllHeader) addBtn.classList.add('hidden');
+        if(delSelectedBtn) delSelectedBtn.classList.add('hidden');
+        if(delHeader) delHeader.classList.add('hidden');
+        if(selectAllHeader) selectAllHeader.classList.add('hidden');
         if(uidHeader) uidHeader.classList.add('hidden');
     }
     renderFilterButtons();
@@ -363,8 +363,55 @@ function openDeckModal(memberId, deckIndex) {
 
     isDeckEditUnlocked = false;
     applyDeckUnlockUIState();
+    updateDeckFormationBonusInfo();
 
     toggleModal('deckEditModal');
+}
+
+// ✨ 진형 효과 및 인연 보너스 실시간 연동 계산 함수
+function updateDeckFormationBonusInfo() {
+    const selectedFormation = document.getElementById('editDeckFormation').value;
+    const formationTextElem = document.getElementById('deckFormationBonusText');
+    const synergyTextElem = document.getElementById('deckSynergyBonusText');
+
+    // 1. 진형 효과 도감에서 추출
+    const formationMarkdown = DICT_CONTENTS['formation'] || "";
+    let parsedFormations = parseMarkdownByTarget(formationMarkdown);
+    let foundForm = parsedFormations.find(f => f.title === selectedFormation);
+    if (foundForm) {
+        formationTextElem.innerHTML = foundForm.desc;
+    } else {
+        formationTextElem.innerText = `${selectedFormation} 효과 정보가 도감에 등록되어 있지 않습니다.`;
+    }
+
+    // 2. 장수 인연 보너스 매칭 확인 (장수 1, 2, 3 이름 수집)
+    const g1 = document.getElementById('deckG1').value.trim();
+    const g2 = document.getElementById('deckG2').value.trim();
+    const g3 = document.getElementById('deckG3').value.trim();
+    const activeGenerals = [g1, g2, g3].filter(name => name !== '');
+
+    const synergyMarkdown = DICT_CONTENTS['synergy'] || "";
+    let parsedSynergies = parseMarkdownByTarget(synergyMarkdown);
+    let activeSynergies = [];
+
+    parsedSynergies.forEach(syn => {
+        // 인연 대상 조건이 포함되어 있는지 단순 매칭 검사
+        let matchedCount = 0;
+        activeGenerals.forEach(gen => {
+            if (syn.desc.includes(gen) || syn.title.includes(gen)) {
+                matchedCount++;
+            }
+        });
+        if (matchedCount >= 2) { // 2명 이상 포함시 활성화로 간주
+            activeSynergies.push(`⭐ ${syn.title} (${syn.desc.replace(/<[^>]*>?/gm, '')})`);
+        }
+    });
+
+    if (activeSynergies.length > 0) {
+        synergyTextElem.innerHTML = activeSynergies.join(' | ');
+    } else {
+        synergyTextElem.innerText = activeGenerals.length > 0 ? "현재 조합에서 활성화된 인연 보너스가 없습니다." : "장수를 선택하면 인연 보너스가 자동으로 계산됩니다.";
+    }
 }
 
 function toggleDeckEditUnlock() {
@@ -473,6 +520,8 @@ function selectDeckAutocompleteValue(slotNum, type, name) {
         document.getElementById(`deckT${slotNum}_2` || `deckT${slotNum}_3`).value = name;
         document.getElementById(`autocomplete-list-${type}${slotNum}`).classList.add('hidden');
     }
+
+    updateDeckFormationBonusInfo(); // 장수 변경 시 인연 보너스 재계산
 }
 
 function saveDeckData() {
