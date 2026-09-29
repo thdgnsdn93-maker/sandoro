@@ -11,6 +11,9 @@ let searchQuery = '';
 let uploadedFiles = [];
 let currentDictTargetTab = 'formation';
 
+// ✨ 즐겨찾기 관리 (로컬스토리지 연동)
+let favorites = JSON.parse(localStorage.getItem('userFavorites') || '[]');
+
 let accessLogs = JSON.parse(localStorage.getItem('accessLogs') || '[]');
 const AVAILABLE_JOBS = ["진군", "신행", "기좌", "병참", "천공", "청낭", "금의위"];
 let members = [];
@@ -45,7 +48,7 @@ async function loadDataFromFirebase() {
                 if (data.categoryNames) categoryNames = data.categoryNames;
                 if (data.DICT_CONTENTS) DICT_CONTENTS = data.DICT_CONTENTS;
                 
-                if (!categoryNames.includes(currentFilter)) {
+                if (currentFilter !== '즐겨찾기' && !categoryNames.includes(currentFilter)) {
                     currentFilter = categoryNames[0] || '금의위';
                 }
 
@@ -67,7 +70,7 @@ async function loadDataFromFirebase() {
     if (localCategories) categoryNames = JSON.parse(localCategories);
     if (localDict) DICT_CONTENTS = JSON.parse(localDict);
 
-    if (!categoryNames.includes(currentFilter)) {
+    if (currentFilter !== '즐겨찾기' && !categoryNames.includes(currentFilter)) {
         currentFilter = categoryNames[0] || '금의위';
     }
 
@@ -79,6 +82,7 @@ async function saveDataToStorage() {
     localStorage.setItem('gameMembers', JSON.stringify(members));
     localStorage.setItem('categoryNames', JSON.stringify(categoryNames));
     localStorage.setItem('dictContents', JSON.stringify(DICT_CONTENTS));
+    localStorage.setItem('userFavorites', JSON.stringify(favorites));
 
     if (window.firebaseDB) {
         const { db, doc, setDoc } = window.firebaseDB;
@@ -353,7 +357,7 @@ function addCategoryInput() {
 function saveCategorySettings() {
     const inputs = document.querySelectorAll('.cat-input');
     categoryNames = Array.from(inputs).map(input => input.value.trim()).filter(val => val !== '');
-    if (!categoryNames.includes(currentFilter)) {
+    if (currentFilter !== '즐겨찾기' && !categoryNames.includes(currentFilter)) {
         currentFilter = categoryNames[0] || '금의위';
     }
     
@@ -966,6 +970,19 @@ function filterDictList() {
     }
 }
 
+// ✨ 즐겨찾기 토글 함수
+function toggleFavorite(memberId) {
+    const idNum = Number(memberId);
+    const index = favorites.indexOf(idNum);
+    if (index > -1) {
+        favorites.splice(index, 1);
+    } else {
+        favorites.push(idNum);
+    }
+    saveDataToStorage();
+    renderTable();
+}
+
 function renderFilterButtons() {
     const container = document.getElementById('filter-buttons');
     const sidebarContainer = document.getElementById('sidebar-filter-buttons');
@@ -982,6 +999,11 @@ function renderFilterButtons() {
         sidebarHtml += `<a href="#" onclick="filterTable('${cat}'); return false;" class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium ${sidebarClass} transition"><span>${index + 1}.</span> ${cat}</a>`;
     });
     
+    // ✨ 카테고리 있는 줄 맨 오른쪽에 즐겨찾기 탭 버튼 추가
+    const isFavSelected = currentFilter === '즐겨찾기';
+    const favBtnClass = isFavSelected ? 'bg-yellow-600 text-white shadow' : 'bg-panel hover:bg-hover border border-theme text-yellow-400';
+    html += `<button onclick="filterTable('즐겨찾기')" class="px-4 py-2 rounded-lg text-xs font-bold transition ${favBtnClass} flex items-center gap-1 ml-auto"><span>⭐</span> 즐겨찾기 (${favorites.length})</button>`;
+
     if(container) container.innerHTML = html;
     if(sidebarContainer) sidebarContainer.innerHTML = sidebarHtml;
 }
@@ -1046,7 +1068,12 @@ function renderTable() {
     const showUidCol = effectiveIsAdmin || hasAdminRole;
 
     let filtered = members.filter(member => {
-        const matchAlliance = (member.alliance === currentFilter);
+        let matchAlliance = false;
+        if (currentFilter === '즐겨찾기') {
+            matchAlliance = favorites.includes(member.id);
+        } else {
+            matchAlliance = (member.alliance === currentFilter);
+        }
         const matchSearch = member.name.toLowerCase().includes(searchQuery);
         return matchAlliance && matchSearch;
     });
@@ -1122,14 +1149,21 @@ function renderTable() {
         const absoluteIndex = (pageSizeVal !== 'all') ? ((currentPage - 1) * parseInt(pageSizeVal, 10)) + index + 1 : index + 1;
         
         let indexCellContent = '';
-        // ✨ 관리자 권한(hasAdminRole)이 있거나 관리자 모드일 때 인덱스 수정이 가능하도록 동기화
         if (effectiveIsAdmin || hasAdminRole) {
             indexCellContent = `<input type="number" value="${absoluteIndex}" onchange="updateMemberCustomIndex(${member.id}, this.value)" class="w-12 text-center text-xs font-bold bg-main border border-theme py-1 rounded">`;
         } else {
             indexCellContent = `<span class="text-muted font-bold">${absoluteIndex}</span>`;
         }
 
-        html += `<td class="p-4 border-r border-theme text-center">${indexCellContent}</td>`;
+        // ✨ No. 열 앞에 별모양 체크박스(즐겨찾기 토글) 추가
+        const isFav = favorites.includes(member.id);
+        const starCheckboxHtml = `
+            <button type="button" onclick="toggleFavorite(${member.id})" class="text-base focus:outline-none transition transform hover:scale-125 mr-2" title="${isFav ? '즐겨찾기 해제' : '즐겨찾기 등록'}">
+                ${isFav ? '⭐' : '☆'}
+            </button>
+        `;
+
+        html += `<td class="p-4 border-r border-theme text-center flex items-center justify-center gap-1">${starCheckboxHtml}${indexCellContent}</td>`;
         
         if (showUidCol) {
             html += `<td class="p-4 border-r border-theme text-muted font-mono select-all">${member.uid}</td>`;
@@ -1153,7 +1187,6 @@ function renderTable() {
             nameCellContent = member.name;
         }
 
-        // ✨ 관리자 권한이 있는 경우 직업 및 소속도 셀렉트박스로 직접 수정 가능하게 동기화
         let jobCellContent = '';
         if (effectiveIsAdmin || hasAdminRole) {
             jobCellContent = `<select onchange="updateMemberField(${member.id}, 'job', this.value)" class="text-xs bg-main border border-theme p-1 rounded">${jobOptions}</select>`;
