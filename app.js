@@ -108,7 +108,7 @@ function handleUidAuth() {
 
     if (!matchedMember) {
         if (isCreator) {
-            matchedMember = { uid: CREATOR_UID, name: "관리자(산도로)", alliance: categoryNames[0], job: "금의위", decks: [] };
+            matchedMember = { uid: CREATOR_UID, name: "관리자(산도로)", alliance: categoryNames[0], job: "금의위", isAdminRole: true, decks: [] };
             members.push(matchedMember);
         } else {
             matchedMember = { 
@@ -117,6 +117,7 @@ function handleUidAuth() {
                 name: `대원_${inputUid.slice(-4)}`, 
                 alliance: categoryNames[0], 
                 job: "", 
+                isAdminRole: false,
                 decks: [] 
             };
             members.push(matchedMember);
@@ -129,10 +130,10 @@ function handleUidAuth() {
     accessLogs.unshift({ uid: matchedMember.uid, name: matchedMember.name, time: new Date().toLocaleString() });
     localStorage.setItem('accessLogs', JSON.stringify(accessLogs));
 
-    if (isCreator || matchedMember.uid === CREATOR_UID) {
-        alert("반갑습니다 관리자(산도로)님!");
+    if (isCreator || matchedMember.uid === CREATOR_UID || matchedMember.isAdminRole) {
+        alert(`반갑습니다 ${matchedMember.name}님! (관리자 권한 보유)`);
     } else {
-        alert(`환영합니다 ${matchedMember.uid} ${matchedMember.name}님! (일반 모드 로그인)`);
+        alert(`환영합니다 ${matchedMember.name}님! (일반 모드 로그인)`);
     }
 
     document.getElementById('authOverlay').classList.add('hidden');
@@ -189,14 +190,15 @@ function openDictTabWithScroll(tabKey) {
     toggleModal('dictModal');
 }
 
-// ✨ 현재 로그인한 유저가 '금의위' 소속인지 확인하는 함수
-function isCurrentLoggedUserGeumuiwi() {
+// ✨ 현재 로그인한 유저가 관리자 권한(또는 금의위 관리자 권한)을 가졌는지 확인
+function isCurrentLoggedUserAdmin() {
     const loggedUserStr = localStorage.getItem('loggedUser');
     if (!loggedUserStr) return false;
     try {
         const loggedUser = JSON.parse(loggedUserStr);
+        if (String(loggedUser.uid) === CREATOR_UID) return true;
         const member = members.find(m => String(m.uid) === String(loggedUser.uid));
-        return member && member.alliance === '금의위';
+        return member && member.alliance === '금의위' && member.isAdminRole === true;
     } catch (e) {
         return false;
     }
@@ -210,8 +212,8 @@ function applyAdminUIState() {
     const selectAllHeader = document.getElementById('selectAllHeader');
     const uidHeader = document.getElementById('uidColHeader');
     
-    const isGeumuiwi = isCurrentLoggedUserGeumuiwi();
-    const showUidCol = (isAdminMode && !isUserPreview) || isGeumuiwi;
+    const hasAdminRole = isCurrentLoggedUserAdmin();
+    const showUidCol = (isAdminMode && !isUserPreview) || hasAdminRole;
 
     if (isAdminMode) {
         if(btn) {
@@ -224,16 +226,15 @@ function applyAdminUIState() {
         if(selectAllHeader) selectAllHeader.classList.remove('hidden');
     } else {
         if(btn) {
-            btn.innerHTML = "<span>🛡️</span> 관리자 모드";
+            btn.innerHTML = "<span>🛡️️</span> 관리자 모드";
             btn.className = "bg-amber-600 hover:bg-amber-500 px-4 py-2 rounded-lg font-bold text-white text-xs shadow transition flex items-center gap-1.5";
         }
         if(addBtn) addBtn.classList.add('hidden');
-        if(delSelectedBtn) delSelectedBtn.classList.add('hidden');
-        if(delHeader) delHeader.classList.add('hidden');
+        if(delSelectedBtn) addBtn.classList.add('hidden');
+        if(delHeader) addBtn.classList.add('hidden');
         if(selectAllHeader) selectAllHeader.classList.add('hidden');
     }
 
-    // 금의위 소속이거나 관리자 모드면 UID 열 표시
     if (showUidCol) {
         if(uidHeader) uidHeader.classList.remove('hidden');
     } else {
@@ -1021,14 +1022,22 @@ function deleteSelectedMembers() {
     }
 }
 
+function toggleMemberAdminRole(memberId, checkboxElem) {
+    const member = members.find(m => m.id === memberId);
+    if (member) {
+        member.isAdminRole = checkboxElem.checked;
+        saveDataToStorage();
+    }
+}
+
 function renderTable() {
     const tbody = document.getElementById('member-table-body');
     if(!tbody) return;
     tbody.innerHTML = '';
     
     const effectiveIsAdmin = isAdminMode && !isUserPreview;
-    const isGeumuiwi = isCurrentLoggedUserGeumuiwi();
-    const showUidCol = effectiveIsAdmin || isGeumuiwi;
+    const hasAdminRole = isCurrentLoggedUserAdmin();
+    const showUidCol = effectiveIsAdmin || hasAdminRole;
 
     let filtered = members.filter(member => {
         const matchAlliance = (member.alliance === currentFilter);
@@ -1111,8 +1120,15 @@ function renderTable() {
             html += `<td class="p-4 border-r border-theme text-muted font-mono select-all">${member.uid}</td>`;
         }
 
+        // ✨ 관리자 모드이고 현재 금의위 소속인 경우에만 닉네임 옆에 관리자 권한 부여 체크박스 표시
+        let adminRoleCheckboxHtml = '';
+        if (effectiveIsAdmin && member.alliance === '금의위') {
+            const isChecked = member.isAdminRole ? 'checked' : '';
+            adminRoleCheckboxHtml = `<label class="ml-2 inline-flex items-center gap-1 text-[11px] text-yellow-400 cursor-pointer font-normal" title="관리자 권한 부여"><input type="checkbox" ${isChecked} onchange="toggleMemberAdminRole(${member.id}, this)" class="cursor-pointer"> 관리자</label>`;
+        }
+
         html += `
-            <td class="p-4 border-r border-theme font-bold">${effectiveIsAdmin ? `<input type="text" value="${member.name}" onchange="updateMemberField(${member.id}, 'name', this.value)" class="w-28 text-xs font-bold bg-main border border-theme px-1 rounded">` : member.name}</td>
+            <td class="p-4 border-r border-theme font-bold">${effectiveIsAdmin ? `<input type="text" value="${member.name}" onchange="updateMemberField(${member.id}, 'name', this.value)" class="w-28 text-xs font-bold bg-main border border-theme px-1 rounded">` : member.name}${adminRoleCheckboxHtml}</td>
             <td class="p-4 border-r border-theme text-muted">${effectiveIsAdmin ? `<select onchange="updateMemberField(${member.id}, 'job', this.value)" class="text-xs bg-main border border-theme p-1 rounded">${jobOptions}</select>` : (member.job || '-')}</td>
             <td class="p-4 border-r border-theme">${effectiveIsAdmin ? `<select onchange="updateMemberField(${member.id}, 'alliance', this.value)" class="text-xs bg-main border border-theme p-1 rounded">${allianceOptions}</select>` : `<span class="px-2.5 py-1 rounded-lg text-xs bg-panel border border-theme">${member.alliance}</span>`}</td>
         `;
@@ -1221,6 +1237,7 @@ function handleAllianceExcelUpload(event) {
                         name: row.name, 
                         job: row.job, 
                         alliance: targetAlliance, 
+                        isAdminRole: false,
                         decks 
                     });
                 }
@@ -1286,7 +1303,7 @@ function handleDictFileUpload(event) {
 function openSettingsModal() { toggleModal('settingsModal'); }
 function toggleModal(id) { document.getElementById(id).classList.toggle('hidden'); }
 function addNewMember() {
-    members.push({ id: Date.now(), uid: "00000000", name: "신규장수", job: "", alliance: currentFilter, decks: [] });
+    members.push({ id: Date.now(), uid: "00000000", name: "신규장수", job: "", alliance: currentFilter, isAdminRole: false, decks: [] });
     saveDataToStorage();
     renderTable();
 }
