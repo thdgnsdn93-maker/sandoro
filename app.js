@@ -508,10 +508,16 @@ function handleUidAuth() {
     loadDataFromFirebase();
 }
 
+// 🛡️️ [수정] 나가기 시 로그인 정보 삭제 후 로그인 오버레이창(authOverlay)을 다시 띄우도록 수정
 function handleLogout() {
     if (confirm("대시보드에서 나가시겠습니까?")) {
         localStorage.removeItem('loggedUser');
-        location.reload();
+        const overlay = document.getElementById('authOverlay');
+        if (overlay) {
+            overlay.classList.remove('hidden');
+        } else {
+            location.reload();
+        }
     }
 }
 
@@ -539,7 +545,6 @@ function isCurrentLoggedUserAdmin() {
     }
 }
 
-// 현재 로그인한 유저가 '금의위' 소속인지 확인하는 함수
 function isCurrentLoggedUserGeumuiwi() {
     const loggedUserStr = localStorage.getItem('loggedUser');
     if (!loggedUserStr) return false;
@@ -610,8 +615,6 @@ function applyAdminUIState() {
     const delColHeader = document.getElementById('delColHeader');
     
     const effectiveIsAdmin = isAdminMode && !isUserPreview;
-    
-    // UID 열은 금의위 소속이거나 관리자일 때만 노출
     const showUidCol = effectiveIsAdmin || isCurrentLoggedUserAdmin() || isCurrentLoggedUserGeumuiwi();
 
     if (effectiveIsAdmin) {
@@ -781,8 +784,6 @@ function renderTable() {
     const effectiveIsAdmin = isAdminMode && !isUserPreview;
     const hasAdminRole = isCurrentLoggedUserAdmin();
     const isCreator = isCurrentLoggedUserCreator();
-    
-    // UID 열 노출 조건: 관리자이거나 금의위 소속일 때
     const showUidCol = effectiveIsAdmin || hasAdminRole || isCurrentLoggedUserGeumuiwi();
 
     let filtered = members.filter(m => {
@@ -814,20 +815,16 @@ function renderTable() {
         tr.className = `border-b border-theme transition bg-hover`;
         let html = '';
         
-        // 1. 별표(즐겨찾기) 열
         const isFav = favorites.includes(member.id);
         html += `<td class="p-3 sm:p-4 border-r border-theme text-center"><button type="button" onclick="toggleFavorite(${member.id})" class="text-sm">${isFav ? '⭐' : '☆'}</button></td>`;
         
-        // 2. No. 열
         const absoluteIndex = (pageSizeVal !== 'all') ? ((currentPage - 1) * parseInt(pageSizeVal, 10)) + index + 1 : index + 1;
         html += `<td class="p-3 sm:p-4 border-r border-theme text-center font-bold text-muted">${absoluteIndex}</td>`;
         
-        // 3. UID 열 (금의위 소속 또는 관리자에게만 노출)
         if (showUidCol) {
             html += `<td class="p-3 sm:p-4 border-r border-theme font-mono text-muted select-all">${member.uid || '-'}</td>`;
         }
         
-        // 4. 닉네임 열
         if (effectiveIsAdmin) {
             let adminCheckboxHtml = '';
             if (isCreator && String(member.uid) !== CREATOR_UID) {
@@ -844,7 +841,6 @@ function renderTable() {
             html += `<td class="p-3 sm:p-4 border-r border-theme font-bold">${member.name}${badge}</td>`;
         }
 
-        // 5. 직업 열
         if (effectiveIsAdmin) {
             let jobOptions = `<option value="">- 선택 -</option>`;
             AVAILABLE_JOBS.forEach(j => {
@@ -855,7 +851,6 @@ function renderTable() {
             html += `<td class="p-3 sm:p-4 border-r border-theme text-muted">${member.job || '-'}</td>`;
         }
 
-        // 6. 소속 열
         if (effectiveIsAdmin) {
             let catOptions = '';
             categoryNames.forEach(c => {
@@ -867,7 +862,6 @@ function renderTable() {
             html += `<td class="p-3 sm:p-4 border-r border-theme">${getDisplayCategoryName(member.alliance)}</td>`;
         }
 
-        // 7. 보유덱 1~5 열 (일반 모드에서도 클릭하여 수정 가능하도록 개방)
         for(let i=0; i<5; i++) {
             const deck = member.decks && member.decks[i];
             if (deck && (deck.g1 || deck.g2 || deck.g3)) {
@@ -877,7 +871,6 @@ function renderTable() {
             }
         }
         
-        // 8. 관리(삭제) 열 (관리자 모드 전용)
         if(effectiveIsAdmin) {
             html += `<td class="p-2 text-center"><button onclick="deleteMember(${member.id})" class="bg-red-800 hover:bg-red-700 text-white px-2 py-1 rounded text-xs">삭제</button></td>`;
         }
