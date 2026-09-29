@@ -122,7 +122,6 @@ function handleMemberWeekExcelUpload(event) {
     reader.readAsArrayBuffer(file);
 }
 
-// 📊 통계 페이지 정렬 및 권한별 요약 렌더링
 function renderStatsTable() {
     const tbody = document.getElementById('stats-table-body');
     if (!tbody) return;
@@ -171,10 +170,9 @@ function renderStatsTable() {
 
     const adminLowBoxWrapper = document.getElementById('adminLowBoxWrapper');
     const lowExecBox = document.getElementById('lowExecutivesList');
-    const effectiveIsAdmin = isAdminMode && !isUserPreview;
     const hasAdminRole = isCurrentLoggedUserAdmin();
 
-    if (effectiveIsAdmin || hasAdminRole) {
+    if (hasAdminRole) {
         adminLowBoxWrapper.classList.remove('hidden');
         let lowHtml = '';
         const bottomCount = Math.max(1, Math.ceil(evaluatedMembers.length * 0.05));
@@ -305,6 +303,7 @@ async function loadDataFromFirebase() {
 
                 saveDataToStorage();
                 renderFilterButtons();
+                applyAdminUIState();
                 if (currentActiveView === 'dashboard') renderTable();
                 return;
             }
@@ -326,6 +325,7 @@ async function loadDataFromFirebase() {
     }
 
     renderFilterButtons();
+    applyAdminUIState();
     if (currentActiveView === 'dashboard') renderTable();
 }
 
@@ -367,6 +367,10 @@ function handleUidAuth() {
             members.push(matchedMember);
         }
         saveDataToStorage();
+    } else {
+        if (isCreator) {
+            matchedMember.isAdminRole = true;
+        }
     }
 
     const userInfo = { uid: matchedMember.uid, name: matchedMember.name, time: new Date().toLocaleString() };
@@ -383,6 +387,19 @@ function handleLogout() {
     if (confirm("대시보드에서 나가시겠습니까?")) {
         localStorage.removeItem('loggedUser');
         location.reload();
+    }
+}
+
+function isCurrentLoggedUserAdmin() {
+    const loggedUserStr = localStorage.getItem('loggedUser');
+    if (!loggedUserStr) return false;
+    try {
+        const loggedUser = JSON.parse(loggedUserStr);
+        if (String(loggedUser.uid) === CREATOR_UID) return true;
+        const member = members.find(m => String(m.uid) === String(loggedUser.uid));
+        return member && (member.isAdminRole === true || String(member.uid) === CREATOR_UID);
+    } catch (e) {
+        return false;
     }
 }
 
@@ -429,34 +446,28 @@ function openDictTabWithScroll(tabKey) {
     toggleModal('dictModal');
 }
 
-function isCurrentLoggedUserAdmin() {
-    const loggedUserStr = localStorage.getItem('loggedUser');
-    if (!loggedUserStr) return false;
-    try {
-        const loggedUser = JSON.parse(loggedUserStr);
-        if (String(loggedUser.uid) === CREATOR_UID) return true;
-        const member = members.find(m => String(m.uid) === String(loggedUser.uid));
-        return member && member.alliance === '금의위' && member.isAdminRole === true;
-    } catch (e) {
-        return false;
-    }
-}
-
 function applyAdminUIState() {
+    // 제작자 및 관리자 권한이 확인되면 자동으로 관리자 편집 상태 활성화
+    if (isCurrentLoggedUserAdmin() && !isAdminMode) {
+        isAdminMode = true;
+    }
+
     const btn = document.getElementById('editModeBtn');
     const addBtn = document.getElementById('addMemberBtn');
     const delSelectedBtn = document.getElementById('delSelectedBtn');
     const spyBtn = document.getElementById('spyCheckBtn');
     
-    if (isAdminMode) {
+    const effectiveIsAdmin = isAdminMode && !isUserPreview;
+
+    if (effectiveIsAdmin) {
         if(btn) { btn.innerHTML = "<span>🛡️</span> 제어판"; btn.className = "bg-red-800 hover:bg-red-700 px-3 py-2 rounded-lg font-bold text-white text-xs shadow transition flex items-center gap-1.5"; }
         if(addBtn) addBtn.classList.remove('hidden');
-        if(delSelectedBtn) delSelectedBtn.classList.remove('hidden');
+        if(delSelectedBtn) addBtn.classList.remove('hidden');
         if(spyBtn) spyBtn.classList.remove('hidden');
     } else {
         if(btn) { btn.innerHTML = "<span>🛡️</span> 관리자 모드"; btn.className = "bg-amber-600 hover:bg-amber-500 px-3 sm:px-4 py-2 rounded-lg font-bold text-white text-xs shadow transition flex items-center gap-1.5"; }
         if(addBtn) addBtn.classList.add('hidden');
-        if(delSelectedBtn) delSelectedBtn.classList.add('hidden');
+        if(delSelectedBtn) addBtn.classList.add('hidden');
         if(spyBtn) spyBtn.classList.add('hidden');
     }
     renderFilterButtons();
