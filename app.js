@@ -189,6 +189,19 @@ function openDictTabWithScroll(tabKey) {
     toggleModal('dictModal');
 }
 
+// ✨ 현재 로그인한 유저가 '금의위' 소속인지 확인하는 함수
+function isCurrentLoggedUserGeumuiwi() {
+    const loggedUserStr = localStorage.getItem('loggedUser');
+    if (!loggedUserStr) return false;
+    try {
+        const loggedUser = JSON.parse(loggedUserStr);
+        const member = members.find(m => String(m.uid) === String(loggedUser.uid));
+        return member && member.alliance === '금의위';
+    } catch (e) {
+        return false;
+    }
+}
+
 function applyAdminUIState() {
     const btn = document.getElementById('editModeBtn');
     const addBtn = document.getElementById('addMemberBtn');
@@ -197,6 +210,9 @@ function applyAdminUIState() {
     const selectAllHeader = document.getElementById('selectAllHeader');
     const uidHeader = document.getElementById('uidColHeader');
     
+    const isGeumuiwi = isCurrentLoggedUserGeumuiwi();
+    const showUidCol = (isAdminMode && !isUserPreview) || isGeumuiwi;
+
     if (isAdminMode) {
         if(btn) {
             btn.innerHTML = "<span>🛡️</span> 관리자 제어판";
@@ -206,7 +222,6 @@ function applyAdminUIState() {
         if(delSelectedBtn) delSelectedBtn.classList.remove('hidden');
         if(delHeader) delHeader.classList.remove('hidden');
         if(selectAllHeader) selectAllHeader.classList.remove('hidden');
-        if(uidHeader) uidHeader.classList.remove('hidden');
     } else {
         if(btn) {
             btn.innerHTML = "<span>🛡️</span> 관리자 모드";
@@ -216,8 +231,15 @@ function applyAdminUIState() {
         if(delSelectedBtn) delSelectedBtn.classList.add('hidden');
         if(delHeader) delHeader.classList.add('hidden');
         if(selectAllHeader) selectAllHeader.classList.add('hidden');
+    }
+
+    // 금의위 소속이거나 관리자 모드면 UID 열 표시
+    if (showUidCol) {
+        if(uidHeader) uidHeader.classList.remove('hidden');
+    } else {
         if(uidHeader) uidHeader.classList.add('hidden');
     }
+
     renderFilterButtons();
     renderTable();
     updateDictAdminUI();
@@ -1005,6 +1027,8 @@ function renderTable() {
     tbody.innerHTML = '';
     
     const effectiveIsAdmin = isAdminMode && !isUserPreview;
+    const isGeumuiwi = isCurrentLoggedUserGeumuiwi();
+    const showUidCol = effectiveIsAdmin || isGeumuiwi;
 
     let filtered = members.filter(member => {
         const matchAlliance = (member.alliance === currentFilter);
@@ -1060,7 +1084,7 @@ function renderTable() {
     }
 
     if(displayedList.length === 0) {
-        const colSpan = effectiveIsAdmin ? 12 : 11;
+        const colSpan = effectiveIsAdmin ? 12 : (showUidCol ? 12 : 11);
         tbody.innerHTML = `<tr><td colspan="${colSpan}" class="p-6 text-center text-muted">등록된 인원이 없습니다.</td></tr>`;
         return;
     }
@@ -1083,7 +1107,7 @@ function renderTable() {
         const absoluteIndex = (pageSizeVal !== 'all') ? ((currentPage - 1) * parseInt(pageSizeVal, 10)) + index + 1 : index + 1;
         html += `<td class="p-4 border-r border-theme text-center text-muted font-bold">${absoluteIndex}</td>`;
         
-        if (effectiveIsAdmin) {
+        if (showUidCol) {
             html += `<td class="p-4 border-r border-theme text-muted font-mono select-all">${member.uid}</td>`;
         }
 
@@ -1093,7 +1117,6 @@ function renderTable() {
             <td class="p-4 border-r border-theme">${effectiveIsAdmin ? `<select onchange="updateMemberField(${member.id}, 'alliance', this.value)" class="text-xs bg-main border border-theme p-1 rounded">${allianceOptions}</select>` : `<span class="px-2.5 py-1 rounded-lg text-xs bg-panel border border-theme">${member.alliance}</span>`}</td>
         `;
 
-        // ✨ 보유덱 5개 모두 정상 출력되도록 수정 (0부터 4까지 총 5개)
         for(let i=0; i<5; i++) {
             const deck = member.decks && member.decks[i];
             if (deck && (deck.g1 || deck.g2 || deck.g3)) {
