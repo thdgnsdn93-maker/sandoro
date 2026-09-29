@@ -76,7 +76,6 @@
             <p class="text-xs text-muted mb-4">각 연맹별 명단 파일 및 도감 파일을 개별 업로드할 수 있습니다.</p>
             
             <div class="space-y-4">
-                <!-- 각 연맹별 엑셀 업로드 영역 -->
                 <div class="bg-main p-4 rounded-xl border border-theme space-y-2.5">
                     <p class="text-xs font-bold gold-text">👥 각 연맹별 명단 현황 (엑셀 파일)</p>
                     <p class="text-[11px] text-yellow-500">※ 업로드 파일에 없는 기존 인원은 자동으로 '재야'로 이동됩니다.</p>
@@ -95,7 +94,7 @@
                             <button onclick="triggerAllianceUpload('낙화')" class="bg-emerald-700 hover:bg-emerald-600 text-white px-3 py-1 rounded text-xs font-bold shadow transition">파일 업로드</button>
                         </div>
                         <div class="flex items-center justify-between bg-panel p-2 rounded-lg border border-theme">
-                            <span class="text-xs font-bold text-main">🛡️ 고구려</span>
+                            <span class="text-xs font-bold text-main">🛡️️ 고구려</span>
                             <button onclick="triggerAllianceUpload('고구려')" class="bg-emerald-700 hover:bg-emerald-600 text-white px-3 py-1 rounded text-xs font-bold shadow transition">파일 업로드</button>
                         </div>
                         <div class="flex items-center justify-between bg-panel p-2 rounded-lg border border-theme">
@@ -103,11 +102,9 @@
                             <button onclick="triggerAllianceUpload('재야')" class="bg-emerald-700 hover:bg-emerald-600 text-white px-3 py-1 rounded text-xs font-bold shadow transition">파일 업로드</button>
                         </div>
                     </div>
-                    <!-- 숨겨진 공용 엑셀 파일 입력기 -->
                     <input type="file" id="allianceExcelInput" accept=".xlsx, .xls, .csv" class="hidden" onchange="handleAllianceExcelUpload(event)">
                 </div>
 
-                <!-- 도감 업로드 영역 -->
                 <div class="bg-main p-4 rounded-xl border border-theme space-y-2">
                     <p class="text-xs font-bold gold-text">📖 천하열전 대도감 (마크다운 파일)</p>
                     <p class="text-[11px] text-muted">선택한 도감 탭의 내용을 마크다운 파일로 일괄 업데이트합니다.</p>
@@ -129,14 +126,12 @@
         </div>
     </div>
 
-    <!-- ⚠️️ 중복 인원 감지 관리자 알림 모달 -->
+    <!-- ⚠ 중복 인원 감지 관리자 알림 모달 -->
     <div id="duplicateAlertModal" class="hidden fixed inset-0 modal-bg flex items-center justify-center z-50 p-4">
         <div class="bg-panel border-2 border-amber-500 rounded-xl shadow-2xl w-full max-w-lg p-6 relative flex flex-col max-h-[85vh]">
             <h2 class="text-xl font-bold text-amber-400 mb-2 flex items-center gap-2">⚠️ 엑셀 업로드 중복 인원 감지</h2>
             <p class="text-xs text-muted mb-4">업로드하신 엑셀 파일 내에 UID 또는 닉네임이 중복되는 대원이 발견되었습니다.</p>
-            
             <div id="duplicateListContainer" class="flex-1 overflow-y-auto bg-main border border-theme p-3 rounded-lg space-y-2 mb-6 text-xs"></div>
-
             <div class="flex justify-end gap-2">
                 <button onclick="toggleModal('duplicateAlertModal')" class="px-4 py-2 bg-gray-700 text-white rounded-lg text-xs font-bold">확인</button>
             </div>
@@ -155,11 +150,10 @@
         </div>
     </div>
 
-    <!-- ⚔️ 조합 공유 스타일 부대 덱 편성 수정 팝업 모달 -->
+    <!-- ⚔️ 덱 편집 모달 -->
     <div id="deckEditModal" class="hidden fixed inset-0 modal-bg flex items-center justify-center z-50 p-4">
         <div class="bg-panel border-2 gold-border rounded-xl shadow-2xl w-full max-w-4xl p-6 relative max-h-[95vh] overflow-y-auto">
             <button onclick="toggleModal('deckEditModal')" class="absolute top-4 right-4 p-2 rounded-lg border border-theme bg-panel hover:bg-hover text-muted hover:text-main text-xl font-bold transition">&times;</button>
-            
             <div class="flex justify-between items-center mb-6 border-b border-theme pb-3 pr-10">
                 <h2 class="text-xl font-bold gold-text">⚔️ 조합 공유 & 부대 편성 편집</h2>
                 <div class="flex items-center gap-2">
@@ -167,10 +161,8 @@
                     <button onclick="toggleDeckEditUnlock()" id="deckUnlockBtn" class="bg-amber-600 hover:bg-amber-500 text-white px-4 py-1.5 rounded-lg text-xs font-bold shadow transition">🔓 수정</button>
                 </div>
             </div>
-
             <input type="hidden" id="editDeckMemberId">
             <input type="hidden" id="editDeckIndex">
-
             <div class="mb-6 bg-main p-4 rounded-xl border border-theme flex items-center justify-between">
                 <span class="text-xs font-bold text-muted">선택 진형</span>
                 <select id="editDeckFormation" onchange="updateDeckFormationBonusInfo()" disabled class="bg-panel border border-theme px-4 py-1.5 rounded-lg text-sm font-bold gold-text">
@@ -181,12 +173,10 @@
                     <option value="팔괘진">팔괘진</option>
                 </select>
             </div>
-
             <div id="deckFormationBonusBox" class="mb-4 bg-amber-500/10 border border-amber-500/30 p-3 rounded-xl text-xs text-main flex items-center gap-2">
                 <span class="font-bold text-yellow-600">🛡 진형 효과:</span>
                 <span id="deckFormationBonusText" class="text-muted">선택된 진형의 특성 효과가 여기에 표시됩니다.</span>
             </div>
-
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                 <div class="bg-main border border-theme rounded-xl p-4 flex flex-col gap-3 relative">
                     <span class="text-xs font-bold text-yellow-500">장수 1 (메인)</span>
@@ -210,7 +200,6 @@
                         <div id="autocomplete-list-t1_3" class="autocomplete-items hidden"></div>
                     </div>
                 </div>
-
                 <div class="bg-main border border-theme rounded-xl p-4 flex flex-col gap-3 relative">
                     <span class="text-xs font-bold text-yellow-500">장수 2</span>
                     <div class="relative autocomplete-container">
@@ -233,7 +222,6 @@
                         <div id="autocomplete-list-t2_3" class="autocomplete-items hidden"></div>
                     </div>
                 </div>
-
                 <div class="bg-main border border-theme rounded-xl p-4 flex flex-col gap-3 relative">
                     <span class="text-xs font-bold text-yellow-500">장수 3</span>
                     <div class="relative autocomplete-container">
@@ -257,12 +245,10 @@
                     </div>
                 </div>
             </div>
-
             <div id="deckSynergyBonusBox" class="mb-6 bg-blue-500/10 border border-blue-500/30 p-3 rounded-xl text-xs text-main flex items-center gap-2">
                 <span class="font-bold text-blue-500">🤝 인연 보너스:</span>
                 <span id="deckSynergyBonusText" class="text-muted">등록된 장수들의 활성화된 인연 효과가 여기에 표시됩니다.</span>
             </div>
-
             <div class="flex justify-between pt-4 border-t border-theme">
                 <button onclick="clearDeckData()" class="bg-red-800 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-xs font-bold">덱 비우기</button>
                 <div class="flex gap-2">
@@ -273,7 +259,7 @@
         </div>
     </div>
 
-    <!-- 🎮 통합 대도감 팝업 모달 -->
+    <!-- 🎮 통합 대도감 모달 -->
     <div id="dictModal" class="hidden fixed inset-0 modal-bg flex items-center justify-center z-50 p-4">
         <div class="bg-panel border-2 gold-border rounded-xl shadow-2xl w-full max-w-6xl h-[88vh] relative flex flex-col overflow-hidden">
             <div class="bg-main px-6 py-3 border-b border-theme flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0">
@@ -306,15 +292,13 @@
         </div>
     </div>
 
-    <!-- ✏️ 도감 내용 직접 편집 모달 -->
+    <!-- ✏️ 도감 편집 모달 -->
     <div id="dictEditModal" class="hidden fixed inset-0 modal-bg flex items-center justify-center z-50 p-4">
         <div class="bg-panel border-2 gold-border rounded-xl shadow-2xl w-full max-w-4xl h-[85vh] relative flex flex-col p-6">
             <button onclick="toggleModal('dictEditModal')" class="absolute top-4 right-4 p-2 rounded-lg border border-theme bg-panel hover:bg-hover text-muted hover:text-main text-xl font-bold transition">&times;</button>
             <h2 class="text-xl font-bold gold-text mb-2">📖 도감 내용 직접 편집 (마크다운)</h2>
             <p class="text-xs text-muted mb-4">💡 마크다운 형식으로 오탈자나 내용을 자유롭게 수정할 수 있습니다.</p>
-            
             <textarea id="dictEditTextarea" class="flex-1 w-full bg-main border border-theme p-4 rounded-xl font-mono text-xs text-main leading-relaxed resize-none focus:outline-none"></textarea>
-            
             <div class="flex justify-between items-center mt-4 pt-3 border-t border-theme">
                 <span class="text-[11px] text-muted">※ 저장 즉시 반영되며 클라우드(파이어베이스)에 동기화됩니다.</span>
                 <div class="flex gap-2">
@@ -411,7 +395,7 @@
                                 <th id="selectAllHeader" class="p-4 border-r border-theme text-center hidden w-10">
                                     <input type="checkbox" id="selectAllCheckbox" onclick="toggleSelectAll(this)" class="cursor-pointer">
                                 </th>
-                                <th class="p-4 border-r border-theme text-center w-12">No.</th>
+                                <th class="p-4 border-r border-theme text-center w-16">No.</th>
                                 <th id="uidColHeader" class="p-4 border-r border-theme hidden">UID</th>
                                 <th class="p-4 border-r border-theme">닉네임</th>
                                 <th class="p-4 border-r border-theme">직업</th>
@@ -429,7 +413,6 @@
                 </div>
             </div>
 
-            <!-- 📄 페이지네이션 컨트롤 영역 -->
             <div id="paginationContainer" class="flex justify-center items-center gap-2 mt-6 py-2"></div>
         </main>
     </div>

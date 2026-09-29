@@ -1113,7 +1113,16 @@ function renderTable() {
         }
 
         const absoluteIndex = (pageSizeVal !== 'all') ? ((currentPage - 1) * parseInt(pageSizeVal, 10)) + index + 1 : index + 1;
-        html += `<td class="p-4 border-r border-theme text-center text-muted font-bold">${absoluteIndex}</td>`;
+        
+        // ✨ 관리자 모드에서는 No. 인덱스를 직접 수정할 수 있도록 입력창 제공
+        let indexCellContent = '';
+        if (effectiveIsAdmin) {
+            indexCellContent = `<input type="number" value="${absoluteIndex}" onchange="updateMemberCustomIndex(${member.id}, this.value)" class="w-12 text-center text-xs font-bold bg-main border border-theme py-1 rounded">`;
+        } else {
+            indexCellContent = `<span class="text-muted font-bold">${absoluteIndex}</span>`;
+        }
+
+        html += `<td class="p-4 border-r border-theme text-center">${indexCellContent}</td>`;
         
         if (showUidCol) {
             html += `<td class="p-4 border-r border-theme text-muted font-mono select-all">${member.uid}</td>`;
@@ -1125,7 +1134,6 @@ function renderTable() {
             adminRoleCheckboxHtml = `<label class="inline-flex items-center gap-1 text-[11px] text-yellow-400 cursor-pointer font-normal whitespace-nowrap" title="관리자 권한 부여"><input type="checkbox" ${isChecked} onchange="toggleMemberAdminRole(${member.id}, this)" class="cursor-pointer"> 관리자</label>`;
         }
 
-        // ✨ 닉네임 입력칸과 관리자 체크박스가 깔끔하게 정렬되도록 감싸는 구조 적용
         let nameCellContent = '';
         if (effectiveIsAdmin) {
             nameCellContent = `
@@ -1160,6 +1168,19 @@ function renderTable() {
         tr.innerHTML = html;
         tbody.appendChild(tr);
     });
+}
+
+function updateMemberCustomIndex(memberId, val) {
+    const newIdx = parseInt(val, 10);
+    if (isNaN(newIdx)) return;
+    const member = members.find(m => m.id === memberId);
+    if (member) {
+        members = members.filter(m => m.id !== memberId);
+        let targetIndex = Math.max(0, newIdx - 1);
+        members.splice(targetIndex, 0, member);
+        saveDataToStorage();
+        renderTable();
+    }
 }
 
 function handleAllianceExcelUpload(event) {
