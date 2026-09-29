@@ -16,7 +16,6 @@ let accessLogs = JSON.parse(localStorage.getItem('accessLogs') || '[]');
 const AVAILABLE_JOBS = ["진군", "신행", "기좌", "병참", "천공", "청낭", "금의위"];
 let members = [];
 
-// ✨ 맹원 주간 활동 데이터 스토리지 연동
 let memberWeekData = JSON.parse(localStorage.getItem('memberWeekData') || '[]');
 
 let DICT_CONTENTS = {
@@ -26,7 +25,7 @@ let DICT_CONTENTS = {
     commonTactic: `# 4. 공용 전법정리 대도감`
 };
 
-// ✨ 페이지 뷰 전환 함수 (편성 뷰 vs 통계 룸 뷰)
+// 페이지 뷰 전환 함수 (편성 뷰 vs 통계 룸 뷰)
 function switchPageView(viewName) {
     currentActiveView = viewName;
     const dashView = document.getElementById('view-dashboard');
@@ -48,7 +47,6 @@ function switchPageView(viewName) {
         renderTable();
     }
     
-    // 모바일 드로어 열려있다면 닫기
     const drawer = document.getElementById('mobileDrawerMenu');
     const backdrop = document.getElementById('mobileDrawerBackdrop');
     if (drawer && !drawer.classList.contains('-translate-x-full')) {
@@ -57,7 +55,7 @@ function switchPageView(viewName) {
     }
 }
 
-// ✨ 엑셀 파일 업로드 처리 (금의위 맹원 주간 활동 리포트)
+// 엑셀 파일 업로드 처리 (금의위 맹원 주간 활동 리포트)
 function handleMemberWeekExcelUpload(event) {
     const file = event.target.files[0];
     if (!file) return;
@@ -100,7 +98,7 @@ function handleMemberWeekExcelUpload(event) {
     reader.readAsArrayBuffer(file);
 }
 
-// ✨ 통계 페이지 데이터 및 요약 카드 렌더링
+// 통계 페이지 데이터 및 요약 카드 렌더링
 function renderStatsTable() {
     const tbody = document.getElementById('stats-table-body');
     if (!tbody) return;
@@ -108,7 +106,6 @@ function renderStatsTable() {
     const keyword = (document.getElementById('statsSearchInput')?.value || '').toLowerCase().trim();
     const filtered = memberWeekData.filter(m => m.name.toLowerCase().includes(keyword));
 
-    // 요약 카드 계산
     const totalMembers = memberWeekData.length;
     const totalProsperity = memberWeekData.reduce((acc, cur) => acc + cur.prosperity, 0);
     const totalContribution = memberWeekData.reduce((acc, cur) => acc + cur.contribution, 0);
@@ -143,7 +140,6 @@ function renderStatsTable() {
     tbody.innerHTML = html;
 }
 
-// 기존 함수들 유지 (toggleSubMenu, toggleMobileDrawer, loadDataFromFirebase, saveDataToStorage, handleUidAuth 등 기존 로직 포함)
 function toggleSubMenu(menuId) {
     const menu = document.getElementById(menuId);
     const arrow = document.getElementById(menuId + '-arrow');
@@ -455,7 +451,7 @@ function toggleSelectAll(cb) {
 function deleteSelectedMembers() {
     const sel = document.querySelectorAll('.row-checkbox:checked');
     if (sel.length === 0) return alert("삭제할 대원을 선택해주세요.");
-    if (confirm(`선택한 ${sel.length명의 대원을 정말 삭제하시겠습니까?`)) {
+    if (confirm(`선택한 ${sel.length}명의 대원을 정말 삭제하시겠습니까?`)) {
         const ids = Array.from(sel).map(b => Number(b.getAttribute('data-id')));
         members = members.filter(m => !ids.includes(m.id));
         saveDataToStorage();
@@ -563,6 +559,3 @@ function addNewMember() { members.push({ id: Date.now(), uid: "0000", name: "신
 function deleteMember(id) { if(confirm("정말 삭제하시겠습니까?")) { members = members.filter(m => m.id !== id); saveDataToStorage(); renderTable(); } }
 
 loadDataFromFirebase();
-if (memberWeekData.length > 0) {
-    // 자동 초기 로드 시 엑셀 데이터가 있으면 반영
-}
