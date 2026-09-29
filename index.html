@@ -37,14 +37,14 @@
         </div>
     </div>
 
-    <!-- 🛡 관리자 제어판 모달 -->
+    <!-- 🛡 관리자 제어판 모달 (업로드 센터 및 카테고리 편집 버튼 포함) -->
     <div id="adminControlModal" class="hidden fixed inset-0 modal-bg flex items-center justify-center z-50 p-4">
         <div class="bg-panel border-2 gold-border rounded-xl shadow-2xl w-full max-w-md p-6 relative">
             <button onclick="toggleModal('adminControlModal')" class="absolute top-4 right-4 p-2 rounded-lg border border-theme bg-panel hover:bg-hover text-muted text-xl font-bold transition">&times;</button>
             <h2 class="text-2xl font-bold gold-text mb-4 flex items-center gap-2">🛡 관리자 제어판</h2>
             <div class="space-y-3">
                 <button onclick="openCategoryModal()" class="w-full bg-blue-700 hover:bg-blue-600 text-white py-3 rounded-lg text-sm font-bold shadow transition">📁 카테고리 편집</button>
-                <button onclick="openDataUploadModal()" class="w-full bg-emerald-700 hover:bg-emerald-600 text-white py-3 rounded-lg text-sm font-bold shadow transition">📤 데이터 업로드 센터 (인원/도감)</button>
+                <button onclick="openDataUploadModal()" class="w-full bg-emerald-700 hover:bg-emerald-600 text-white py-3 rounded-lg text-sm font-bold shadow transition">📤 데이터 업로드 센터 (연맹 명단 / 주간 통계)</button>
                 <button onclick="downloadShareExcel()" class="w-full bg-teal-700 hover:bg-teal-600 text-white py-3 rounded-lg text-sm font-bold shadow transition">📥 엑셀 다운로드 (백업/공유)</button>
                 <button onclick="openAdminLogModal()" class="w-full bg-gray-700 hover:bg-gray-600 text-white py-3 rounded-lg text-sm font-bold shadow transition">📋 접속자 로그 확인</button>
                 <button onclick="toggleUserPreview()" id="previewToggleBtn" class="w-full bg-amber-700 hover:bg-amber-600 text-white py-3 rounded-lg text-sm font-bold shadow transition">👀 일반 유저 시점 미리보기</button>
@@ -93,7 +93,7 @@
         </div>
     </div>
 
-    <!-- 📤 데이터 업로드 센터 모달 -->
+    <!-- 📤 데이터 업로드 센터 모달 (동적 연맹별 업로드 버튼 영역 포함) -->
     <div id="dataUploadModal" class="hidden fixed inset-0 modal-bg flex items-center justify-center z-50 p-4">
         <div class="bg-panel border-2 gold-border rounded-xl shadow-2xl w-full max-w-md p-6 relative max-h-[90vh] overflow-y-auto">
             <button onclick="openAdminControlFromSub('dataUploadModal')" class="absolute top-4 right-4 p-2 rounded-lg border border-theme bg-panel text-xl font-bold">&times;</button>
@@ -102,11 +102,9 @@
                 <div class="bg-main p-4 rounded-xl border border-theme space-y-2.5">
                     <p class="text-xs font-bold gold-text">👥 각 연맹별 명단 현황 (엑셀)</p>
                     <div class="space-y-2 pt-1" id="allianceUploadButtonsBox"></div>
-                    <input type="file" id="allianceExcelInput" accept=".xlsx, .xls, .csv" class="hidden" onchange="handleAllianceExcelUpload(event)">
                 </div>
                 <div class="bg-main p-4 rounded-xl border border-theme space-y-2.5">
                     <p class="text-xs font-bold gold-text">📊 금의위 맹원 주간활동 리포트 (엑셀)</p>
-                    <input type="file" id="memberWeekExcelInput" accept=".xlsx, .xls, .csv" class="hidden" onchange="handleMemberWeekExcelUpload(event)">
                     <button onclick="document.getElementById('memberWeekExcelInput').click();" class="w-full bg-teal-700 text-white py-2 rounded text-xs font-bold">📊 주간활동 데이터 업로드</button>
                 </div>
             </div>
@@ -115,6 +113,10 @@
             </div>
         </div>
     </div>
+
+    <!-- 숨겨진 엑셀 업로드 파일 인풋들 -->
+    <input type="file" id="allianceExcelInput" accept=".xlsx, .xls, .csv" class="hidden" onchange="handleAllianceExcelUpload(event)">
+    <input type="file" id="memberWeekExcelInput" accept=".xlsx, .xls, .csv" class="hidden" onchange="handleMemberWeekExcelUpload(event)">
 
     <!-- 📋 접속자 로그 모달 -->
     <div id="adminLogModal" class="hidden fixed inset-0 modal-bg flex items-center justify-center z-50 p-4">
@@ -291,78 +293,80 @@
 
         <!-- ✨ [페이지 2] 맹원 주간활동 통계 룸 뷰 -->
         <main id="view-stats" class="hidden flex-1 p-3 sm:p-6 md:p-8 overflow-y-auto space-y-6">
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div class="bg-panel border border-theme p-5 rounded-xl shadow">
-                    <p class="text-xs text-muted font-medium mb-1">총 맹원 인원수</p>
-                    <div class="flex items-baseline justify-between">
-                        <h3 id="statTotalMembers" class="text-2xl font-extrabold gold-text">0명</h3>
-                        <span class="text-xs bg-yellow-500/20 text-yellow-500 px-2 py-0.5 rounded font-bold">Active</span>
-                    </div>
+            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+                <div class="bg-panel border border-theme p-4 rounded-xl shadow">
+                    <p class="text-xs text-muted font-medium mb-1">인원수</p>
+                    <h3 id="statTotalMembers" class="text-xl font-extrabold gold-text">0명</h3>
                 </div>
-                <div class="bg-panel border border-theme p-5 rounded-xl shadow">
-                    <p class="text-xs text-muted font-medium mb-1">총 번영도 합계</p>
-                    <div class="flex items-baseline justify-between">
-                        <h3 id="statTotalProsperity" class="text-2xl font-extrabold text-main">0</h3>
-                        <span class="text-xs bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded font-bold">Prosperity</span>
-                    </div>
-                </div>
-                <div class="bg-panel border border-theme p-5 rounded-xl shadow">
-                    <p class="text-xs text-muted font-medium mb-1">주간 공헌 합계</p>
-                    <div class="flex items-baseline justify-between">
-                        <h3 id="statTotalContribution" class="text-2xl font-extrabold text-main">0</h3>
-                        <span class="text-xs bg-purple-500/20 text-purple-400 px-2 py-0.5 rounded font-bold">Contribution</span>
-                    </div>
-                </div>
-                <div class="bg-panel border border-theme p-5 rounded-xl shadow">
+                <div class="bg-panel border border-theme p-4 rounded-xl shadow">
                     <p class="text-xs text-muted font-medium mb-1">평균 번영도</p>
-                    <div class="flex items-baseline justify-between">
-                        <h3 id="statAvgProsperity" class="text-2xl font-extrabold text-main">0</h3>
-                        <span class="text-xs bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded font-bold">Average</span>
-                    </div>
+                    <h3 id="statAvgProsperity" class="text-xl font-extrabold text-main">0</h3>
+                </div>
+                <div class="bg-panel border border-theme p-4 rounded-xl shadow">
+                    <p class="text-xs text-muted font-medium mb-1">평균 무훈</p>
+                    <h3 id="statAvgMhoon" class="text-xl font-extrabold text-yellow-500">0</h3>
+                </div>
+                <div class="bg-panel border border-theme p-4 rounded-xl shadow">
+                    <p class="text-xs text-muted font-medium mb-1">평균 공헌</p>
+                    <h3 id="statAvgContribution" class="text-xl font-extrabold text-emerald-400">0</h3>
+                </div>
+                <div class="bg-panel border border-theme p-4 rounded-xl shadow col-span-2 sm:col-span-1">
+                    <p class="text-xs text-muted font-medium mb-1">평균 공성</p>
+                    <h3 id="statAvgSiege" class="text-xl font-extrabold text-blue-400">0회</h3>
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div class="bg-panel border border-theme p-5 rounded-xl shadow">
-                    <h3 class="text-sm font-bold gold-text mb-3 flex items-center gap-1.5"><span>🏆</span> 우수 활약 맹원 TOP 10 (전체 공개)</h3>
-                    <div id="topExecutivesList" class="space-y-2 text-xs text-main"></div>
+                    <h3 class="text-sm font-bold gold-text mb-3 flex items-center gap-1.5"><span>⚔</span> 주간 무훈 순위 TOP 5</h3>
+                    <div id="topMhoonList" class="space-y-2 text-xs text-main"></div>
                 </div>
-                <div id="adminLowBoxWrapper" class="bg-panel border border-theme p-5 rounded-xl shadow hidden">
-                    <h3 class="text-sm font-bold text-red-400 mb-3 flex items-center gap-1.5"><span>🔒 [관리자 전용] 저조한 지표 맹원 관리 (하위 5%)</span></h3>
-                    <div id="lowExecutivesList" class="space-y-2 text-xs text-main"></div>
+                <div class="bg-panel border border-theme p-5 rounded-xl shadow">
+                    <h3 class="text-sm font-bold text-emerald-400 mb-3 flex items-center gap-1.5"><span>🏆</span> 주간 공헌도 순위 TOP 5</h3>
+                    <div id="topContribList" class="space-y-2 text-xs text-main"></div>
                 </div>
+                <div class="bg-panel border border-theme p-5 rounded-xl shadow">
+                    <h3 class="text-sm font-bold text-blue-400 mb-3 flex items-center gap-1.5"><span>🏰</span> 주간 공성횟수 순위 TOP 5</h3>
+                    <div id="topSiegeList" class="space-y-2 text-xs text-main"></div>
+                </div>
+            </div>
+
+            <div id="adminLowBoxWrapper" class="bg-panel border border-red-500/40 p-5 rounded-xl shadow hidden">
+                <h3 class="text-sm font-bold text-red-400 mb-3 flex items-center gap-1.5"><span>🔒 [관리자 전용] 3대 지표 종합 저조 인원 (하위 10%)</span></h3>
+                <div id="lowExecutivesList" class="space-y-2 text-xs text-main"></div>
             </div>
 
             <div class="bg-panel border border-theme rounded-xl shadow-xl overflow-hidden flex flex-col">
                 <div class="p-4 sm:p-5 border-b border-theme flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-main/30">
                     <div class="flex items-center gap-3">
                         <div>
-                            <h3 class="text-base font-bold gold-text">📊 금의위 맹원 주간 활동 리포트</h3>
+                            <h3 class="text-base font-bold gold-text">📊 금의위 맹원 전체 주간활동 리포트</h3>
                             <p class="text-xs text-muted mt-0.5">번영도, 주간 무훈 및 공헌도 순위 일람</p>
                         </div>
                     </div>
                     <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto">
                         <select id="statsSortSelect" onchange="renderStatsTable()" class="bg-main border border-theme px-3 py-1.5 rounded-lg text-xs text-main font-bold">
-                            <option value="contributionDesc">정렬: 주간 공헌 높은순</option>
-                            <option value="contributionAsc">정렬: 주간 공헌 낮은순</option>
-                            <option value="prosperityDesc">정렬: 번영도 높은순</option>
-                            <option value="siegeDesc">정렬: 공성 횟수 많은순</option>
+                            <option value="contributionDesc">공헌도 높은순</option>
+                            <option value="contributionAsc">공헌도 낮은순</option>
+                            <option value="prosperityDesc">번영도 높은순</option>
+                            <option value="mhoonDesc">무훈 높은순</option>
+                            <option value="siegeDesc">공성 횟수순</option>
                         </select>
-                        <input type="text" id="statsSearchInput" oninput="renderStatsTable()" placeholder="🔍 맹원 이름 검색..." class="w-full sm:w-48 bg-main border border-theme px-3 py-1.5 rounded-lg text-xs text-main">
+                        <input type="text" id="statsSearchInput" oninput="renderStatsTable()" placeholder="🔍 맹원 검색..." class="w-full sm:w-48 bg-main border border-theme px-3 py-1.5 rounded-lg text-xs text-main">
                     </div>
                 </div>
                 <div class="overflow-x-auto">
                     <table class="w-full text-left border-collapse whitespace-nowrap text-xs sm:text-sm">
                         <thead>
                             <tr class="border-b border-theme text-muted bg-main/50">
-                                <th class="p-3 sm:p-4 border-r border-theme text-center w-16">No.</th>
-                                <th class="p-3 sm:p-4 border-r border-theme">멤버 이름</th>
+                                <th class="p-3 sm:p-4 border-r border-theme text-center w-16">No</th>
+                                <th class="p-3 sm:p-4 border-r border-theme">멤버</th>
                                 <th class="p-3 sm:p-4 border-r border-theme">직업</th>
                                 <th class="p-3 sm:p-4 border-r border-theme">조별</th>
                                 <th class="p-3 sm:p-4 border-r border-theme">직위</th>
-                                <th class="p-3 sm:p-4 border-r border-theme text-right">번영</th>
-                                <th class="p-3 sm:p-4 border-r border-theme text-right">주간 무훈</th>
-                                <th class="p-3 sm:p-4 border-r border-theme text-right">주간 공헌</th>
+                                <th class="p-3 sm:p-4 border-r border-theme text-right">번영도</th>
+                                <th class="p-3 sm:p-4 border-r border-theme text-right">주간무훈</th>
+                                <th class="p-3 sm:p-4 border-r border-theme text-right">주간공헌</th>
                                 <th class="p-3 sm:p-4 border-r border-theme">주둔지</th>
                                 <th class="p-3 sm:p-4 text-center">주 공성 횟수</th>
                             </tr>
