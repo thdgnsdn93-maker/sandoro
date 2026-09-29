@@ -54,7 +54,7 @@ function switchPageView(viewName) {
     }
 }
 
-// 엑셀 명단 업로드 파싱 로직 (UID 및 필수 필드 완벽 대응)
+// 엑셀 명단 업로드 파싱 로직 (키값 공백/대소문자 무시 및 UID 완벽 매칭)
 function handleAllianceExcelUpload(event) {
     const file = event.target.files[0];
     if (!file) return;
@@ -72,10 +72,15 @@ function handleAllianceExcelUpload(event) {
             const allianceToAssign = activeUploadAlliance || categoryNames[0];
 
             jsonRows.forEach((row, idx) => {
-                // UID 및 필수 데이터 키 매핑 (다양한 엑셀 서식 대응)
-                const uidVal = String(row['캐릭터 ID'] || row['UID'] || row['uid'] || row['ID'] || '').trim();
-                const nameVal = String(row['멤버'] || row['닉네임'] || row['이름'] || `대원_${idx+1}`).trim();
-                const jobVal = String(row['직업'] || '').trim();
+                // 키값의 공백 및 대소문자 차이를 흡수하여 정확한 데이터 추출
+                let rawRow = {};
+                Object.keys(row).forEach(k => {
+                    rawRow[k.trim().toLowerCase().replace(/\s+/g, '')] = String(row[k]).trim();
+                });
+
+                const uidVal = rawRow['캐릭터id'] || rawRow['uid'] || rawRow['id'] || rawRow['캐릭터아이디'] || '';
+                const nameVal = rawRow['멤버'] || rawRow['닉네임'] || rawRow['이름'] || rawRow['캐릭터이름'] || `대원_${idx+1}`;
+                const jobVal = rawRow['직업'] || '';
 
                 if (!uidVal) return;
 
@@ -98,7 +103,7 @@ function handleAllianceExcelUpload(event) {
             });
 
             saveDataToStorage();
-            alert(`👥 ${allianceToAssign} 인원 엑셀 데이터 반영 완료!`);
+            alert(`👥 ${allianceToAssign} 인원 엑셀 데이터 반영 완료! (${members.length}명 보유)`);
             renderTable();
             toggleModal('dataUploadModal');
         } catch (err) {
@@ -124,15 +129,20 @@ function handleMemberWeekExcelUpload(event) {
             if(jsonRows.length === 0) return alert("엑셀 파일에 데이터가 없습니다.");
 
             memberWeekData = jsonRows.map((row, idx) => {
-                const uidVal = String(row['캐릭터 ID'] || row['UID'] || '').trim();
-                const nameVal = row['멤버'] || '';
-                const jobVal = row['직업'] || '';
+                let rawRow = {};
+                Object.keys(row).forEach(k => {
+                    rawRow[k.trim().toLowerCase().replace(/\s+/g, '')] = String(row[k]).trim();
+                });
+
+                const uidVal = rawRow['캐릭터id'] || rawRow['uid'] || rawRow['id'] || '';
+                const nameVal = rawRow['멤버'] || rawRow['닉네임'] || rawRow['이름'] || '';
+                const jobVal = rawRow['직업'] || '';
 
                 let existingMember = members.find(m => String(m.uid) === uidVal);
                 if (existingMember) {
                     existingMember.name = nameVal;
                     if (jobVal) existingMember.job = jobVal;
-                } else {
+                } else if (uidVal) {
                     members.push({
                         id: Date.now() + Math.random() + idx,
                         uid: uidVal,
@@ -150,13 +160,13 @@ function handleMemberWeekExcelUpload(event) {
                     name: nameVal,
                     job: jobVal,
                     alliance: existingMember ? existingMember.alliance : categoryNames[0],
-                    group: row['조별'] || '',
-                    position: row['직위'] || '일반 멤버',
-                    prosperity: Number(String(row['번영'] || 0).replace(/,/g, '')) || 0,
-                    mhoon: row['주간 무훈'] || 0,
-                    contribution: Number(String(row['주간 공헌'] || 0).replace(/,/g, '')) || 0,
-                    camp: row['주둔지'] || '',
-                    siegeCount: Number(String(row['주 공성 횟수'] || 0).replace(/,/g, '')) || 0
+                    group: rawRow['조별'] || '',
+                    position: rawRow['직위'] || '일반 멤버',
+                    prosperity: Number(String(rawRow['번영'] || 0).replace(/,/g, '')) || 0,
+                    mhoon: rawRow['주간무훈'] || 0,
+                    contribution: Number(String(rawRow['주간공헌'] || 0).replace(/,/g, '')) || 0,
+                    camp: rawRow['주둔지'] || '',
+                    siegeCount: Number(String(rawRow['주공성횟수'] || 0).replace(/,/g, '')) || 0
                 };
             });
 
