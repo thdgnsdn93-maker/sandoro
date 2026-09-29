@@ -36,7 +36,6 @@ const COMMON_TACTICS_LIST = [
     "태평요술 (효과: 책략 피해 극대화 및 발동 확률 증가)"
 ];
 
-// 기본 도감 템플릿 (3번 무장고유전법은 좌측 장수 이름 / 우측 고유전법 상세)
 const DEFAULT_DICT_DATA = {
     formation: [
         { name: "일자진", type: "밸런스 분산형 / 전열 받는 피해 8% 감소", effect: "어그로가 3곳으로 균등 분산되는 기본 밸런스진" },
@@ -209,7 +208,7 @@ function showDictDetail(item) {
     `;
 }
 
-// 📌 마크다운 업로드 파서: 3번 무장고유전법은 '장수 이름'만 좌측에 추출하도록 최적화
+// 📌 업로드 마크다운 문서를 1:1 정확한 이름과 내용으로 파싱하는 로직
 function handleDictMarkdownUpload(event) {
     const file = event.target.files[0];
     if (!file) return;
@@ -223,16 +222,16 @@ function handleDictMarkdownUpload(event) {
             const lines = rawContent.split(/\r?\n/);
             let parsedItems = [];
             let currentItem = null;
-            const excludeKeywords = ['인연 효과', '대상 무장', '필요 인원', '진형 분류', '상세', '특성', '효과', '발동', '유형', '장수', '고유전법'];
 
             lines.forEach(line => {
                 let trimmed = line.trim();
                 if (!trimmed) return;
                 if (trimmed.startsWith('>') || trimmed.startsWith('---')) return;
 
-                const isNewItemHeader = trimmed.startsWith('###') || trimmed.match(/^[0-9]+\.\s+/) || trimmed.startsWith('- **') || trimmed.startsWith('**');
+                // 새로운 항목(이름)의 시작점 감지 (### 헤더 또는 **볼드체** 또는 번호 매기기)
+                const isHeader = trimmed.startsWith('###') || trimmed.startsWith('##') || trimmed.match(/^[0-9]+\.\s+/) || (trimmed.startsWith('**') && trimmed.endsWith('**'));
 
-                if (isNewItemHeader) {
+                if (isHeader) {
                     if (currentItem && currentItem.name) {
                         parsedItems.push(currentItem);
                     }
@@ -241,15 +240,15 @@ function handleDictMarkdownUpload(event) {
                         .replace(/\*\*/g, '')
                         .split(':')[0]
                         .split('(')[0]
-                        .split('-')[0] // 3번 전법 탭에서 "장수 - 전법" 형태일 경우 장수 이름만 좌측에 추출
+                        .split('-')[0]
                         .trim();
 
-                    if (cleanName && !excludeKeywords.some(kw => cleanName.includes(kw))) {
-                        currentItem = { name: cleanName, type: "전법 상세 정보", effect: "" };
+                    if (cleanName && cleanName.length < 20) {
+                        currentItem = { name: cleanName, type: "상세 정보", effect: "" };
                     }
                 } else if (currentItem) {
-                    if (trimmed.includes('전법') || trimmed.includes('유형') || trimmed.includes('발동') || trimmed.includes('지휘') || trimmed.includes('액티브') || trimmed.includes('패시브')) {
-                        if (currentItem.type === "전법 상세 정보") {
+                    if (trimmed.includes('유형') || trimmed.includes('발동') || trimmed.includes('분류') || trimmed.includes('대상') || trimmed.includes('인원') || trimmed.includes('지휘') || trimmed.includes('액티브') || trimmed.includes('패시브')) {
+                        if (currentItem.type === "상세 정보") {
                             currentItem.type = trimmed.replace(/^[#\-*]+\s*/, '').replace(/\*\*/g, '').trim();
                         } else {
                             currentItem.effect += (currentItem.effect ? " " : "") + trimmed.replace(/^[#\-*]+\s*/, '').replace(/\*\*/g, '').trim();
@@ -267,7 +266,7 @@ function handleDictMarkdownUpload(event) {
             if (parsedItems.length > 0) {
                 DICT_DETAIL_DATA[activeDictUploadKey] = parsedItems.map(item => ({
                     name: item.name,
-                    type: item.type || "고유전법 상세 정보",
+                    type: item.type || "세부 분류 및 정보",
                     effect: item.effect || "상세 효과 내용"
                 }));
 
