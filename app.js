@@ -54,7 +54,7 @@ function switchPageView(viewName) {
     }
 }
 
-// 엑셀 명단 업로드 파싱 로직 (키값 공백/대소문자 무시 및 UID 완벽 매칭)
+// 엑셀 명단 업로드 파싱 로직 (UID, 닉네임, 직업, 소속만 갱신 및 덱 유지)
 function handleAllianceExcelUpload(event) {
     const file = event.target.files[0];
     if (!file) return;
@@ -113,6 +113,7 @@ function handleAllianceExcelUpload(event) {
     reader.readAsArrayBuffer(file);
 }
 
+// 주간활동 리포트 연동 시 누락 인원 '재야' 자동 변경 및 덱 보존
 function handleMemberWeekExcelUpload(event) {
     const file = event.target.files[0];
     if (!file) return;
@@ -127,6 +128,8 @@ function handleMemberWeekExcelUpload(event) {
             
             if(jsonRows.length === 0) return alert("엑셀 파일에 데이터가 없습니다.");
 
+            let uploadedUids = new Set();
+
             memberWeekData = jsonRows.map((row, idx) => {
                 let rawRow = {};
                 Object.keys(row).forEach(k => {
@@ -137,11 +140,14 @@ function handleMemberWeekExcelUpload(event) {
                 const nameVal = rawRow['멤버'] || rawRow['닉네임'] || rawRow['이름'] || '';
                 const jobVal = rawRow['직업'] || '';
 
+                if (uidVal) uploadedUids.add(uidVal);
+
                 let existingMember = members.find(m => String(m.uid) === uidVal);
                 if (existingMember) {
                     existingMember.name = nameVal;
                     if (jobVal) existingMember.job = jobVal;
                 } else if (uidVal) {
+                    // 편성에 없던 인원인 경우 새로 추가
                     members.push({
                         id: Date.now() + Math.random() + idx,
                         uid: uidVal,
@@ -169,9 +175,16 @@ function handleMemberWeekExcelUpload(event) {
                 };
             });
 
+            // 통계 리포트 데이터에 누락된 기존 인원은 '재야' 소속으로 자동 변경
+            members.forEach(m => {
+                if (m.uid && !uploadedUids.has(String(m.uid))) {
+                    m.alliance = '재야';
+                }
+            });
+
             saveDataToStorage();
             localStorage.setItem('memberWeekData', JSON.stringify(memberWeekData));
-            alert(`📊 주간활동 데이터 ${memberWeekData.length}건 반영 완료!`);
+            alert(`📊 주간활동 데이터 ${memberWeekData.length}건 반영 완료! (통계 누락 인원은 '재야'로 소속 변경됨)`);
             
             if (currentActiveView === 'stats') {
                 renderStatsTable();
@@ -276,7 +289,7 @@ function renderStatsTable() {
     tbody.innerHTML = html;
 }
 
-// 🕵️ 스파이 및 이상 계정 검사 로직
+// 🕵️ 스파이 및 중복 계정 검사 로직
 function runSpyCheck() {
     const duplicateBox = document.getElementById('duplicateUidList');
     const suspiciousBox = document.getElementById('suspiciousUidList');
@@ -739,7 +752,7 @@ function renderTable() {
         const absoluteIndex = (pageSizeVal !== 'all') ? ((currentPage - 1) * parseInt(pageSizeVal, 10)) + index + 1 : index + 1;
         html += `<td class="p-3 sm:p-4 border-r border-theme text-center font-bold text-muted">${absoluteIndex}</td>`;
         
-        // 3. UID 열 (관리자/권한자여도 수정 불가능한 읽기 전용 텍스트로 잠금 처리)
+        // 3. UID 열 (절대 수정 불가, 읽기 전용 잠금)
         if (showUidCol) {
             html += `<td class="p-3 sm:p-4 border-r border-theme font-mono text-muted select-all">${member.uid || '-'}</td>`;
         }
