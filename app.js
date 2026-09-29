@@ -190,7 +190,6 @@ function openDictTabWithScroll(tabKey) {
     toggleModal('dictModal');
 }
 
-// ✨ 현재 로그인한 유저가 관리자 권한(또는 금의위 관리자 권한)을 가졌는지 확인
 function isCurrentLoggedUserAdmin() {
     const loggedUserStr = localStorage.getItem('loggedUser');
     if (!loggedUserStr) return false;
@@ -226,12 +225,12 @@ function applyAdminUIState() {
         if(selectAllHeader) selectAllHeader.classList.remove('hidden');
     } else {
         if(btn) {
-            btn.innerHTML = "<span>🛡️️</span> 관리자 모드";
+            btn.innerHTML = "<span>🛡️</span> 관리자 모드";
             btn.className = "bg-amber-600 hover:bg-amber-500 px-4 py-2 rounded-lg font-bold text-white text-xs shadow transition flex items-center gap-1.5";
         }
         if(addBtn) addBtn.classList.add('hidden');
-        if(delSelectedBtn) addBtn.classList.add('hidden');
-        if(delHeader) addBtn.classList.add('hidden');
+        if(delSelectedBtn) delSelectedBtn.classList.add('hidden');
+        if(delHeader) delHeader.classList.add('hidden');
         if(selectAllHeader) selectAllHeader.classList.add('hidden');
     }
 
@@ -1120,15 +1119,27 @@ function renderTable() {
             html += `<td class="p-4 border-r border-theme text-muted font-mono select-all">${member.uid}</td>`;
         }
 
-        // ✨ 관리자 모드이고 현재 금의위 소속인 경우에만 닉네임 옆에 관리자 권한 부여 체크박스 표시
         let adminRoleCheckboxHtml = '';
         if (effectiveIsAdmin && member.alliance === '금의위') {
             const isChecked = member.isAdminRole ? 'checked' : '';
-            adminRoleCheckboxHtml = `<label class="ml-2 inline-flex items-center gap-1 text-[11px] text-yellow-400 cursor-pointer font-normal" title="관리자 권한 부여"><input type="checkbox" ${isChecked} onchange="toggleMemberAdminRole(${member.id}, this)" class="cursor-pointer"> 관리자</label>`;
+            adminRoleCheckboxHtml = `<label class="inline-flex items-center gap-1 text-[11px] text-yellow-400 cursor-pointer font-normal whitespace-nowrap" title="관리자 권한 부여"><input type="checkbox" ${isChecked} onchange="toggleMemberAdminRole(${member.id}, this)" class="cursor-pointer"> 관리자</label>`;
+        }
+
+        // ✨ 닉네임 입력칸과 관리자 체크박스가 깔끔하게 정렬되도록 감싸는 구조 적용
+        let nameCellContent = '';
+        if (effectiveIsAdmin) {
+            nameCellContent = `
+                <div class="flex items-center gap-2">
+                    <input type="text" value="${member.name}" onchange="updateMemberField(${member.id}, 'name', this.value)" class="w-24 text-xs font-bold bg-main border border-theme px-1.5 py-1 rounded">
+                    ${adminRoleCheckboxHtml}
+                </div>
+            `;
+        } else {
+            nameCellContent = member.name;
         }
 
         html += `
-            <td class="p-4 border-r border-theme font-bold">${effectiveIsAdmin ? `<input type="text" value="${member.name}" onchange="updateMemberField(${member.id}, 'name', this.value)" class="w-28 text-xs font-bold bg-main border border-theme px-1 rounded">` : member.name}${adminRoleCheckboxHtml}</td>
+            <td class="p-4 border-r border-theme font-bold">${nameCellContent}</td>
             <td class="p-4 border-r border-theme text-muted">${effectiveIsAdmin ? `<select onchange="updateMemberField(${member.id}, 'job', this.value)" class="text-xs bg-main border border-theme p-1 rounded">${jobOptions}</select>` : (member.job || '-')}</td>
             <td class="p-4 border-r border-theme">${effectiveIsAdmin ? `<select onchange="updateMemberField(${member.id}, 'alliance', this.value)" class="text-xs bg-main border border-theme p-1 rounded">${allianceOptions}</select>` : `<span class="px-2.5 py-1 rounded-lg text-xs bg-panel border border-theme">${member.alliance}</span>`}</td>
         `;
