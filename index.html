@@ -61,13 +61,11 @@
         <div class="bg-panel border-2 border-red-500/50 rounded-xl shadow-2xl w-full max-w-lg p-6 relative max-h-[90vh] overflow-y-auto">
             <button onclick="toggleModal('spyCheckModal')" class="absolute top-4 right-4 p-2 rounded-lg border border-theme bg-panel text-xl font-bold hover:bg-red-500/20 transition">&times;</button>
             <h2 class="text-xl font-bold text-red-500 mb-4 flex items-center gap-2">🕵️ 스파이 & 이상 계정 검사 리포트</h2>
-            
             <div class="space-y-4">
                 <div class="bg-main border border-theme p-4 rounded-lg">
                     <h3 class="text-sm font-bold gold-text mb-2 flex items-center gap-1.5"><span>⚠️</span> 중복 UID 검출 (다중 계정 의심)</h3>
                     <div id="duplicateUidList" class="space-y-1 text-xs text-muted"></div>
                 </div>
-                
                 <div class="bg-main border border-theme p-4 rounded-lg">
                     <h3 class="text-sm font-bold text-orange-400 mb-2 flex items-center gap-1.5"><span>❓</span> UID 미설정 및 이상 계정</h3>
                     <div id="suspiciousUidList" class="space-y-1 text-xs text-muted"></div>
@@ -93,7 +91,7 @@
         </div>
     </div>
 
-    <!-- 📤 데이터 업로드 센터 모달 (도감 마크다운 업로드 버튼 추가됨) -->
+    <!-- 📤 데이터 업로드 센터 모달 -->
     <div id="dataUploadModal" class="hidden fixed inset-0 modal-bg flex items-center justify-center z-50 p-4">
         <div class="bg-panel border-2 gold-border rounded-xl shadow-2xl w-full max-w-md p-6 relative max-h-[90vh] overflow-y-auto">
             <button onclick="openAdminControlFromSub('dataUploadModal')" class="absolute top-4 right-4 p-2 rounded-lg border border-theme bg-panel text-xl font-bold">&times;</button>
@@ -140,48 +138,136 @@
         </div>
     </div>
 
-    <!-- ⚔️ 덱 설정 및 편집 모달 -->
+    <!-- ⚔️ [개편] 예시 1 스타일의 덱 편성 & 조합 공유 모달 -->
     <div id="deckModal" class="hidden fixed inset-0 modal-bg flex items-center justify-center z-50 p-4">
-        <div class="bg-panel border-2 gold-border rounded-xl shadow-2xl w-full max-w-md p-6 relative">
+        <div class="bg-panel border-2 gold-border rounded-xl shadow-2xl w-full max-w-4xl p-6 relative max-h-[92vh] overflow-y-auto">
             <button onclick="toggleModal('deckModal')" class="absolute top-4 right-4 p-2 rounded-lg border border-theme bg-panel text-xl font-bold">&times;</button>
-            <h2 id="deckModalTitle" class="text-xl font-bold gold-text mb-4">⚔️ 덱 편성 설정</h2>
-            <div class="space-y-3">
-                <div>
-                    <label class="text-xs text-muted mb-1 block">장수 1</label>
-                    <input type="text" id="deckGen1" class="w-full bg-main border border-theme px-3 py-2 rounded-lg text-sm text-main">
-                </div>
-                <div>
-                    <label class="text-xs text-muted mb-1 block">장수 2</label>
-                    <input type="text" id="deckGen2" class="w-full bg-main border border-theme px-3 py-2 rounded-lg text-sm text-main">
-                </div>
-                <div>
-                    <label class="text-xs text-muted mb-1 block">장수 3</label>
-                    <input type="text" id="deckGen3" class="w-full bg-main border border-theme px-3 py-2 rounded-lg text-sm text-main">
+            
+            <div class="flex justify-between items-center pb-3 border-b border-theme mb-4">
+                <h2 id="deckModalTitle" class="text-lg font-bold gold-text flex items-center gap-2">⚔️ 조합 공유 & 부대 편성 편집</h2>
+                <div class="flex gap-2">
+                    <button onclick="alert('수성 장성특세 기능 준비 중입니다.')" class="bg-amber-600 hover:bg-amber-500 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition">🏰 수성 장성특세</button>
                 </div>
             </div>
-            <div class="mt-6 flex justify-end gap-2">
-                <button onclick="saveDeckData()" class="btn-gold px-4 py-2 rounded-lg text-xs font-bold">저장</button>
-                <button onclick="toggleModal('deckModal')" class="px-4 py-2 bg-gray-700 text-white rounded-lg text-xs">취소</button>
+
+            <div class="space-y-4">
+                <!-- 진형 선택 영역 -->
+                <div class="bg-main p-3.5 rounded-xl border border-theme space-y-1.5">
+                    <label class="text-xs text-muted block">선택 진형</label>
+                    <select id="deckFormationSelect" class="w-full bg-panel border border-theme px-3 py-2 rounded-lg text-sm text-main font-bold">
+                        <option value="기략진">기략진</option>
+                        <option value="학익진">학익진</option>
+                        <option value="어룡진">어룡진</option>
+                        <option value="봉시진">봉시진</option>
+                        <option value="안행진">안행진</option>
+                        <option value="언월진">언월진</option>
+                    </select>
+                </div>
+
+                <div class="text-center py-1 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
+                    <span class="text-xs font-bold gold-text">✨ 해당 진형 보너스 및 장수 인연 보너스 적용</span>
+                </div>
+
+                <!-- 장수 1, 2, 3 카드 배치 그리드 -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <!-- 장수 1 -->
+                    <div class="bg-main p-4 rounded-xl border border-theme space-y-3">
+                        <div class="text-xs font-bold gold-text pb-1 border-b border-theme">장수 1 (메인)</div>
+                        <div>
+                            <label class="text-[11px] text-muted mb-1 block">장수 이름</label>
+                            <input type="text" id="deckGen1" placeholder="장수 검색..." class="w-full bg-panel border border-theme px-3 py-2 rounded-lg text-sm text-main">
+                        </div>
+                        <div>
+                            <label class="text-[11px] text-muted mb-1 block">1번 전법 (고유전법 자동 연동)</label>
+                            <input type="text" id="deckSkill1_1" placeholder="고유 전법" class="w-full bg-panel border border-theme px-3 py-2 rounded-lg text-xs text-main">
+                        </div>
+                        <div>
+                            <label class="text-[11px] text-muted mb-1 block">2번 전법</label>
+                            <input type="text" id="deckSkill1_2" placeholder="전법 검색..." class="w-full bg-panel border border-theme px-3 py-2 rounded-lg text-xs text-main">
+                        </div>
+                        <div>
+                            <label class="text-[11px] text-muted mb-1 block">3번 전법</label>
+                            <input type="text" id="deckSkill1_3" placeholder="전법 검색..." class="w-full bg-panel border border-theme px-3 py-2 rounded-lg text-xs text-main">
+                        </div>
+                    </div>
+
+                    <!-- 장수 2 -->
+                    <div class="bg-main p-4 rounded-xl border border-theme space-y-3">
+                        <div class="text-xs font-bold gold-text pb-1 border-b border-theme">장수 2</div>
+                        <div>
+                            <label class="text-[11px] text-muted mb-1 block">장수 이름</label>
+                            <input type="text" id="deckGen2" placeholder="장수 검색..." class="w-full bg-panel border border-theme px-3 py-2 rounded-lg text-sm text-main">
+                        </div>
+                        <div>
+                            <label class="text-[11px] text-muted mb-1 block">1번 전법 (고유전법 자동 연동)</label>
+                            <input type="text" id="deckSkill2_1" placeholder="고유 전법" class="w-full bg-panel border border-theme px-3 py-2 rounded-lg text-xs text-main">
+                        </div>
+                        <div>
+                            <label class="text-[11px] text-muted mb-1 block">2번 전법</label>
+                            <input type="text" id="deckSkill2_2" placeholder="전법 검색..." class="w-full bg-panel border border-theme px-3 py-2 rounded-lg text-xs text-main">
+                        </div>
+                        <div>
+                            <label class="text-[11px] text-muted mb-1 block">3번 전법</label>
+                            <input type="text" id="deckSkill2_3" placeholder="전법 검색..." class="w-full bg-panel border border-theme px-3 py-2 rounded-lg text-xs text-main">
+                        </div>
+                    </div>
+
+                    <!-- 장수 3 -->
+                    <div class="bg-main p-4 rounded-xl border border-theme space-y-3">
+                        <div class="text-xs font-bold gold-text pb-1 border-b border-theme">장수 3</div>
+                        <div>
+                            <label class="text-[11px] text-muted mb-1 block">장수 이름</label>
+                            <input type="text" id="deckGen3" placeholder="장수 검색..." class="w-full bg-panel border border-theme px-3 py-2 rounded-lg text-sm text-main">
+                        </div>
+                        <div>
+                            <label class="text-[11px] text-muted mb-1 block">1번 전법 (고유전법 자동 연동)</label>
+                            <input type="text" id="deckSkill3_1" placeholder="고유 전법" class="w-full bg-panel border border-theme px-3 py-2 rounded-lg text-xs text-main">
+                        </div>
+                        <div>
+                            <label class="text-[11px] text-muted mb-1 block">2번 전법</label>
+                            <input type="text" id="deckSkill3_2" placeholder="전법 검색..." class="w-full bg-panel border border-theme px-3 py-2 rounded-lg text-xs text-main">
+                        </div>
+                        <div>
+                            <label class="text-[11px] text-muted mb-1 block">3번 전법</label>
+                            <input type="text" id="deckSkill3_3" placeholder="전법 검색..." class="w-full bg-panel border border-theme px-3 py-2 rounded-lg text-xs text-main">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-6 flex justify-between items-center pt-3 border-t border-theme">
+                <button onclick="clearDeckInputs()" class="bg-red-800 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-xs font-bold transition">덱 비우기</button>
+                <div class="flex gap-2">
+                    <button onclick="saveDeckData()" class="btn-gold px-6 py-2 rounded-lg text-xs font-bold shadow">저장하기</button>
+                    <button onclick="toggleModal('deckModal')" class="px-4 py-2 bg-gray-700 text-white rounded-lg text-xs">닫기</button>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- 📚 정보일람 도감 모달 -->
+    <!-- 📚 [개편] 예시 2 스타일의 좌측 사이드바 + 우측 상세설명 도감 모달 -->
     <div id="dictModal" class="hidden fixed inset-0 modal-bg flex items-center justify-center z-50 p-4">
-        <div class="bg-panel border-2 gold-border rounded-xl shadow-2xl w-full max-w-3xl p-6 relative max-h-[90vh] flex flex-col">
-            <button onclick="toggleModal('dictModal')" class="absolute top-4 right-4 p-2 rounded-lg border border-theme bg-panel text-xl font-bold">&times;</button>
+        <div class="bg-panel border-2 gold-border rounded-xl shadow-2xl w-full max-w-4xl p-6 relative max-h-[90vh] flex flex-col">
+            <button onclick="toggleModal('dictModal')" class="absolute top-4 right-4 p-2 rounded-lg border border-theme bg-panel text-xl font-bold z-10">&times;</button>
             <h2 class="text-xl font-bold gold-text mb-4">📚 정보일람 대도감</h2>
-            <div class="flex flex-wrap gap-2 border-b border-theme pb-2 mb-4">
-                <button onclick="switchDictTab('formation')" id="dictTab-formation" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-amber-600 text-white">1. 진형 및 상성</button>
-                <button onclick="switchDictTab('synergy')" id="dictTab-synergy" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-main text-muted">2. 무장 인연</button>
-                <button onclick="switchDictTab('generalTactic')" id="dictTab-generalTactic" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-main text-muted">3. 무장고유전법</button>
-                <button onclick="switchDictTab('commonTactic')" id="dictTab-commonTactic" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-main text-muted">4. 공용전법</button>
+            
+            <div class="flex flex-col md:flex-row gap-4 flex-1 overflow-hidden">
+                <!-- 좌측: 각 항목 선택 버튼 리스트 (예시 2 구현) -->
+                <div class="w-full md:w-64 bg-main border border-theme rounded-xl p-3 flex flex-row md:flex-col gap-2 overflow-x-auto md:overflow-y-auto shrink-0">
+                    <button onclick="switchDictTab('formation')" id="dictTab-formation" class="w-full text-left px-3 py-2.5 rounded-lg text-xs font-bold bg-amber-600 text-white transition flex items-center gap-2"><span>⚔️</span> 1. 진형 및 병종상성</button>
+                    <button onclick="switchDictTab('synergy')" id="dictTab-synergy" class="w-full text-left px-3 py-2.5 rounded-lg text-xs font-bold bg-panel text-muted hover:bg-hover transition flex items-center gap-2"><span>🤝</span> 2. 무장 인연 보너스</button>
+                    <button onclick="switchDictTab('generalTactic')" id="dictTab-generalTactic" class="w-full text-left px-3 py-2.5 rounded-lg text-xs font-bold bg-panel text-muted hover:bg-hover transition flex items-center gap-2"><span>🛡️</span> 3. 무장고유전법</button>
+                    <button onclick="switchDictTab('commonTactic')" id="dictTab-commonTactic" class="w-full text-left px-3 py-2.5 rounded-lg text-xs font-bold bg-panel text-muted hover:bg-hover transition flex items-center gap-2"><span>📜</span> 4. 공용전법</button>
+                </div>
+
+                <!-- 우측: 상세 설명 깔끔하게 정리되는 패널 -->
+                <div id="dictContentArea" class="flex-1 overflow-y-auto bg-main p-5 rounded-xl border border-theme text-xs sm:text-sm text-main space-y-3 leading-relaxed">
+                    <!-- 도감 내용 렌더링 영역 -->
+                </div>
             </div>
-            <div id="dictContentArea" class="flex-1 overflow-y-auto bg-main p-4 rounded-xl border border-theme text-xs sm:text-sm text-main space-y-2">
-                <!-- 도감 내용 렌더링 영역 -->
-            </div>
+
             <div class="mt-4 flex justify-end">
-                <button onclick="toggleModal('dictModal')" class="px-4 py-2 bg-gray-700 text-white rounded-lg text-xs">닫기</button>
+                <button onclick="toggleModal('dictModal')" class="px-5 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-xs font-bold">닫기</button>
             </div>
         </div>
     </div>

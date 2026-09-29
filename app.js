@@ -60,7 +60,7 @@ function switchPageView(viewName) {
     }
 }
 
-// 📚 정보일람 도감 탭 전환 함수
+// 📚 정보일람 도감 탭 전환 함수 (예시 2 스타일 연동)
 function switchDictTab(tabKey) {
     currentDictTargetTab = tabKey;
     const tabs = ['formation', 'synergy', 'generalTactic', 'commonTactic'];
@@ -68,9 +68,9 @@ function switchDictTab(tabKey) {
         const btn = document.getElementById(`dictTab-${t}`);
         if (btn) {
             if (t === tabKey) {
-                btn.className = "px-3 py-1.5 rounded-lg text-xs font-bold bg-amber-600 text-white shadow";
+                btn.className = "w-full text-left px-3 py-2.5 rounded-lg text-xs font-bold bg-amber-600 text-white transition flex items-center gap-2 shadow";
             } else {
-                btn.className = "px-3 py-1.5 rounded-lg text-xs font-bold bg-main text-muted hover:bg-hover";
+                btn.className = "w-full text-left px-3 py-2.5 rounded-lg text-xs font-bold bg-panel text-muted hover:bg-hover transition flex items-center gap-2";
             }
         }
     });
@@ -82,7 +82,7 @@ function switchDictTab(tabKey) {
     }
 }
 
-// ⚔️ 덱 설정 모달 관련 함수
+// ⚔️ [개편] 덱 설정 모달 열기 함수 (예시 1 스타일 매핑)
 let currentEditingMemberId = null;
 let currentEditingDeckIdx = 0;
 
@@ -94,16 +94,51 @@ function openDeckModal(memberId, deckIdx) {
     currentEditingDeckIdx = deckIdx;
 
     const titleEl = document.getElementById('deckModalTitle');
-    if (titleEl) titleEl.innerText = `⚔️ ${member.name} - 보유덱 ${deckIdx + 1} 설정`;
+    if (titleEl) titleEl.innerText = `⚔️ ${member.name} - 보유덱 ${deckIdx + 1} 편성 편집`;
 
-    const deck = (member.decks && member.decks[deckIdx]) || { g1: '', g2: '', g3: '' };
+    const deck = (member.decks && member.decks[deckIdx]) || {};
+    
+    document.getElementById('deckFormationSelect').value = deck.formation || '기략진';
     document.getElementById('deckGen1').value = deck.g1 || '';
     document.getElementById('deckGen2').value = deck.g2 || '';
     document.getElementById('deckGen3').value = deck.g3 || '';
 
+    document.getElementById('deckSkill1_1').value = deck.s1_1 || '';
+    document.getElementById('deckSkill1_2').value = deck.s1_2 || '';
+    document.getElementById('deckSkill1_3').value = deck.s1_3 || '';
+
+    document.getElementById('deckSkill2_1').value = deck.s2_1 || '';
+    document.getElementById('deckSkill2_2').value = deck.s2_2 || '';
+    document.getElementById('deckSkill2_3').value = deck.s2_3 || '';
+
+    document.getElementById('deckSkill3_1').value = deck.s3_1 || '';
+    document.getElementById('deckSkill3_2').value = deck.s3_2 || '';
+    document.getElementById('deckSkill3_3').value = deck.s3_3 || '';
+
     toggleModal('deckModal');
 }
 
+// 덱 입력 초기화 (비우기 버튼)
+function clearDeckInputs() {
+    document.getElementById('deckFormationSelect').value = '기략진';
+    document.getElementById('deckGen1').value = '';
+    document.getElementById('deckGen2').value = '';
+    document.getElementById('deckGen3').value = '';
+
+    document.getElementById('deckSkill1_1').value = '';
+    document.getElementById('deckSkill1_2').value = '';
+    document.getElementById('deckSkill1_3').value = '';
+
+    document.getElementById('deckSkill2_1').value = '';
+    document.getElementById('deckSkill2_2').value = '';
+    document.getElementById('deckSkill2_3').value = '';
+
+    document.getElementById('deckSkill3_1').value = '';
+    document.getElementById('deckSkill3_2').value = '';
+    document.getElementById('deckSkill3_3').value = '';
+}
+
+// ⚔️ 덱 설정 저장 함수
 function saveDeckData() {
     const member = members.find(m => m.id === currentEditingMemberId);
     if (!member) return;
@@ -111,14 +146,25 @@ function saveDeckData() {
     if (!member.decks) member.decks = [];
     
     member.decks[currentEditingDeckIdx] = {
+        formation: document.getElementById('deckFormationSelect').value,
         g1: document.getElementById('deckGen1').value.trim(),
         g2: document.getElementById('deckGen2').value.trim(),
-        g3: document.getElementById('deckGen3').value.trim()
+        g3: document.getElementById('deckGen3').value.trim(),
+        s1_1: document.getElementById('deckSkill1_1').value.trim(),
+        s1_2: document.getElementById('deckSkill1_2').value.trim(),
+        s1_3: document.getElementById('deckSkill1_3').value.trim(),
+        s2_1: document.getElementById('deckSkill2_1').value.trim(),
+        s2_2: document.getElementById('deckSkill2_2').value.trim(),
+        s2_3: document.getElementById('deckSkill2_3').value.trim(),
+        s3_1: document.getElementById('deckSkill3_1').value.trim(),
+        s3_2: document.getElementById('deckSkill3_2').value.trim(),
+        s3_3: document.getElementById('deckSkill3_3').value.trim()
     };
 
     saveDataToStorage();
     renderTable();
     toggleModal('deckModal');
+    alert("덱 편성이 저장되었습니다!");
 }
 
 // ✨ 도감 마크다운 파일 업로드 처리 함수
