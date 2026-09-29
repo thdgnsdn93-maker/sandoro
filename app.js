@@ -59,7 +59,7 @@ function switchPageView(viewName) {
     }
 }
 
-// 일반 연맹 명단 업로드 파싱 로직 (닉네임 및 닉네임(이전닉네임) 형태 완벽 지원, 덱 보존)
+// 일반 연맹 명단 업로드 파싱 로직 (덱 보존 및 닉네임 인식 강화)
 function handleAllianceExcelUpload(event) {
     const file = event.target.files[0];
     if (!file) return;
@@ -90,11 +90,7 @@ function handleAllianceExcelUpload(event) {
                 });
 
                 const uidVal = rawRow['캐릭터id'] || rawRow['uid'] || rawRow['id'] || rawRow['캐릭터아이디'] || '';
-                
-                let rawNameVal = rawRow['멤버'] || rawRow['닉네임'] || rawRow['이름'] || rawRow['캐릭터이름'] || rawRow['캐릭터'] || rawRow['캐릭터명'] || rawRow['유저명'] || rawRow['성명'] || rawRow['군주명'] || rawNameKey || `대원_${idx+1}`;
-                
-                // "닉네임(이전닉네임)" 형태나 특수 공백이 포함된 경우 처리
-                // 그대로 유지하되 앞뒤 공백 정리 (원하시는 경우 괄호 포함 전체를 닉네임으로 수용)
+                const rawNameVal = rawRow['멤버'] || rawRow['닉네임'] || rawRow['이름'] || rawRow['캐릭터이름'] || rawRow['캐릭터'] || rawRow['캐릭터명'] || rawRow['유저명'] || rawRow['성명'] || rawRow['군주명'] || rawNameKey || `대원_${idx+1}`;
                 const nameVal = String(rawNameVal).trim();
                 const jobVal = rawRow['직업'] || '';
 
@@ -119,7 +115,7 @@ function handleAllianceExcelUpload(event) {
             });
 
             saveDataToStorage();
-            alert(`👥 ${getDisplayCategoryName(allianceToAssign)} 인원 엑셀 데이터 반영 완료! (${members.length}명 보유)[cite: 7]`);
+            alert(`👥 ${getDisplayCategoryName(allianceToAssign)} 인원 엑셀 데이터 반영 완료! (${members.length}명 보유)`);
             renderTable();
             toggleModal('dataUploadModal');
         } catch (err) {
@@ -130,7 +126,7 @@ function handleAllianceExcelUpload(event) {
     reader.readAsArrayBuffer(file);
 }
 
-// 주간활동 리포트 연동 로직 (금의위만 연동, 타 카테고리는 영향 없음, 덱 보존 및 누락 시 '재야'로 변경)
+// 주간활동 리포트 연동 로직 (금의위만 연동, 누락 시 '재야'로 변경, 덱 보존)
 function handleMemberWeekExcelUpload(event) {
     const file = event.target.files[0];
     if (!file) return;
@@ -182,6 +178,8 @@ function handleMemberWeekExcelUpload(event) {
                     });
                 }
 
+                const mhoonVal = Number(String(rawRow['주간무훈'] || rawRow['무훈'] || 0).replace(/,/g, '')) || 0;
+
                 return {
                     id: uidVal || idx,
                     uid: uidVal,
@@ -191,10 +189,10 @@ function handleMemberWeekExcelUpload(event) {
                     group: rawRow['조별'] || '',
                     position: rawRow['직위'] || '일반 멤버',
                     prosperity: Number(String(rawRow['번영'] || 0).replace(/,/g, '')) || 0,
-                    mhoon: rawRow['주간무훈'] || 0,
-                    contribution: Number(String(rawRow['주간공헌'] || 0).replace(/,/g, '')) || 0,
+                    mhoon: mhoonVal,
+                    contribution: Number(String(rawRow['주간공헌'] || rawRow['공헌'] || 0).replace(/,/g, '')) || 0,
                     camp: rawRow['주둔지'] || '',
-                    siegeCount: Number(String(rawRow['주공성횟수'] || 0).replace(/,/g, '')) || 0
+                    siegeCount: Number(String(rawRow['주공성횟수'] || rawRow['공성횟수'] || 0).replace(/,/g, '')) || 0
                 };
             });
 
@@ -206,7 +204,7 @@ function handleMemberWeekExcelUpload(event) {
 
             saveDataToStorage();
             localStorage.setItem('memberWeekData', JSON.stringify(memberWeekData));
-            alert(`📊 금의위 주간활동 데이터 ${memberWeekData.length}건 반영 완료! (통계 누락 금의위 인원은 '재야'로 변경됨)[cite: 7]`);
+            alert(`📊 금의위 주간활동 데이터 ${memberWeekData.length}건 반영 완료! (통계 누락 금의위 인원은 '재야'로 변경됨)`);
             
             if (currentActiveView === 'stats') {
                 renderStatsTable();
@@ -235,50 +233,77 @@ function renderStatsTable() {
         if (sortType === 'contributionDesc') return b.contribution - a.contribution;
         if (sortType === 'contributionAsc') return a.contribution - b.contribution;
         if (sortType === 'prosperityDesc') return b.prosperity - a.prosperity;
+        if (sortType === 'mhoonDesc') return b.mhoon - a.mhoon;
         if (sortType === 'siegeDesc') return b.siegeCount - a.siegeCount;
         return 0;
     });
 
     const totalMembers = memberWeekData.length;
     const totalProsperity = memberWeekData.reduce((acc, cur) => acc + cur.prosperity, 0);
+    const totalMhoon = memberWeekData.reduce((acc, cur) => acc + cur.mhoon, 0);
     const totalContribution = memberWeekData.reduce((acc, cur) => acc + cur.contribution, 0);
+    const totalSiege = memberWeekData.reduce((acc, cur) => acc + cur.siegeCount, 0);
+
     const avgProsperity = totalMembers > 0 ? Math.round(totalProsperity / totalMembers) : 0;
+    const avgMhoon = totalMembers > 0 ? Math.round(totalMhoon / totalMembers) : 0;
+    const avgContribution = totalMembers > 0 ? Math.round(totalContribution / totalMembers) : 0;
+    const avgSiege = totalMembers > 0 ? (totalSiege / totalMembers).toFixed(1) : 0;
 
     document.getElementById('statTotalMembers').innerText = `${totalMembers}명`;
-    document.getElementById('statTotalProsperity').innerText = totalProsperity.toLocaleString();
-    document.getElementById('statTotalContribution').innerText = totalContribution.toLocaleString();
     document.getElementById('statAvgProsperity').innerText = avgProsperity.toLocaleString();
+    document.getElementById('statAvgMhoon').innerText = avgMhoon.toLocaleString();
+    document.getElementById('statAvgContribution').innerText = avgContribution.toLocaleString();
+    document.getElementById('statAvgSiege').innerText = `${avgSiege}회`;
 
-    const evaluatedMembers = [...memberWeekData].map(m => {
-        const mhoonNum = Number(String(m.mhoon).replace(/,/g, '')) || 0;
-        return {
-            ...m,
-            totalScore: m.contribution + (mhoonNum * 10) + (m.siegeCount * 1000)
-        };
+    const mhoonSorted = [...memberWeekData].sort((a, b) => b.mhoon - a.mhoon);
+    const contribSorted = [...memberWeekData].sort((a, b) => b.contribution - a.contribution);
+    const siegeSorted = [...memberWeekData].sort((a, b) => b.siegeCount - a.siegeCount);
+
+    let mhoonHtml = '';
+    mhoonSorted.slice(0, 5).forEach((m, i) => {
+        const medal = i === 0 ? '🥇' : (i === 1 ? '🥈' : (i === 2 ? '🥉' : `${i+1}.`));
+        mhoonHtml += `<div class="flex justify-between items-center bg-main p-2 rounded border border-theme"><span>${medal} <strong>${m.name}</strong></span><span class="text-yellow-500 font-bold">무훈: ${m.mhoon.toLocaleString()}</span></div>`;
     });
-    evaluatedMembers.sort((a, b) => b.totalScore - a.totalScore);
+    document.getElementById('topMhoonList').innerHTML = mhoonHtml || '<p class="text-muted">데이터 없음</p>';
 
-    const topExecBox = document.getElementById('topExecutivesList');
-    if (evaluatedMembers.length > 0) {
-        let topHtml = '';
-        evaluatedMembers.slice(0, 10).forEach((ex, i) => {
-            const medal = i === 0 ? '🥇' : (i === 1 ? '🥈' : (i === 2 ? '🥉' : `${i+1}.`));
-            topHtml += `<div class="flex justify-between items-center bg-main p-2 rounded border border-theme"><span>${medal} <strong>${ex.name}</strong> <span class="text-[10px] text-muted">(${ex.position})</span></span><span class="gold-text font-bold">공헌: ${ex.contribution.toLocaleString()}</span></div>`;
-        });
-        topExecBox.innerHTML = topHtml;
-    }
+    let contribHtml = '';
+    contribSorted.slice(0, 5).forEach((m, i) => {
+        const medal = i === 0 ? '🥇' : (i === 1 ? '🥈' : (i === 2 ? '🥉' : `${i+1}.`));
+        contribHtml += `<div class="flex justify-between items-center bg-main p-2 rounded border border-theme"><span>${medal} <strong>${m.name}</strong></span><span class="text-emerald-400 font-bold">공헌: ${m.contribution.toLocaleString()}</span></div>`;
+    });
+    document.getElementById('topContribList').innerHTML = contribHtml || '<p class="text-muted">데이터 없음</p>';
+
+    let siegeHtml = '';
+    siegeSorted.slice(0, 5).forEach((m, i) => {
+        const medal = i === 0 ? '🥇' : (i === 1 ? '🥈' : (i === 2 ? '🥉' : `${i+1}.`));
+        siegeHtml += `<div class="flex justify-between items-center bg-main p-2 rounded border border-theme"><span>${medal} <strong>${m.name}</strong></span><span class="text-blue-400 font-bold">공성: ${m.siegeCount}회</span></div>`;
+    });
+    document.getElementById('topSiegeList').innerHTML = siegeHtml || '<p class="text-muted">데이터 없음</p>';
 
     const adminLowBoxWrapper = document.getElementById('adminLowBoxWrapper');
     const lowExecBox = document.getElementById('lowExecutivesList');
     const hasAdminRole = isCurrentLoggedUserAdmin();
 
-    if (hasAdminRole) {
+    if (hasAdminRole && memberWeekData.length > 0) {
         adminLowBoxWrapper.classList.remove('hidden');
+        
+        const evaluated = memberWeekData.map(m => {
+            const mRank = mhoonSorted.findIndex(item => item.uid === m.uid);
+            const cRank = contribSorted.findIndex(item => item.uid === m.uid);
+            const sRank = siegeSorted.findIndex(item => item.uid === m.uid);
+            return {
+                ...m,
+                avgRank: (mRank + cRank + sRank) / 3
+            };
+        });
+        evaluated.sort((a, b) => b.avgRank - a.avgRank);
+
+        const bottomCount = Math.max(1, Math.ceil(evaluated.length * 0.10));
+        const bottomMembers = evaluated.slice(0, bottomCount);
+
         let lowHtml = '';
-        const bottomCount = Math.max(1, Math.ceil(evaluatedMembers.length * 0.05));
-        const bottomMembers = [...evaluatedMembers].reverse().slice(0, bottomCount);
         bottomMembers.forEach((ex) => {
-            lowHtml += `<div class="flex justify-between items-center bg-main p-2 rounded border border-theme"><span>⚠ <strong>${ex.name}</strong> <span class="text-[10px] text-muted">(${ex.position})</span></span><span class="text-red-400 font-bold">공헌: ${ex.contribution.toLocaleString()}</span></div>`;
+            lowHtml += `<div class="flex justify-between items-center bg-main p-2 rounded border border-theme"><span>⚠ <strong>${ex.name}</strong> <span class="text-[10px] text-muted">(${ex.position})</span></span><span class="text-red-400 font-bold">공헌: ${ex.contribution.toLocaleString()} / 무훈: ${ex.mhoon.toLocaleString()} / 공성: ${ex.siegeCount}회</span></div>`;
         });
         lowExecBox.innerHTML = lowHtml;
     } else {
@@ -286,7 +311,7 @@ function renderStatsTable() {
     }
 
     if (filtered.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="10" class="p-8 text-center text-muted">등록된 주간활동 데이터가 없습니다. 관리자 제어판에서 엑셀 파일을 업로드해주세요.[cite: 7]</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="10" class="p-8 text-center text-muted">등록된 주간활동 데이터가 없습니다. 관리자 제어판에서 엑셀 파일을 업로드해주세요.</td></tr>`;
         return;
     }
 
@@ -302,7 +327,7 @@ function renderStatsTable() {
             <td class="p-3 sm:p-4 border-r border-theme text-muted">${m.group || '-'}</td>
             <td class="p-3 sm:p-4 border-r border-theme"><span class="px-2 py-0.5 rounded text-xs ${badgeClass}">${m.position}</span></td>
             <td class="p-3 sm:p-4 border-r border-theme text-right font-mono">${m.prosperity.toLocaleString()}</td>
-            <td class="p-3 sm:p-4 border-r border-theme text-right font-mono text-yellow-500">${m.mhoon}</td>
+            <td class="p-3 sm:p-4 border-r border-theme text-right font-mono text-yellow-500">${m.mhoon.toLocaleString()}</td>
             <td class="p-3 sm:p-4 border-r border-theme text-right font-mono text-emerald-400">${m.contribution.toLocaleString()}</td>
             <td class="p-3 sm:p-4 border-r border-theme text-muted text-xs">${m.camp}</td>
             <td class="p-3 sm:p-4 text-center font-bold">${m.siegeCount}회</td>
@@ -514,6 +539,20 @@ function isCurrentLoggedUserAdmin() {
     }
 }
 
+// 현재 로그인한 유저가 '금의위' 소속인지 확인하는 함수
+function isCurrentLoggedUserGeumuiwi() {
+    const loggedUserStr = localStorage.getItem('loggedUser');
+    if (!loggedUserStr) return false;
+    try {
+        const loggedUser = JSON.parse(loggedUserStr);
+        if (String(loggedUser.uid) === CREATOR_UID) return true;
+        const member = members.find(m => String(m.uid) === String(loggedUser.uid));
+        return member && member.alliance === '금의위';
+    } catch (e) {
+        return false;
+    }
+}
+
 function toggleAdminMode() {
     if (!isAdminMode) {
         if (isCurrentLoggedUserAdmin()) {
@@ -571,8 +610,9 @@ function applyAdminUIState() {
     const delColHeader = document.getElementById('delColHeader');
     
     const effectiveIsAdmin = isAdminMode && !isUserPreview;
-    const hasAdminRole = isCurrentLoggedUserAdmin();
-    const showUidCol = effectiveIsAdmin || hasAdminRole;
+    
+    // UID 열은 금의위 소속이거나 관리자일 때만 노출
+    const showUidCol = effectiveIsAdmin || isCurrentLoggedUserAdmin() || isCurrentLoggedUserGeumuiwi();
 
     if (effectiveIsAdmin) {
         if(delColHeader) delColHeader.classList.remove('hidden');
@@ -686,7 +726,6 @@ function renderFilterButtons() {
     const container = document.getElementById('filter-buttons');
     const sidebarContainer = document.getElementById('sidebar-filter-buttons');
     
-    // ⭐ 즐겨찾기 버튼을 맨 앞에 항상 고정 배치
     let html = `<button onclick="switchPageView('dashboard'); filterTable('⭐ 즐겨찾기');" class="px-3 py-2 rounded-lg text-xs font-bold transition whitespace-nowrap ${currentFilter === '⭐ 즐겨찾기' && currentActiveView === 'dashboard' ? 'bg-yellow-600 text-white shadow' : 'bg-panel hover:bg-hover border border-theme text-muted'}">⭐ 즐겨찾기</button>`;
     
     let sidebarHtml = '';
@@ -742,7 +781,9 @@ function renderTable() {
     const effectiveIsAdmin = isAdminMode && !isUserPreview;
     const hasAdminRole = isCurrentLoggedUserAdmin();
     const isCreator = isCurrentLoggedUserCreator();
-    const showUidCol = effectiveIsAdmin || hasAdminRole;
+    
+    // UID 열 노출 조건: 관리자이거나 금의위 소속일 때
+    const showUidCol = effectiveIsAdmin || hasAdminRole || isCurrentLoggedUserGeumuiwi();
 
     let filtered = members.filter(m => {
         let match = currentFilter === '⭐ 즐겨찾기' ? favorites.includes(m.id) : (m.alliance === currentFilter);
@@ -777,16 +818,16 @@ function renderTable() {
         const isFav = favorites.includes(member.id);
         html += `<td class="p-3 sm:p-4 border-r border-theme text-center"><button type="button" onclick="toggleFavorite(${member.id})" class="text-sm">${isFav ? '⭐' : '☆'}</button></td>`;
         
-        // 2. No. 열 (숫자만 출력)
+        // 2. No. 열
         const absoluteIndex = (pageSizeVal !== 'all') ? ((currentPage - 1) * parseInt(pageSizeVal, 10)) + index + 1 : index + 1;
         html += `<td class="p-3 sm:p-4 border-r border-theme text-center font-bold text-muted">${absoluteIndex}</td>`;
         
-        // 3. UID 열 (절대 수정 불가, 읽기 전용 잠금)
+        // 3. UID 열 (금의위 소속 또는 관리자에게만 노출)
         if (showUidCol) {
             html += `<td class="p-3 sm:p-4 border-r border-theme font-mono text-muted select-all">${member.uid || '-'}</td>`;
         }
         
-        // 4. 닉네임 열 (제작자 로그인 시 닉네임 옆에 관리자 권한 부여 체크박스 표시)
+        // 4. 닉네임 열
         if (effectiveIsAdmin) {
             let adminCheckboxHtml = '';
             if (isCreator && String(member.uid) !== CREATOR_UID) {
@@ -826,7 +867,7 @@ function renderTable() {
             html += `<td class="p-3 sm:p-4 border-r border-theme">${getDisplayCategoryName(member.alliance)}</td>`;
         }
 
-        // 7. 보유덱 1~5 열
+        // 7. 보유덱 1~5 열 (일반 모드에서도 클릭하여 수정 가능하도록 개방)
         for(let i=0; i<5; i++) {
             const deck = member.decks && member.decks[i];
             if (deck && (deck.g1 || deck.g2 || deck.g3)) {

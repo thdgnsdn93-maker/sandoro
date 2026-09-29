@@ -1,371 +1,53 @@
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>금의위 DB - 삼국지 천하결전 대시보드</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <link rel="stylesheet" href="style.css">
-</head>
-<body class="theme-imperial-gold min-h-screen flex flex-col md:flex-row relative" id="app-body">
-
-    <!-- 📱 모바일용 슬라이드 사이드바 백드롭 -->
-    <div id="mobileDrawerBackdrop" onclick="toggleMobileDrawer()" class="hidden fixed inset-0 bg-black/60 z-40 md:hidden transition-opacity"></div>
-
-    <!-- 🔒 UID 로그인 팝업 -->
-    <div id="authOverlay" class="fixed inset-0 modal-bg z-50 flex items-center justify-center p-4">
-        <div class="bg-panel border-2 gold-border rounded-2xl shadow-2xl w-full max-w-md p-6 sm:p-8 relative text-center">
-            <div class="mb-6 flex justify-center">
-                <img src="logo.png" alt="Logo" class="max-h-20 object-contain" onerror="this.onerror=null; this.src='연맹 아이콘.png';">
-            </div>
-            <h2 class="text-2xl font-bold gold-text mb-2">🔐 금의위 대시보드 입장</h2>
-            <p class="text-xs text-muted mb-6">데이터베이스에 등록된 본인의 게임 UID를 입력해 주세요.</p>
-            <div class="space-y-4 text-left">
-                <div>
-                    <label class="text-xs text-muted mb-1 block">게임 UID</label>
-                    <input type="text" id="authUid" placeholder="예: 20029876543" class="w-full bg-main border border-theme px-4 py-2.5 rounded-lg text-sm text-main">
-                </div>
-                <div class="flex items-center gap-2">
-                    <input type="checkbox" id="saveUidCheckbox" class="cursor-pointer w-4 h-4">
-                    <label for="saveUidCheckbox" class="text-xs text-muted cursor-pointer select-none">내 UID 기억하기 (저장)</label>
-                </div>
-            </div>
-            <div class="mt-6 space-y-3">
-                <button onclick="handleUidAuth()" class="w-full btn-gold py-3 rounded-lg text-sm shadow font-bold">입장하기</button>
-            </div>
+<!-- ✨ [페이지 2] 맹원 주간활동 통계 룸 뷰 -->
+<main id="view-stats" class="hidden flex-1 p-3 sm:p-6 md:p-8 overflow-y-auto space-y-6">
+    <!-- 상단 요약 카드 (인원수 / 평균 번영도 / 평균 무훈 / 평균 공헌 / 평균 공성) -->
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+        <div class="bg-panel border border-theme p-4 rounded-xl shadow">
+            <p class="text-xs text-muted font-medium mb-1">인원수</p>
+            <h3 id="statTotalMembers" class="text-xl font-extrabold gold-text">0명</h3>
+        </div>
+        <div class="bg-panel border border-theme p-4 rounded-xl shadow">
+            <p class="text-xs text-muted font-medium mb-1">평균 번영도</p>
+            <h3 id="statAvgProsperity" class="text-xl font-extrabold text-main">0</h3>
+        </div>
+        <div class="bg-panel border border-theme p-4 rounded-xl shadow">
+            <p class="text-xs text-muted font-medium mb-1">평균 무훈</p>
+            <h3 id="statAvgMhoon" class="text-xl font-extrabold text-yellow-500">0</h3>
+        </div>
+        <div class="bg-panel border border-theme p-4 rounded-xl shadow">
+            <p class="text-xs text-muted font-medium mb-1">평균 공헌</p>
+            <h3 id="statAvgContribution" class="text-xl font-extrabold text-emerald-400">0</h3>
+        </div>
+        <div class="bg-panel border border-theme p-4 rounded-xl shadow col-span-2 sm:col-span-1">
+            <p class="text-xs text-muted font-medium mb-1">평균 공성</p>
+            <h3 id="statAvgSiege" class="text-xl font-extrabold text-blue-400">0회</h3>
         </div>
     </div>
 
-    <!-- 🛡 관리자 제어판 모달 -->
-    <div id="adminControlModal" class="hidden fixed inset-0 modal-bg flex items-center justify-center z-50 p-4">
-        <div class="bg-panel border-2 gold-border rounded-xl shadow-2xl w-full max-w-md p-6 relative">
-            <button onclick="toggleModal('adminControlModal')" class="absolute top-4 right-4 p-2 rounded-lg border border-theme bg-panel hover:bg-hover text-muted text-xl font-bold transition">&times;</button>
-            <h2 class="text-2xl font-bold gold-text mb-4 flex items-center gap-2">🛡 관리자 제어판</h2>
-            <div class="space-y-3">
-                <button onclick="openCategoryModal()" class="w-full bg-blue-700 hover:bg-blue-600 text-white py-3 rounded-lg text-sm font-bold shadow transition">📁 카테고리 편집</button>
-                <button onclick="openDataUploadModal()" class="w-full bg-emerald-700 hover:bg-emerald-600 text-white py-3 rounded-lg text-sm font-bold shadow transition">📤 데이터 업로드 센터 (인원/도감)</button>
-                <button onclick="downloadShareExcel()" class="w-full bg-teal-700 hover:bg-teal-600 text-white py-3 rounded-lg text-sm font-bold shadow transition">📥 엑셀 다운로드 (백업/공유)</button>
-                <button onclick="openAdminLogModal()" class="w-full bg-gray-700 hover:bg-gray-600 text-white py-3 rounded-lg text-sm font-bold shadow transition">📋 접속자 로그 확인</button>
-                <button onclick="toggleUserPreview()" id="previewToggleBtn" class="w-full bg-amber-700 hover:bg-amber-600 text-white py-3 rounded-lg text-sm font-bold shadow transition">👀 일반 유저 시점 미리보기</button>
-            </div>
-            <div class="mt-6 flex justify-between">
-                <button onclick="turnOffAdminMode()" class="bg-red-800 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-xs font-bold transition">관리자 모드 끄기</button>
-                <button onclick="toggleModal('adminControlModal')" class="px-4 py-2 bg-gray-700 text-white rounded-lg text-xs">닫기</button>
-            </div>
+    <!-- 활약도 평가 영역 (주간 무훈 순위 / 주간 공헌도 순위 / 주간 공성횟수 순위) -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="bg-panel border border-theme p-5 rounded-xl shadow">
+            <h3 class="text-sm font-bold gold-text mb-3 flex items-center gap-1.5"><span>⚔️</span> 주간 무훈 순위 TOP 5</h3>
+            <div id="topMhoonList" class="space-y-2 text-xs text-main"></div>
+        </div>
+        <div class="bg-panel border border-theme p-5 rounded-xl shadow">
+            <h3 class="text-sm font-bold text-emerald-400 mb-3 flex items-center gap-1.5"><span>🏆</span> 주간 공헌도 순위 TOP 5</h3>
+            <div id="topContribList" class="space-y-2 text-xs text-main"></div>
+        </div>
+        <div class="bg-panel border border-theme p-5 rounded-xl shadow">
+            <h3 class="text-sm font-bold text-blue-400 mb-3 flex items-center gap-1.5"><span>🏰</span> 주간 공성횟수 순위 TOP 5</h3>
+            <div id="topSiegeList" class="space-y-2 text-xs text-main"></div>
         </div>
     </div>
 
-    <!-- 🕵️ 스파이/중복 검사 결과 모달 -->
-    <div id="spyCheckModal" class="hidden fixed inset-0 modal-bg flex items-center justify-center z-50 p-4">
-        <div class="bg-panel border-2 border-red-500/50 rounded-xl shadow-2xl w-full max-w-lg p-6 relative max-h-[90vh] overflow-y-auto">
-            <button onclick="toggleModal('spyCheckModal')" class="absolute top-4 right-4 p-2 rounded-lg border border-theme bg-panel text-xl font-bold hover:bg-red-500/20 transition">&times;</button>
-            <h2 class="text-xl font-bold text-red-500 mb-4 flex items-center gap-2">🕵️ 스파이 & 이상 계정 검사 리포트</h2>
-            
-            <div class="space-y-4">
-                <div class="bg-main border border-theme p-4 rounded-lg">
-                    <h3 class="text-sm font-bold gold-text mb-2 flex items-center gap-1.5"><span>⚠️</span> 중복 UID 검출 (다중 계정 의심)</h3>
-                    <div id="duplicateUidList" class="space-y-1 text-xs text-muted"></div>
-                </div>
-                
-                <div class="bg-main border border-theme p-4 rounded-lg">
-                    <h3 class="text-sm font-bold text-orange-400 mb-2 flex items-center gap-1.5"><span>❓</span> UID 미설정 및 이상 계정</h3>
-                    <div id="suspiciousUidList" class="space-y-1 text-xs text-muted"></div>
-                </div>
-            </div>
-            <div class="mt-6 flex justify-end">
-                <button onclick="toggleModal('spyCheckModal')" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-xs transition">닫기</button>
-            </div>
-        </div>
+    <!-- 관리자 전용 저조 인원 관리 (하위 10%) -->
+    <div id="adminLowBoxWrapper" class="bg-panel border border-red-500/40 p-5 rounded-xl shadow hidden">
+        <h3 class="text-sm font-bold text-red-400 mb-3 flex items-center gap-1.5"><span>🔒 [관리자 전용] 3대 지표 종합 저조 인원 (하위 10%)</span></h3>
+        <div id="lowExecutivesList" class="space-y-2 text-xs text-main"></div>
     </div>
 
-    <!-- 📁 카테고리 편집 모달 -->
-    <div id="categoryModal" class="hidden fixed inset-0 modal-bg flex items-center justify-center z-50 p-4">
-        <div class="bg-panel border-2 gold-border rounded-xl shadow-2xl w-full max-w-md p-6 relative max-h-[90vh] overflow-y-auto">
-            <button onclick="openAdminControlFromSub('categoryModal')" class="absolute top-4 right-4 p-2 rounded-lg border border-theme bg-panel text-xl font-bold">&times;</button>
-            <h2 class="text-2xl font-bold gold-text mb-2">📁 동맹 카테고리 편집</h2>
-            <div id="categoryInputsContainer" class="space-y-2 mb-6"></div>
-            <button onclick="addCategoryInput()" class="w-full bg-blue-600 text-white py-2 rounded-lg text-xs font-bold mb-4">+ 카테고리 추가</button>
-            <div class="flex justify-between">
-                <button onclick="saveCategorySettings()" class="btn-gold px-5 py-2 rounded-lg text-xs font-bold">저장</button>
-                <button onclick="openAdminControlFromSub('categoryModal')" class="px-4 py-2 bg-gray-700 text-white rounded-lg text-xs">뒤로가기</button>
-            </div>
-        </div>
+    <!-- 하단 전체 리포트 테이블 영역 -->
+    <div class="bg-panel border border-theme rounded-xl shadow-xl overflow-hidden flex flex-col">
+        ... (기존 테이블 영역 유지) ...
     </div>
-
-    <!-- 📤 데이터 업로드 센터 모달 -->
-    <div id="dataUploadModal" class="hidden fixed inset-0 modal-bg flex items-center justify-center z-50 p-4">
-        <div class="bg-panel border-2 gold-border rounded-xl shadow-2xl w-full max-w-md p-6 relative max-h-[90vh] overflow-y-auto">
-            <button onclick="openAdminControlFromSub('dataUploadModal')" class="absolute top-4 right-4 p-2 rounded-lg border border-theme bg-panel text-xl font-bold">&times;</button>
-            <h2 class="text-2xl font-bold gold-text mb-2">📤 데이터 업로드 센터</h2>
-            <div class="space-y-4">
-                <div class="bg-main p-4 rounded-xl border border-theme space-y-2.5">
-                    <p class="text-xs font-bold gold-text">👥 각 연맹별 명단 현황 (엑셀)</p>
-                    <div class="space-y-2 pt-1" id="allianceUploadButtonsBox"></div>
-                    <input type="file" id="allianceExcelInput" accept=".xlsx, .xls, .csv" class="hidden" onchange="handleAllianceExcelUpload(event)">
-                </div>
-                <div class="bg-main p-4 rounded-xl border border-theme space-y-2.5">
-                    <p class="text-xs font-bold gold-text">📊 금의위 맹원 주간활동 리포트 (엑셀)</p>
-                    <input type="file" id="memberWeekExcelInput" accept=".xlsx, .xls, .csv" class="hidden" onchange="handleMemberWeekExcelUpload(event)">
-                    <button onclick="document.getElementById('memberWeekExcelInput').click();" class="w-full bg-teal-700 text-white py-2 rounded text-xs font-bold">📊 주간활동 데이터 업로드</button>
-                </div>
-            </div>
-            <div class="mt-6 flex justify-end">
-                <button onclick="openAdminControlFromSub('dataUploadModal')" class="px-4 py-2 bg-gray-700 text-white rounded-lg text-xs">뒤로가기</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- 👈 왼쪽 사이드바 네비게이션 -->
-    <aside id="mobileDrawerMenu" class="fixed inset-y-0 left-0 z-50 w-72 bg-panel border-r border-theme flex flex-col justify-between shrink-0 transform -translate-x-full md:translate-x-0 md:static transition-transform duration-300 shadow-2xl md:shadow-none">
-        <div>
-            <div class="p-3 border-b border-theme flex items-center justify-between">
-                <img src="logo.png" alt="Logo" class="h-12 object-contain" onerror="this.onerror=null; this.src='연맹 아이콘.png';">
-                <button onclick="toggleMobileDrawer()" class="md:hidden text-muted text-xl font-bold p-2 hover:text-main">&times;</button>
-            </div>
-            <div class="p-4 space-y-4 overflow-y-auto max-h-[calc(100vh-140px)]">
-                <div>
-                    <button onclick="toggleSubMenu('allianceSubMenu')" class="w-full flex justify-between items-center text-xs font-bold text-main uppercase tracking-wider mb-2 px-3 py-1 hover:bg-hover rounded transition">
-                        <span>각 연맹 인원 & 편성</span>
-                        <span id="allianceSubMenu-arrow" class="text-muted">▲</span>
-                    </button>
-                    <div id="allianceSubMenu" class="space-y-1 pl-2">
-                        <div id="sidebar-filter-buttons" class="space-y-1"></div>
-                    </div>
-                </div>
-                <hr class="border-theme">
-                <div>
-                    <button onclick="switchPageView('stats')" id="sidebarStatsBtn" class="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-bold text-muted hover:bg-hover hover:text-main transition">
-                        <span>📊</span> 맹원 주간활동 통계 룸
-                    </button>
-                </div>
-                <hr class="border-theme">
-                <div>
-                    <button onclick="toggleSubMenu('infoSubMenu')" class="w-full flex justify-between items-center text-xs font-bold text-main uppercase tracking-wider mb-2 px-3 py-1 hover:bg-hover rounded transition">
-                        <span>정보일람</span>
-                        <span id="infoSubMenu-arrow" class="text-muted">▲</span>
-                    </button>
-                    <div id="infoSubMenu" class="space-y-1 pl-2">
-                        <nav class="space-y-1">
-                            <a href="#" onclick="openDictTabWithScroll('formation'); toggleMobileDrawer(); return false;" class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium text-muted hover:bg-hover hover:text-main transition"><span>⚔</span> 1. 진형 및 상성</a>
-                            <a href="#" onclick="openDictTabWithScroll('synergy'); toggleMobileDrawer(); return false;" class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium text-muted hover:bg-hover hover:text-main transition"><span>🤝</span> 2. 장수 인연</a>
-                            <a href="#" onclick="openDictTabWithScroll('generalTactic'); toggleMobileDrawer(); return false;" class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium text-muted hover:bg-hover hover:text-main transition"><span>🛡</span> 3. 장수 전법</a>
-                            <a href="#" onclick="openDictTabWithScroll('commonTactic'); toggleMobileDrawer(); return false;" class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium text-muted hover:bg-hover hover:text-main transition"><span>📜</span> 4. 공용 전법</a>
-                        </nav>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="p-4 border-t border-theme space-y-1">
-            <p class="text-xs font-bold text-main uppercase tracking-wider mb-2 px-3">테마 설정</p>
-            <button onclick="openSettingsModal()" class="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-muted hover:bg-hover hover:text-main transition text-left"><span>🎨</span> 테마 변경</button>
-            <button onclick="handleLogout()" class="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-red-500 hover:bg-hover transition text-left"><span>🚪</span> 나가기</button>
-        </div>
-    </aside>
-
-    <!-- 💻 메인 컨텐츠 영역 -->
-    <div class="flex-1 flex flex-col min-w-0">
-        <header class="bg-panel border-b border-theme px-4 sm:px-6 py-3 sm:py-4 flex flex-col sm:flex-row justify-between items-center gap-3">
-            <div class="flex items-center justify-between w-full sm:w-auto gap-2">
-                <button onclick="toggleMobileDrawer()" class="md:hidden bg-main border border-theme px-3 py-2 rounded-lg text-main text-lg font-bold flex items-center gap-1.5 shadow">
-                    <span>☰</span> <span class="text-xs">메뉴</span>
-                </button>
-                <h2 id="mainHeaderTitle" class="text-base sm:text-lg font-bold text-main">각 연맹 인원 & 편성 현황</h2>
-            </div>
-            <div class="w-full sm:max-w-md">
-                <input type="text" id="searchInput" oninput="handleSearch()" placeholder="🔍 검색하세요..." class="w-full bg-main border border-theme px-4 py-2 rounded-lg text-sm search-input">
-            </div>
-            <div class="flex flex-wrap gap-2 items-center justify-end w-full sm:w-auto">
-                <button onclick="addNewMember()" id="addMemberBtn" class="hidden bg-emerald-700 hover:bg-emerald-600 px-3 py-2 rounded-lg font-bold text-white text-xs shadow transition">+ 인원 추가</button>
-                <button onclick="deleteSelectedMembers()" id="delSelectedBtn" class="hidden bg-red-800 hover:bg-red-700 px-3 py-2 rounded-lg font-bold text-white text-xs shadow transition">🗑️ 선택 삭제</button>
-                
-                <!-- 🕵️ 스파이 확인 버튼 (관리자 전용) -->
-                <button onclick="runSpyCheck()" id="spyCheckBtn" class="hidden bg-purple-700 hover:bg-purple-600 px-3 py-2 rounded-lg font-bold text-white text-xs shadow transition flex items-center gap-1.5 border border-purple-500/50"><span>🕵️</span> 스파이/중복 검사</button>
-
-                <button onclick="toggleAdminMode()" id="editModeBtn" class="bg-amber-600 hover:bg-amber-500 px-3 sm:px-4 py-2 rounded-lg font-bold text-white text-xs shadow transition flex items-center gap-1.5"><span>🛡</span> 관리자 모드</button>
-            </div>
-        </header>
-
-        <!-- ✨ [페이지 1] 기존 편성 대시보드 뷰 -->
-        <main id="view-dashboard" class="flex-1 p-3 sm:p-6 md:p-8 overflow-y-auto flex flex-col justify-between">
-            <div>
-                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 sm:mb-6 gap-3">
-                    <div class="flex items-center gap-2 overflow-x-auto w-full pb-2 sm:pb-0" id="filter-buttons"></div>
-                    <div class="bg-panel border border-theme px-3 py-2 rounded-lg text-xs font-bold shadow flex items-center gap-2 sm:gap-3 shrink-0 w-full sm:w-auto justify-between sm:justify-start">
-                        <div class="flex items-center gap-1.5">
-                            <span class="text-muted">표시:</span>
-                            <select id="pageSizeSelect" onchange="changePageSize()" class="bg-main border border-theme px-2 py-1 rounded text-xs text-main">
-                                <option value="10" selected>10명</option>
-                                <option value="20">20명</option>
-                                <option value="30">30명</option>
-                                <option value="50">50명</option>
-                                <option value="all">전체</option>
-                            </select>
-                        </div>
-                        <span>👥 총원: <span id="total-member-count" class="gold-text text-sm">0</span>명</span>
-                    </div>
-                </div>
-
-                <div class="overflow-x-auto bg-panel rounded-xl shadow-2xl border border-theme -mx-3 sm:mx-0">
-                    <table class="w-full text-left border-collapse whitespace-nowrap text-xs sm:text-sm">
-                        <thead>
-                            <tr class="border-b border-theme text-muted bg-main/50">
-                                <th class="p-3 sm:p-4 border-r border-theme text-center w-12">⭐</th>
-                                <th class="p-3 sm:p-4 border-r border-theme text-center w-16">No.</th>
-                                <th id="uidColHeader" class="p-3 sm:p-4 border-r border-theme hidden">UID</th>
-                                <th class="p-3 sm:p-4 border-r border-theme">닉네임</th>
-                                <th class="p-3 sm:p-4 border-r border-theme">직업</th>
-                                <th class="p-3 sm:p-4 border-r border-theme">소속</th>
-                                <th class="p-3 sm:p-4 text-center border-r border-theme min-w-[140px]">보유덱 1</th>
-                                <th class="p-3 sm:p-4 text-center border-r border-theme min-w-[140px]">보유덱 2</th>
-                                <th class="p-3 sm:p-4 text-center border-r border-theme min-w-[140px]">보유덱 3</th>
-                                <th class="p-3 sm:p-4 text-center border-r border-theme min-w-[140px]">보유덱 4</th>
-                                <th class="p-3 sm:p-4 text-center min-w-[140px]">보유덱 5</th>
-                                <th id="delColHeader" class="p-3 sm:p-4 text-center hidden">관리</th>
-                            </tr>
-                        </thead>
-                        <tbody id="member-table-body" class="divide-y divide-theme"></tbody>
-                    </table>
-                </div>
-            </div>
-            <div id="paginationContainer" class="flex justify-center items-center gap-1.5 sm:gap-2 mt-6 py-2 overflow-x-auto"></div>
-        </main>
-
-        <!-- ✨ [페이지 2] 맹원 주간활동 통계 룸 뷰 -->
-        <main id="view-stats" class="hidden flex-1 p-3 sm:p-6 md:p-8 overflow-y-auto space-y-6">
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div class="bg-panel border border-theme p-5 rounded-xl shadow">
-                    <p class="text-xs text-muted font-medium mb-1">총 맹원 인원수</p>
-                    <div class="flex items-baseline justify-between">
-                        <h3 id="statTotalMembers" class="text-2xl font-extrabold gold-text">0명</h3>
-                        <span class="text-xs bg-yellow-500/20 text-yellow-500 px-2 py-0.5 rounded font-bold">Active</span>
-                    </div>
-                </div>
-                <div class="bg-panel border border-theme p-5 rounded-xl shadow">
-                    <p class="text-xs text-muted font-medium mb-1">총 번영도 합계</p>
-                    <div class="flex items-baseline justify-between">
-                        <h3 id="statTotalProsperity" class="text-2xl font-extrabold text-main">0</h3>
-                        <span class="text-xs bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded font-bold">Prosperity</span>
-                    </div>
-                </div>
-                <div class="bg-panel border border-theme p-5 rounded-xl shadow">
-                    <p class="text-xs text-muted font-medium mb-1">주간 공헌 합계</p>
-                    <div class="flex items-baseline justify-between">
-                        <h3 id="statTotalContribution" class="text-2xl font-extrabold text-main">0</h3>
-                        <span class="text-xs bg-purple-500/20 text-purple-400 px-2 py-0.5 rounded font-bold">Contribution</span>
-                    </div>
-                </div>
-                <div class="bg-panel border border-theme p-5 rounded-xl shadow">
-                    <p class="text-xs text-muted font-medium mb-1">평균 번영도</p>
-                    <div class="flex items-baseline justify-between">
-                        <h3 id="statAvgProsperity" class="text-2xl font-extrabold text-main">0</h3>
-                        <span class="text-xs bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded font-bold">Average</span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div class="bg-panel border border-theme p-5 rounded-xl shadow">
-                    <h3 class="text-sm font-bold gold-text mb-3 flex items-center gap-1.5"><span>🏆</span> 우수 활약 맹원 TOP 10 (전체 공개)</h3>
-                    <div id="topExecutivesList" class="space-y-2 text-xs text-main"></div>
-                </div>
-                <div id="adminLowBoxWrapper" class="bg-panel border border-theme p-5 rounded-xl shadow hidden">
-                    <h3 class="text-sm font-bold text-red-400 mb-3 flex items-center gap-1.5"><span>🔒 [관리자 전용] 저조한 지표 맹원 관리 (하위 5%)</span></h3>
-                    <div id="lowExecutivesList" class="space-y-2 text-xs text-main"></div>
-                </div>
-            </div>
-
-            <div class="bg-panel border border-theme rounded-xl shadow-xl overflow-hidden flex flex-col">
-                <div class="p-4 sm:p-5 border-b border-theme flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-main/30">
-                    <div class="flex items-center gap-3">
-                        <div>
-                            <h3 class="text-base font-bold gold-text">📊 금의위 맹원 주간 활동 리포트</h3>
-                            <p class="text-xs text-muted mt-0.5">번영도, 주간 무훈 및 공헌도 순위 일람</p>
-                        </div>
-                    </div>
-                    <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-                        <select id="statsSortSelect" onchange="renderStatsTable()" class="bg-main border border-theme px-3 py-1.5 rounded-lg text-xs text-main font-bold">
-                            <option value="contributionDesc">정렬: 주간 공헌 높은순</option>
-                            <option value="contributionAsc">정렬: 주간 공헌 낮은순</option>
-                            <option value="prosperityDesc">정렬: 번영도 높은순</option>
-                            <option value="siegeDesc">정렬: 공성 횟수 많은순</option>
-                        </select>
-                        <input type="text" id="statsSearchInput" oninput="renderStatsTable()" placeholder="🔍 맹원 이름 검색..." class="w-full sm:w-48 bg-main border border-theme px-3 py-1.5 rounded-lg text-xs text-main">
-                    </div>
-                </div>
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left border-collapse whitespace-nowrap text-xs sm:text-sm">
-                        <thead>
-                            <tr class="border-b border-theme text-muted bg-main/50">
-                                <th class="p-3 sm:p-4 border-r border-theme text-center w-16">No.</th>
-                                <th class="p-3 sm:p-4 border-r border-theme">멤버 이름</th>
-                                <th class="p-3 sm:p-4 border-r border-theme">직업</th>
-                                <th class="p-3 sm:p-4 border-r border-theme">조별</th>
-                                <th class="p-3 sm:p-4 border-r border-theme">직위</th>
-                                <th class="p-3 sm:p-4 border-r border-theme text-right">번영</th>
-                                <th class="p-3 sm:p-4 border-r border-theme text-right">주간 무훈</th>
-                                <th class="p-3 sm:p-4 border-r border-theme text-right">주간 공헌</th>
-                                <th class="p-3 sm:p-4 border-r border-theme">주둔지</th>
-                                <th class="p-3 sm:p-4 text-center">주 공성 횟수</th>
-                            </tr>
-                        </thead>
-                        <tbody id="stats-table-body" class="divide-y divide-theme"></tbody>
-                    </table>
-                </div>
-            </div>
-        </main>
-    </div>
-
-    <!-- ⚙️ 테마 모달 -->
-    <div id="settingsModal" class="hidden fixed inset-0 modal-bg flex items-center justify-center z-50 p-4">
-        <div class="bg-panel border border-theme rounded-xl shadow-2xl w-full max-w-md p-6 relative">
-            <button onclick="toggleModal('settingsModal')" class="absolute top-4 right-4 p-2 rounded-lg border border-theme bg-panel text-xl font-bold">&times;</button>
-            <h2 class="text-2xl font-bold gold-text mb-4">🎨 테마 설정</h2>
-            <select id="themeSelector" onchange="applyTheme()" class="w-full bg-main border border-theme px-4 py-2 rounded-lg text-sm text-main mb-6">
-                <option value="theme-imperial-gold">황실 금괴 (Imperial Gold)</option>
-                <option value="theme-slate">기본 다크 모드 (Slate Dark)</option>
-                <option value="theme-silver">백은 청명 모드 (Silver Light)</option>
-            </select>
-            <div class="flex justify-between items-center pt-3 border-t border-theme">
-                <button onclick="handleLogout()" class="text-xs text-red-400 font-bold">🚪 나가기 (로그아웃)</button>
-                <button onclick="toggleModal('settingsModal')" class="px-4 py-2 bg-gray-700 text-white rounded-lg text-xs">닫기</button>
-            </div>
-        </div>
-    </div>
-
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
-        import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
-
-        const firebaseConfig = {
-            apiKey: "AIzaSyChbzbLZfjfeaQCcKvxJJFlyrBqnaY_jMY",
-            authDomain: "sandoro-93e0e.firebaseapp.com",
-            projectId: "sandoro-93e0e",
-            storageBucket: "sandoro-93e0e.firebasestorage.app",
-            messagingSenderId: "926098068916",
-            appId: "1:926098068916:web:10cac3a721681fc4230ee1"
-        };
-
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
-        window.firebaseDB = { db, doc, getDoc, setDoc };
-
-        window.addEventListener('DOMContentLoaded', () => {
-            const loggedUser = localStorage.getItem('loggedUser');
-            const overlay = document.getElementById('authOverlay');
-            if (loggedUser) {
-                overlay.classList.add('hidden');
-                window.loadDataFromFirebase();
-            } else {
-                overlay.classList.remove('hidden');
-                const savedUid = localStorage.getItem('savedAuthUid');
-                if (savedUid) {
-                    document.getElementById('authUid').value = savedUid;
-                    document.getElementById('saveUidCheckbox').checked = true;
-                }
-            }
-        });
-    </script>
-    <script src="app.js"></script>
-</body>
-</html>
+</main>
