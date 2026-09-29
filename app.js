@@ -188,7 +188,7 @@ function applyAdminUIState() {
             btn.className = "bg-amber-600 hover:bg-amber-500 px-4 py-2 rounded-lg font-bold text-white text-xs shadow transition flex items-center gap-1.5";
         }
         if(addBtn) addBtn.classList.add('hidden');
-        if(delSelectedBtn) addBtn.classList.add('hidden');
+        if(delSelectedBtn) delSelectedBtn.classList.add('hidden');
         if(delHeader) delHeader.classList.add('hidden');
         if(selectAllHeader) addBtn.classList.add('hidden');
         if(uidHeader) uidHeader.classList.add('hidden');
@@ -368,13 +368,55 @@ function openDeckModal(memberId, deckIndex) {
     toggleModal('deckEditModal');
 }
 
-// ✨ 진형 효과 및 인연 보너스 정밀 매칭 및 [이름 - 효과] 형식 출력 함수
+// ✨ 수정 모드가 아닐 때(잠금 상태일 때)만 마우스 오버 시 전법 효과 툴팁 표시
+function showTacticTooltip(tacticName) {
+    if (isDeckEditUnlocked) return; // 수정 모드일 때는 툴팁 비활성화
+    if (!tacticName) return;
+    let cleanName = tacticName.trim();
+
+    let allDictTexts = (DICT_CONTENTS['commonTactic'] || "") + "\n" + (DICT_CONTENTS['generalTactic'] || "");
+    let parsedTactics = parseMarkdownByTarget(allDictTexts);
+    let found = parsedTactics.find(t => t.title.toLowerCase() === cleanName.toLowerCase());
+
+    let tooltipElem = document.getElementById('globalTacticTooltip');
+    if (!tooltipElem) {
+        tooltipElem = document.createElement('div');
+        tooltipElem.id = 'globalTacticTooltip';
+        tooltipElem.className = 'fixed z-50 bg-panel border border-theme p-3 rounded-lg shadow-xl text-xs text-main max-w-xs pointer-events-none transition-opacity duration-150';
+        document.body.appendChild(tooltipElem);
+    }
+
+    if (found) {
+        tooltipElem.innerHTML = `<strong class="gold-text block mb-1">📜 ${found.title}</strong>${found.desc}`;
+    } else {
+        tooltipElem.innerHTML = `<strong class="gold-text block mb-1">📜 ${cleanName}</strong>등록된 전법 효과가 없습니다.`;
+    }
+
+    tooltipElem.style.display = 'block';
+    document.addEventListener('mousemove', moveTacticTooltip);
+}
+
+function moveTacticTooltip(e) {
+    let tooltipElem = document.getElementById('globalTacticTooltip');
+    if (tooltipElem) {
+        tooltipElem.style.left = (e.clientX + 15) + 'px';
+        tooltipElem.style.top = (e.clientY + 15) + 'px';
+    }
+}
+
+function hideTacticTooltip() {
+    let tooltipElem = document.getElementById('globalTacticTooltip');
+    if (tooltipElem) {
+        tooltipElem.style.display = 'none';
+    }
+    document.removeEventListener('mousemove', moveTacticTooltip);
+}
+
 function updateDeckFormationBonusInfo() {
     const selectedFormation = document.getElementById('editDeckFormation').value.trim();
     const formationTextElem = document.getElementById('deckFormationBonusText');
     const synergyTextElem = document.getElementById('deckSynergyBonusText');
 
-    // 1. 진형 효과 (주요 효과 및 피격률 관련 내용만 간결하게 추출)
     const formationMarkdown = DICT_CONTENTS['formation'] || "";
     let parsedFormations = parseMarkdownByTarget(formationMarkdown);
     let foundForm = parsedFormations.find(f => f.title.replace(/\s+/g, '').includes(selectedFormation.replace(/\s+/g, '')));
@@ -387,7 +429,6 @@ function updateDeckFormationBonusInfo() {
         formationTextElem.innerText = `${selectedFormation} 정보 없음`;
     }
 
-    // 2. 장수 인연 보너스 ([이름 - 효과] 형식 및 인원수 충족 정확한 매칭)
     const g1 = document.getElementById('deckG1').value.split('(')[0].trim();
     const g2 = document.getElementById('deckG2').value.split('(')[0].trim();
     const g3 = document.getElementById('deckG3').value.split('(')[0].trim();
@@ -398,13 +439,10 @@ function updateDeckFormationBonusInfo() {
     let activeSynergies = [];
 
     parsedSynergies.forEach(syn => {
-        // 도감 내용에서 대상 장수 목록과 인연 효과 분리 추출
         let targetLine = syn.desc.split('<br>').find(l => l.includes('대상') || l.includes('구성원')) || syn.desc;
         let effectLine = syn.desc.split('<br>').find(l => l.includes('효과')) || "효과 미등록";
-        
         let cleanEffect = effectLine.replace(/<[^>]*>?/gm, '').replace('인연 효과:', '').trim();
 
-        // 등록된 대상 장수들이 현재 덱에 몇 명이나 포함되어 있는지 카운트
         let requiredGenerals = ['유비', '관우', '장비', '조운', '마초', '황충', '안량', '문추', '장합'].filter(g => targetLine.includes(g));
         let matchedCount = 0;
 
@@ -414,10 +452,9 @@ function updateDeckFormationBonusInfo() {
             }
         });
 
-        // 도원결의(3명 전원 필수) 혹은 오호상장 등 조건 인원수에 맞게 엄격하게 판별
         let minRequired = requiredGenerals.length >= 3 ? 3 : 2; 
         if (targetLine.includes('유비') && targetLine.includes('관우') && targetLine.includes('장비')) {
-            minRequired = 3; // 도원결의는 3명 모두 필요
+            minRequired = 3;
         }
 
         if (matchedCount >= minRequired) {
@@ -457,7 +494,17 @@ function applyDeckUnlockUIState() {
 
         inputs.forEach(id => {
             document.getElementById(id).removeAttribute('readonly');
+            // ✨ 수정 모드 진입 시 기존에 등록되어 있던 마우스 이벤트 제거
+            document.getElementById(id).onmouseenter = null;
+            document.getElementById(id).onmouseleave = null;
         });
+
+        // 1번 전법(고유전법) 입력란도 동일하게 마우스 이벤트 제거
+        ['deckT1_1', 'deckT2_1', 'deckT3_1'].forEach(id => {
+            const el = document.getElementById(id);
+            if(el) { el.onmouseenter = null; el.onmouseleave = null; }
+        });
+
     } else {
         statusLabel.className = "text-xs bg-red-900/50 text-red-300 px-3 py-1 rounded border border-red-700";
         statusLabel.innerText = "🔒 잠김 상태 (수정 버튼을 누르세요)";
@@ -466,7 +513,22 @@ function applyDeckUnlockUIState() {
         formationSelect.disabled = true;
 
         inputs.forEach(id => {
-            document.getElementById(id).setAttribute('readonly', true);
+            const el = document.getElementById(id);
+            if(el) {
+                el.setAttribute('readonly', true);
+                // ✨ 잠금 상태일 때 마우스 오버 시 툴팁 표시 이벤트 재장착
+                el.onmouseenter = function() { showTacticTooltip(this.value); };
+                el.onmouseleave = function() { hideTacticTooltip(); };
+            }
+        });
+
+        // 1번 전법(고유전법) 입력란에도 마우스 오버 이벤트 재장착
+        ['deckT1_1', 'deckT2_1', 'deckT3_1'].forEach(id => {
+            const el = document.getElementById(id);
+            if(el) {
+                el.onmouseenter = function() { showTacticTooltip(this.value); };
+                el.onmouseleave = function() { hideTacticTooltip(); };
+            }
         });
     }
 }
@@ -475,12 +537,21 @@ function handleDeckInputSearch(slotNum, type) {
     if (!isDeckEditUnlocked) return;
 
     let inputId = '';
-    if (type === 'g') inputId = `deckG${slotNum}`;
-    else inputId = `deckT${slotNum}_2` || `deckT${slotNum}_3`;
+    let listId = '';
 
-    const inputVal = document.getElementById(inputId).value.trim().toLowerCase();
-    const listContainer = document.getElementById(`autocomplete-list-${type}${slotNum !== undefined ? slotNum : ''}`);
-    if(!listContainer) return;
+    if (type === 'g') {
+        inputId = `deckG${slotNum}`;
+        listId = `autocomplete-list-g${slotNum}`;
+    } else {
+        inputId = `deckT${slotNum}`;
+        listId = `autocomplete-list-${slotNum}`;
+    }
+
+    const inputElem = document.getElementById(inputId);
+    const listContainer = document.getElementById(listId);
+    if (!inputElem || !listContainer) return;
+
+    const inputVal = inputElem.value.trim().toLowerCase();
 
     if (!inputVal) {
         listContainer.classList.add('hidden');
@@ -535,8 +606,8 @@ function selectDeckAutocompleteValue(slotNum, type, name) {
         document.getElementById(`deckT${slotNum}_1`).value = uniqueTactic;
 
     } else {
-        document.getElementById(`deckT${slotNum}_2` || `deckT${slotNum}_3`).value = name;
-        document.getElementById(`autocomplete-list-${type}${slotNum}`).classList.add('hidden');
+        document.getElementById(`deckT${slotNum}`).value = name;
+        document.getElementById(`autocomplete-list-${slotNum}`).classList.add('hidden');
     }
 
     updateDeckFormationBonusInfo();

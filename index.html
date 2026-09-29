@@ -155,12 +155,12 @@
                     </div>
                     <div>
                         <label class="text-[11px] text-muted mb-1 block">2번 전법</label>
-                        <input type="text" id="deckT1_2" readonly oninput="handleDeckInputSearch(2, 't1_2')" placeholder="전법 검색..." class="w-full bg-panel border border-theme px-3 py-1.5 rounded-lg text-xs text-main">
+                        <input type="text" id="deckT1_2" readonly oninput="handleDeckInputSearch(1, 't1_2')" placeholder="전법 검색..." class="w-full bg-panel border border-theme px-3 py-1.5 rounded-lg text-xs text-main">
                         <div id="autocomplete-list-t1_2" class="autocomplete-items hidden"></div>
                     </div>
                     <div>
                         <label class="text-[11px] text-muted mb-1 block">3번 전법</label>
-                        <input type="text" id="deckT1_3" readonly oninput="handleDeckInputSearch(3, 't1_3')" placeholder="전법 검색..." class="w-full bg-panel border border-theme px-3 py-1.5 rounded-lg text-xs text-main">
+                        <input type="text" id="deckT1_3" readonly oninput="handleDeckInputSearch(1, 't1_3')" placeholder="전법 검색..." class="w-full bg-panel border border-theme px-3 py-1.5 rounded-lg text-xs text-main">
                         <div id="autocomplete-list-t1_3" class="autocomplete-items hidden"></div>
                     </div>
                 </div>
@@ -184,7 +184,7 @@
                     </div>
                     <div>
                         <label class="text-[11px] text-muted mb-1 block">3번 전법</label>
-                        <input type="text" id="deckT2_3" readonly oninput="handleDeckInputSearch(3, 't3_3')" placeholder="전법 검색..." class="w-full bg-panel border border-theme px-3 py-1.5 rounded-lg text-xs text-main">
+                        <input type="text" id="deckT2_3" readonly oninput="handleDeckInputSearch(2, 't2_3')" placeholder="전법 검색..." class="w-full bg-panel border border-theme px-3 py-1.5 rounded-lg text-xs text-main">
                         <div id="autocomplete-list-t2_3" class="autocomplete-items hidden"></div>
                     </div>
                 </div>
@@ -203,7 +203,7 @@
                     </div>
                     <div>
                         <label class="text-[11px] text-muted mb-1 block">2번 전법</label>
-                        <input type="text" id="deckT3_2" readonly oninput="handleDeckInputSearch(2, 't3_2')" placeholder="전법 검색..." class="w-full bg-panel border border-theme px-3 py-1.5 rounded-lg text-xs text-main">
+                        <input type="text" id="deckT3_2" readonly oninput="handleDeckInputSearch(3, 't3_2')" placeholder="전법 검색..." class="w-full bg-panel border border-theme px-3 py-1.5 rounded-lg text-xs text-main">
                         <div id="autocomplete-list-t3_2" class="autocomplete-items hidden"></div>
                     </div>
                     <div>
@@ -241,7 +241,6 @@
                     <button onclick="switchDictTab('generalTactic')" id="tabBtn-generalTactic" class="px-3 py-1.5 rounded text-xs font-bold bg-main text-muted hover:text-main transition">3. 장수 전법정리</button>
                     <button onclick="switchDictTab('commonTactic')" id="tabBtn-commonTactic" class="px-3 py-1.5 rounded text-xs font-bold bg-main text-muted hover:text-main transition">4. 공용 전법정리</button>
                 </div>
-                <!-- ✨ 닫기 버튼과 수정 버튼 영역 분리 (겹침 방지) -->
                 <div class="flex items-center gap-2">
                     <button id="editDictBtn" onclick="openDictEditModal()" class="hidden bg-amber-700 hover:bg-amber-600 text-white px-3 py-1.5 rounded text-xs font-bold shadow transition">✏️ 내용 수정</button>
                     <button onclick="toggleModal('dictModal')" class="text-muted hover:text-main text-2xl font-bold px-2">&times;</button>
