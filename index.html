@@ -107,7 +107,7 @@
     <!-- ⚠ 중복 인원 감지 알림 모달 -->
     <div id="duplicateAlertModal" class="hidden fixed inset-0 modal-bg flex items-center justify-center z-50 p-4">
         <div class="bg-panel border-2 border-amber-500 rounded-xl shadow-2xl w-full max-w-lg p-6 relative flex flex-col max-h-[85vh]">
-            <h2 class="text-xl font-bold text-amber-400 mb-2">⚠️️ 엑셀 업로드 중복 감지</h2>
+            <h2 class="text-xl font-bold text-amber-400 mb-2">⚠ 엑셀 업로드 중복 감지</h2>
             <div id="duplicateListContainer" class="flex-1 overflow-y-auto bg-main border border-theme p-3 rounded-lg space-y-2 mb-6 text-xs"></div>
             <div class="flex justify-end">
                 <button onclick="toggleModal('duplicateAlertModal')" class="px-4 py-2 bg-gray-700 text-white rounded-lg text-xs font-bold">확인</button>
@@ -263,12 +263,11 @@
         </div>
     </div>
 
-    <!-- 👈 왼쪽 사이드바 네비게이션 (모바일에서는 화면 왼쪽에서 슬라이드로 튀어나오는 드로어 메뉴로 작동) -->
+    <!-- 👈 왼쪽 사이드바 네비게이션 -->
     <aside id="mobileDrawerMenu" class="fixed inset-y-0 left-0 z-50 w-72 bg-panel border-r border-theme flex flex-col justify-between shrink-0 transform -translate-x-full md:translate-x-0 md:static transition-transform duration-300 shadow-2xl md:shadow-none">
         <div>
             <div class="p-3 border-b border-theme flex items-center justify-between">
                 <img src="logo.png" alt="Logo" class="h-12 object-contain" onerror="this.onerror=null; this.src='연맹 아이콘.png';">
-                <!-- 모바일 메뉴 닫기 버튼 (X) -->
                 <button onclick="toggleMobileDrawer()" class="md:hidden text-muted text-xl font-bold p-2 hover:text-main">&times;</button>
             </div>
             <div class="p-4 space-y-4 overflow-y-auto max-h-[calc(100vh-140px)]">
@@ -291,7 +290,7 @@
                         <nav class="space-y-1">
                             <a href="#" onclick="openDictTabWithScroll('formation'); toggleMobileDrawer(); return false;" class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium text-muted hover:bg-hover hover:text-main transition"><span>⚔</span> 1. 진형 및 상성</a>
                             <a href="#" onclick="openDictTabWithScroll('synergy'); toggleMobileDrawer(); return false;" class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium text-muted hover:bg-hover hover:text-main transition"><span>🤝</span> 2. 장수 인연</a>
-                            <a href="#" onclick="openDictTabWithScroll('generalTactic'); toggleMobileDrawer(); return false;" class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium text-muted hover:bg-hover hover:text-main transition"><span>🛡️</span> 3. 장수 전법</a>
+                            <a href="#" onclick="openDictTabWithScroll('generalTactic'); toggleMobileDrawer(); return false;" class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium text-muted hover:bg-hover hover:text-main transition"><span>🛡️️</span> 3. 장수 전법</a>
                             <a href="#" onclick="openDictTabWithScroll('commonTactic'); toggleMobileDrawer(); return false;" class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium text-muted hover:bg-hover hover:text-main transition"><span>📜</span> 4. 공용 전법</a>
                         </nav>
                     </div>
@@ -309,7 +308,6 @@
     <div class="flex-1 flex flex-col min-w-0">
         <header class="bg-panel border-b border-theme px-4 sm:px-6 py-3 sm:py-4 flex flex-col sm:flex-row justify-between items-center gap-3">
             <div class="flex items-center justify-between w-full sm:w-auto gap-2">
-                <!-- 📱 모바일 3줄 햄버거 메뉴 버튼 -->
                 <button onclick="toggleMobileDrawer()" class="md:hidden bg-main border border-theme px-3 py-2 rounded-lg text-main text-lg font-bold flex items-center gap-1.5 shadow">
                     <span>☰</span> <span class="text-xs">메뉴</span>
                 </button>
@@ -327,7 +325,6 @@
 
         <main class="flex-1 p-3 sm:p-6 md:p-8 overflow-y-auto flex flex-col justify-between">
             <div>
-                <!-- 연맹 카테고리 탭 및 즐겨찾기 (가로 스크롤 가능) -->
                 <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 sm:mb-6 gap-3">
                     <div class="flex items-center gap-2 overflow-x-auto w-full pb-2 sm:pb-0" id="filter-buttons"></div>
                     <div class="bg-panel border border-theme px-3 py-2 rounded-lg text-xs font-bold shadow flex items-center gap-2 sm:gap-3 shrink-0 w-full sm:w-auto justify-between sm:justify-start">
@@ -345,7 +342,7 @@
                     </div>
                 </div>
 
-                <!-- 📱 모바일 터치 스크롤 최적화 테이블 영역 -->
+                <!-- 📱 테이블 영역 (별표 컬럼과 No 컬럼 완벽 분리) -->
                 <div class="overflow-x-auto bg-panel rounded-xl shadow-2xl border border-theme -mx-3 sm:mx-0">
                     <table class="w-full text-left border-collapse whitespace-nowrap text-xs sm:text-sm">
                         <thead>
@@ -353,7 +350,8 @@
                                 <th id="selectAllHeader" class="p-3 sm:p-4 border-r border-theme text-center hidden w-10">
                                     <input type="checkbox" id="selectAllCheckbox" onclick="toggleSelectAll(this)" class="cursor-pointer">
                                 </th>
-                                <th class="p-3 sm:p-4 border-r border-theme text-center w-24">⭐ / No.</th>
+                                <th class="p-3 sm:p-4 border-r border-theme text-center w-12">⭐</th>
+                                <th class="p-3 sm:p-4 border-r border-theme text-center w-16">No.</th>
                                 <th id="uidColHeader" class="p-3 sm:p-4 border-r border-theme hidden">UID</th>
                                 <th class="p-3 sm:p-4 border-r border-theme">닉네임</th>
                                 <th class="p-3 sm:p-4 border-r border-theme">직업</th>
