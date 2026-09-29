@@ -37,6 +37,19 @@ function toggleSubMenu(menuId) {
     }
 }
 
+// ✨ 모바일 3줄 햄버거 메뉴(드로어) 열고 닫기
+function toggleMobileDrawer() {
+    const drawer = document.getElementById('mobileDrawerMenu');
+    const backdrop = document.getElementById('mobileDrawerBackdrop');
+    if (drawer.classList.contains('-translate-x-full')) {
+        drawer.classList.remove('-translate-x-full');
+        backdrop.classList.remove('hidden');
+    } else {
+        drawer.classList.add('-translate-x-full');
+        backdrop.classList.add('hidden');
+    }
+}
+
 async function loadDataFromFirebase() {
     if (window.firebaseDB) {
         const { db, doc, getDoc } = window.firebaseDB;
@@ -134,12 +147,7 @@ function handleUidAuth() {
     accessLogs.unshift({ uid: matchedMember.uid, name: matchedMember.name, time: new Date().toLocaleString() });
     localStorage.setItem('accessLogs', JSON.stringify(accessLogs));
 
-    if (isCreator || matchedMember.uid === CREATOR_UID || matchedMember.isAdminRole) {
-        alert(`반갑습니다 ${matchedMember.name}님! (관리자 권한 보유)`);
-    } else {
-        alert(`환영합니다 ${matchedMember.name}님! (일반 모드 로그인)`);
-    }
-
+    alert(`환영합니다 ${matchedMember.name}님!`);
     document.getElementById('authOverlay').classList.add('hidden');
     loadDataFromFirebase();
 }
@@ -227,8 +235,8 @@ function applyAdminUIState() {
 
     if (isAdminMode) {
         if(btn) {
-            btn.innerHTML = "<span>🛡️</span> 관리자 제어판";
-            btn.className = "bg-red-800 hover:bg-red-700 px-4 py-2 rounded-lg font-bold text-white text-xs shadow transition flex items-center gap-1.5";
+            btn.innerHTML = "<span>🛡️</span> 제어판";
+            btn.className = "bg-red-800 hover:bg-red-700 px-3 py-2 rounded-lg font-bold text-white text-xs shadow transition flex items-center gap-1.5";
         }
         if(addBtn) addBtn.classList.remove('hidden');
         if(delSelectedBtn) delSelectedBtn.classList.remove('hidden');
@@ -237,10 +245,10 @@ function applyAdminUIState() {
     } else {
         if(btn) {
             btn.innerHTML = "<span>🛡️</span> 관리자 모드";
-            btn.className = "bg-amber-600 hover:bg-amber-500 px-4 py-2 rounded-lg font-bold text-white text-xs shadow transition flex items-center gap-1.5";
+            btn.className = "bg-amber-600 hover:bg-amber-500 px-3 py-2 rounded-lg font-bold text-white text-xs shadow transition flex items-center gap-1.5";
         }
         if(addBtn) addBtn.classList.add('hidden');
-        if(delSelectedBtn) delSelectedBtn.classList.add('hidden');
+        if(delSelectedBtn) addBtn.classList.add('hidden');
         if(delHeader) delHeader.classList.add('hidden');
         if(selectAllHeader) selectAllHeader.classList.add('hidden');
     }
@@ -280,7 +288,7 @@ function saveDictContent() {
     saveDataToStorage();
     switchDictTab(currentDictTargetTab);
     toggleModal('dictEditModal');
-    alert("도감 내용이 성공적으로 수정 및 저장되었습니다!");
+    alert("도감 내용이 수정되었습니다!");
 }
 
 function openCategoryModal() {
@@ -294,56 +302,18 @@ function renderCategoryModalInputs() {
     container.innerHTML = '';
     categoryNames.forEach((cat, index) => {
         container.innerHTML += `
-        <div class="category-draggable-item flex gap-2 items-center bg-main p-2 rounded-lg border border-theme cursor-grab active:cursor-grabbing" draggable="true" data-index="${index}">
+        <div class="category-draggable-item flex gap-2 items-center bg-main p-2 rounded-lg border border-theme" draggable="true" data-index="${index}">
             <span class="text-muted font-bold text-xs select-none">☰</span>
             <input type="text" value="${cat}" class="cat-input flex-1 bg-panel border border-theme px-3 py-1.5 rounded-lg text-sm text-main">
             <button type="button" onclick="this.parentElement.remove()" class="bg-red-800 text-white px-3 py-1.5 rounded-lg text-xs font-bold">삭제</button>
         </div>`;
-    });
-
-    setupCategoryDragAndDrop();
-}
-
-function setupCategoryDragAndDrop() {
-    const container = document.getElementById('categoryInputsContainer');
-    let draggedItem = null;
-
-    container.querySelectorAll('.category-draggable-item').forEach(item => {
-        item.addEventListener('dragstart', function(e) {
-            draggedItem = this;
-            setTimeout(() => this.classList.add('opacity-40'), 0);
-        });
-
-        item.addEventListener('dragend', function(e) {
-            this.classList.remove('opacity-40');
-            draggedItem = null;
-        });
-
-        item.addEventListener('dragover', function(e) {
-            e.preventDefault();
-        });
-
-        item.addEventListener('drop', function(e) {
-            e.preventDefault();
-            if (this !== draggedItem) {
-                let allItems = Array.from(container.querySelectorAll('.category-draggable-item'));
-                let draggedIdx = allItems.indexOf(draggedItem);
-                let targetIdx = allItems.indexOf(this);
-
-                if (draggedIdx < targetIdx) {
-                    container.insertBefore(draggedItem, this.nextSibling);
-                } else {
-                    container.insertBefore(draggedItem, this);
-                }
-            }
-        });
     });
 }
 
 function addCategoryInput() {
     const container = document.getElementById('categoryInputsContainer');
     const tempDiv = document.createElement('div');
-    tempDiv.className = "category-draggable-item flex gap-2 items-center bg-main p-2 rounded-lg border border-theme cursor-grab active:cursor-grabbing";
+    tempDiv.className = "category-draggable-item flex gap-2 items-center bg-main p-2 rounded-lg border border-theme";
     tempDiv.setAttribute('draggable', 'true');
     tempDiv.innerHTML = `
         <span class="text-muted font-bold text-xs select-none">☰</span>
@@ -351,7 +321,6 @@ function addCategoryInput() {
         <button type="button" onclick="this.parentElement.remove()" class="bg-red-800 text-white px-3 py-1.5 rounded-lg text-xs font-bold">삭제</button>
     `;
     container.appendChild(tempDiv);
-    setupCategoryDragAndDrop();
 }
 
 function saveCategorySettings() {
@@ -360,56 +329,30 @@ function saveCategorySettings() {
     if (currentFilter !== '즐겨찾기' && !categoryNames.includes(currentFilter)) {
         currentFilter = categoryNames[0] || '금의위';
     }
-    
     saveDataToStorage();
     renderFilterButtons();
     renderTable();
     toggleModal('categoryModal');
     toggleModal('adminControlModal');
-    alert("카테고리 순서 및 설정이 성공적으로 저장되었습니다!");
+    alert("카테고리 설정이 저장되었습니다!");
 }
 
 let activeUploadAlliance = '금의위';
 
 function openDataUploadModal() {
     toggleModal('adminControlModal');
-    
-    let uploadModal = document.getElementById('dataUploadModal');
-    if (uploadModal) {
-        let modalBox = uploadModal.querySelector('div.bg-panel') || uploadModal.querySelector('div');
-        if (modalBox) {
-            let memberSection = modalBox.querySelector('#allianceUploadSection');
-            if (!memberSection) {
-                memberSection = document.createElement('div');
-                memberSection.id = 'allianceUploadSection';
-                memberSection.className = "bg-main p-4 rounded-xl border border-theme space-y-3 mb-4";
-                
-                let buttonsHtml = '';
-                categoryNames.forEach(cat => {
-                    buttonsHtml += `
-                    <div class="flex items-center justify-between bg-panel p-2.5 rounded-lg border border-theme">
-                        <span class="text-xs font-bold gold-text">⚔️ ${cat} 명단 업로드</span>
-                        <button onclick="triggerAllianceUpload('${cat}')" class="bg-emerald-700 hover:bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow transition">📁 파일 업로드</button>
-                    </div>`;
-                });
-
-                memberSection.innerHTML = `
-                    <p class="text-xs font-bold gold-text mb-1">👥 각 연맹별 맹원 현황 엑셀 업로드</p>
-                    <p class="text-[11px] text-muted mb-2">선택한 연맹 파일에 없는 기존 인원은 자동으로 '재야'로 이동됩니다.</p>
-                    <div class="space-y-2">${buttonsHtml}</div>
-                    <input type="file" id="allianceExcelInput" accept=".xlsx, .xls, .csv" class="hidden" onchange="handleAllianceExcelUpload(event)">
-                `;
-
-                let oldBox = modalBox.querySelector('div.bg-main');
-                if (oldBox) {
-                    oldBox.replaceWith(memberSection);
-                } else {
-                    modalBox.prepend(memberSection);
-                }
-            }
-        }
+    let box = document.getElementById('allianceUploadButtonsBox');
+    if (box) {
+        let html = '';
+        categoryNames.forEach(cat => {
+            html += `
+            <div class="flex items-center justify-between bg-panel p-2.5 rounded-lg border border-theme">
+                <span class="text-xs font-bold gold-text">⚔️ ${cat} 업로드</span>
+                <button onclick="triggerAllianceUpload('${cat}')" class="bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold">파일 선택</button>
+            </div>`;
+        });
+        box.innerHTML = html;
     }
-
     toggleModal('dataUploadModal');
 }
 
@@ -424,7 +367,7 @@ function openAdminLogModal() {
     const logs = JSON.parse(localStorage.getItem('accessLogs') || '[]');
     let html = logs.length === 0 ? `<p class="text-center text-muted py-4">기록된 접속 로그가 없습니다.</p>` : '';
     logs.forEach((log) => {
-        html += `<div class="bg-main p-3 rounded-lg border border-theme flex justify-between items-center text-xs"><div><strong class="text-main">${log.name}</strong> <span class="text-muted">(UID: ${log.uid})</span></div><div class="text-muted">${log.time}</div></div>`;
+        html += `<div class="bg-main p-2.5 rounded-lg border border-theme flex justify-between items-center text-xs"><div><strong class="text-main">${log.name}</strong> <span class="text-muted">(${log.uid})</span></div><div class="text-muted">${log.time}</div></div>`;
     });
     container.innerHTML = html;
     toggleModal('adminLogModal');
@@ -432,7 +375,7 @@ function openAdminLogModal() {
 
 function applyTheme() {
     const theme = document.getElementById('themeSelector').value;
-    document.getElementById('app-body').className = `${theme} min-h-screen flex transition-colors duration-300`;
+    document.getElementById('app-body').className = `${theme} min-h-screen flex flex-col md:flex-row relative transition-colors duration-300`;
 }
 
 function openDeckModal(memberId, deckIndex) {
@@ -610,7 +553,7 @@ function updateDeckFormationBonusInfo() {
     if (activeSynergies.length > 0) {
         synergyTextElem.innerHTML = activeSynergies.join(' | ');
     } else {
-        synergyTextElem.innerText = activeGenerals.length > 0 ? "현재 조합에서 활성화된 인연 보너스가 없습니다." : "장수를 선택하면 인연 보너스가 자동으로 계산됩니다.";
+        synergyTextElem.innerText = activeGenerals.length > 0 ? "활성화된 인연 보너스 없음" : "장수를 선택하세요.";
     }
 }
 
@@ -632,10 +575,10 @@ function applyDeckUnlockUIState() {
     ];
 
     if (isDeckEditUnlocked) {
-        statusLabel.className = "text-xs bg-emerald-900/50 text-emerald-300 px-3 py-1 rounded border border-emerald-700";
-        statusLabel.innerText = "🔓 수정 가능 상태";
-        unlockBtn.innerText = "🔒 수정완료";
-        unlockBtn.className = "bg-red-700 hover:bg-red-600 text-white px-4 py-1.5 rounded-lg text-xs font-bold shadow transition";
+        statusLabel.className = "text-[11px] sm:text-xs bg-emerald-900/50 text-emerald-300 px-2 py-1 rounded border border-emerald-700";
+        statusLabel.innerText = "🔓 수정 가능";
+        unlockBtn.innerText = "🔒 완료";
+        unlockBtn.className = "bg-red-700 hover:bg-red-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow";
         formationSelect.disabled = false;
 
         [...generalInputs, ...tacticInputs].forEach(id => {
@@ -648,10 +591,10 @@ function applyDeckUnlockUIState() {
         });
 
     } else {
-        statusLabel.className = "text-xs bg-red-900/50 text-red-300 px-3 py-1 rounded border border-red-700";
-        statusLabel.innerText = "🔒 잠김 상태 (수정 버튼을 누르세요)";
+        statusLabel.className = "text-[11px] sm:text-xs bg-red-900/50 text-red-300 px-2 py-1 rounded border border-red-700";
+        statusLabel.innerText = "🔒 잠김";
         unlockBtn.innerText = "🔓 수정";
-        unlockBtn.className = "bg-amber-600 hover:bg-amber-500 text-white px-4 py-1.5 rounded-lg text-xs font-bold shadow transition";
+        unlockBtn.className = "bg-amber-600 hover:bg-amber-500 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow";
         formationSelect.disabled = true;
 
         generalInputs.forEach(id => {
@@ -814,7 +757,7 @@ function saveDeckData() {
         saveDataToStorage();
         renderTable();
         toggleModal('deckEditModal');
-        alert("조합 공유 덱 편성이 성공적으로 저장되었습니다!");
+        alert("덱 편성이 저장되었습니다!");
     }
 }
 
@@ -840,9 +783,9 @@ function switchDictTab(tabKey) {
         const btn = document.getElementById(`tabBtn-${key}`);
         if(btn) {
             if(key === tabKey) {
-                btn.className = "px-3 py-1.5 rounded text-xs font-bold bg-yellow-600 text-white transition";
+                btn.className = "px-2.5 py-1 rounded text-[11px] sm:text-xs font-bold bg-yellow-600 text-white";
             } else {
-                btn.className = "px-3 py-1.5 rounded text-xs font-bold bg-main text-muted hover:text-main transition";
+                btn.className = "px-2.5 py-1 rounded text-[11px] sm:text-xs font-bold bg-main text-muted";
             }
         }
     });
@@ -898,22 +841,14 @@ function renderDictList(items) {
     const container = document.getElementById('dictListContainer');
     if(!container) return;
 
-    let labelName = "항목";
-    if (currentDictTargetTab === 'formation') labelName = "진형 명";
-    else if (currentDictTargetTab === 'synergy') labelName = "인연 이름";
-    else if (currentDictTargetTab === 'generalTactic') labelName = "장수 명";
-    else if (currentDictTargetTab === 'commonTactic') labelName = "전법 명";
-
-    let html = `<div class="px-3 py-1.5 text-[11px] font-bold text-muted border-b border-theme mb-1">📌 ${labelName} 목록</div>`;
-    
+    let html = `<div class="px-2 py-1 text-[10px] font-bold text-muted border-b border-theme mb-1">📌 목록</div>`;
     items.forEach((item, index) => {
         html += `
-        <div onclick="selectDictItem(${index})" id="dict-item-${index}" class="dict-list-btn p-2.5 rounded-lg cursor-pointer transition text-xs font-bold text-main hover:bg-hover bg-main border border-theme flex items-center justify-between" data-index="${index}">
+        <div onclick="selectDictItem(${index})" id="dict-item-${index}" class="dict-list-btn p-2 rounded-lg cursor-pointer transition text-xs font-bold text-main hover:bg-hover bg-main border border-theme flex items-center justify-between" data-index="${index}">
             <span>${item.title}</span>
             <span class="text-muted text-[10px]">▶</span>
         </div>`;
     });
-
     container.innerHTML = html;
 }
 
@@ -925,9 +860,9 @@ function selectDictItem(index) {
         const itemIdx = el.getAttribute('data-index');
         if (itemIdx !== null) {
             if (Number(itemIdx) === index) {
-                el.className = "dict-list-btn p-2.5 rounded-lg cursor-pointer transition text-xs font-bold text-white bg-yellow-600 border border-yellow-500 flex items-center justify-between shadow";
+                el.className = "dict-list-btn p-2 rounded-lg cursor-pointer transition text-xs font-bold text-white bg-yellow-600 border border-yellow-500 flex items-center justify-between shadow";
             } else {
-                el.className = "dict-list-btn p-2.5 rounded-lg cursor-pointer transition text-xs font-bold text-main hover:bg-hover bg-main border border-theme flex items-center justify-between";
+                el.className = "dict-list-btn p-2 rounded-lg cursor-pointer transition text-xs font-bold text-main hover:bg-hover bg-main border border-theme flex items-center justify-between";
             }
         }
     });
@@ -943,18 +878,11 @@ function filterDictList() {
     const container = document.getElementById('dictListContainer');
     if(!container) return;
 
-    let labelName = "항목";
-    if (currentDictTargetTab === 'formation') labelName = "진형 명";
-    else if (currentDictTargetTab === 'synergy') labelName = "인연 이름";
-    else if (currentDictTargetTab === 'generalTactic') labelName = "장수 명";
-    else if (currentDictTargetTab === 'commonTactic') labelName = "전법 명";
-
-    let html = `<div class="px-3 py-1.5 text-[11px] font-bold text-muted border-b border-theme mb-1">📌 ${labelName} 검색 결과</div>`;
-    
+    let html = `<div class="px-2 py-1 text-[10px] font-bold text-muted border-b border-theme mb-1">📌 검색 결과</div>`;
     filtered.forEach((item) => {
         const originalIndex = parsedDictItems.findIndex(orig => orig.title === item.title);
         html += `
-        <div onclick="selectDictItem(${originalIndex})" id="dict-item-${originalIndex}" class="dict-list-btn p-2.5 rounded-lg cursor-pointer transition text-xs font-bold text-main hover:bg-hover bg-main border border-theme flex items-center justify-between" data-index="${originalIndex}">
+        <div onclick="selectDictItem(${originalIndex})" id="dict-item-${originalIndex}" class="dict-list-btn p-2 rounded-lg cursor-pointer transition text-xs font-bold text-main hover:bg-hover bg-main border border-theme flex items-center justify-between" data-index="${originalIndex}">
             <span>${item.title}</span>
             <span class="text-muted text-[10px]">▶</span>
         </div>`;
@@ -965,12 +893,11 @@ function filterDictList() {
         const firstOriginalIndex = parsedDictItems.findIndex(orig => orig.title === filtered[0].title);
         selectDictItem(firstOriginalIndex);
     } else {
-        document.getElementById('dictDetailTitle').innerText = "검색 결과 없음";
+        document.getElementById('dictDetailTitle').innerText = "결과 없음";
         document.getElementById('dictDetailDesc').innerText = "일치하는 항목이 없습니다.";
     }
 }
 
-// ✨ 즐겨찾기 토글 함수
 function toggleFavorite(memberId) {
     const idNum = Number(memberId);
     const index = favorites.indexOf(idNum);
@@ -995,14 +922,13 @@ function renderFilterButtons() {
         const btnClass = isSelected ? 'bg-yellow-600 text-white shadow' : 'bg-panel hover:bg-hover border border-theme text-muted';
         const sidebarClass = isSelected ? 'bg-hover text-main font-bold' : 'text-muted hover:bg-hover hover:text-main';
         
-        html += `<button onclick="filterTable('${cat}')" class="px-4 py-2 rounded-lg text-xs font-bold transition ${btnClass}">${cat}</button>`;
-        sidebarHtml += `<a href="#" onclick="filterTable('${cat}'); return false;" class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium ${sidebarClass} transition"><span>${index + 1}.</span> ${cat}</a>`;
+        html += `<button onclick="filterTable('${cat}');" class="px-3 py-2 rounded-lg text-xs font-bold transition whitespace-nowrap ${btnClass}">${cat}</button>`;
+        sidebarHtml += `<a href="#" onclick="filterTable('${cat}'); toggleMobileDrawer(); return false;" class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium ${sidebarClass} transition"><span>${index + 1}.</span> ${cat}</a>`;
     });
     
-    // ✨ 카테고리 있는 줄 맨 오른쪽에 즐겨찾기 탭 버튼 추가
     const isFavSelected = currentFilter === '즐겨찾기';
     const favBtnClass = isFavSelected ? 'bg-yellow-600 text-white shadow' : 'bg-panel hover:bg-hover border border-theme text-yellow-400';
-    html += `<button onclick="filterTable('즐겨찾기')" class="px-4 py-2 rounded-lg text-xs font-bold transition ${favBtnClass} flex items-center gap-1 ml-auto"><span>⭐</span> 즐겨찾기 (${favorites.length})</button>`;
+    html += `<button onclick="filterTable('즐겨찾기')" class="px-3 py-2 rounded-lg text-xs font-bold transition whitespace-nowrap ${favBtnClass} flex items-center gap-1 ml-auto"><span>⭐</span> 즐겨찾기 (${favorites.length})</button>`;
 
     if(container) container.innerHTML = html;
     if(sidebarContainer) sidebarContainer.innerHTML = sidebarHtml;
@@ -1038,15 +964,13 @@ function toggleSelectAll(selectAllCheckbox) {
 
 function deleteSelectedMembers() {
     const selectedCheckboxes = document.querySelectorAll('.row-checkbox:checked');
-    if (selectedCheckboxes.length === 0) {
-        return alert("삭제할 대원을 선택해주세요.");
-    }
+    if (selectedCheckboxes.length === 0) return alert("삭제할 대원을 선택해주세요.");
     if (confirm(`선택한 ${selectedCheckboxes.length}명의 대원을 정말 삭제하시겠습니까?`)) {
         const idsToDelete = Array.from(selectedCheckboxes).map(cb => Number(cb.getAttribute('data-id')));
         members = members.filter(m => !idsToDelete.includes(m.id));
         saveDataToStorage();
         renderTable();
-        alert("선택된 대원이 삭제되었습니다.");
+        alert("삭제되었습니다.");
     }
 }
 
@@ -1091,32 +1015,22 @@ function renderTable() {
         
         const startIndex = (currentPage - 1) * limit;
         displayedList = filtered.slice(startIndex, startIndex + limit);
-        
-        document.getElementById('filtered-member-count').innerText = ` (표시: ${displayedList.length}명 / 총 검색 결과: ${filtered.length}명)`;
-    } else {
-        document.getElementById('filtered-member-count').innerText = filtered.length !== members.length ? ` (검색 결과: ${filtered.length}명)` : '';
     }
 
     const paginationContainer = document.getElementById('paginationContainer');
     if (paginationContainer) {
         if (pageSizeVal !== 'all' && totalPages > 1) {
-            let pagHtml = `<button onclick="changePage(${currentPage - 1})" ${currentPage === 1 ? 'disabled class="px-3 py-1 bg-panel border border-theme rounded text-xs text-muted opacity-50 cursor-not-allowed"' : 'class="px-3 py-1 bg-panel border border-theme rounded text-xs font-bold hover:bg-hover text-main"'}>◀ 이전</button>`;
+            let pagHtml = `<button onclick="changePage(${currentPage - 1})" ${currentPage === 1 ? 'disabled class="px-2.5 py-1 bg-panel border border-theme rounded text-xs text-muted opacity-50"' : 'class="px-2.5 py-1 bg-panel border border-theme rounded text-xs font-bold hover:bg-hover text-main"'}>◀</button>`;
             
-            let startPage = Math.max(1, currentPage - 2);
-            let endPage = Math.min(totalPages, startPage + 4);
-            if (endPage - startPage < 4) {
-                startPage = Math.max(1, endPage - 4);
-            }
-
-            for (let p = startPage; p <= endPage; p++) {
+            for (let p = 1; p <= totalPages; p++) {
                 if (p === currentPage) {
-                    pagHtml += `<button class="px-3 py-1 bg-yellow-600 text-white rounded text-xs font-bold shadow">${p}</button>`;
+                    pagHtml += `<button class="px-2.5 py-1 bg-yellow-600 text-white rounded text-xs font-bold">${p}</button>`;
                 } else {
-                    pagHtml += `<button onclick="changePage(${p})" class="px-3 py-1 bg-panel border border-theme rounded text-xs font-bold hover:bg-hover text-main">${p}</button>`;
+                    pagHtml += `<button onclick="changePage(${p})" class="px-2.5 py-1 bg-panel border border-theme rounded text-xs font-bold hover:bg-hover text-main">${p}</button>`;
                 }
             }
 
-            pagHtml += `<button onclick="changePage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled class="px-3 py-1 bg-panel border border-theme rounded text-xs text-muted opacity-50 cursor-not-allowed"' : 'class="px-3 py-1 bg-panel border border-theme rounded text-xs font-bold hover:bg-hover text-main"'}>다음 ▶</button>`;
+            pagHtml += `<button onclick="changePage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled class="px-2.5 py-1 bg-panel border border-theme rounded text-xs text-muted opacity-50"' : 'class="px-2.5 py-1 bg-panel border border-theme rounded text-xs font-bold hover:bg-hover text-main"'}>▶</button>`;
             paginationContainer.innerHTML = pagHtml;
             paginationContainer.classList.remove('hidden');
         } else {
@@ -1143,43 +1057,42 @@ function renderTable() {
 
         let html = '';
         if(effectiveIsAdmin) {
-            html += `<td class="p-4 border-r border-theme text-center"><input type="checkbox" class="row-checkbox cursor-pointer" data-id="${member.id}"></td>`;
+            html += `<td class="p-3 sm:p-4 border-r border-theme text-center"><input type="checkbox" class="row-checkbox cursor-pointer" data-id="${member.id}"></td>`;
         }
 
         const absoluteIndex = (pageSizeVal !== 'all') ? ((currentPage - 1) * parseInt(pageSizeVal, 10)) + index + 1 : index + 1;
         
         let indexCellContent = '';
         if (effectiveIsAdmin || hasAdminRole) {
-            indexCellContent = `<input type="number" value="${absoluteIndex}" onchange="updateMemberCustomIndex(${member.id}, this.value)" class="w-12 text-center text-xs font-bold bg-main border border-theme py-1 rounded">`;
+            indexCellContent = `<input type="number" value="${absoluteIndex}" onchange="updateMemberCustomIndex(${member.id}, this.value)" class="w-10 text-center text-xs font-bold bg-main border border-theme py-1 rounded">`;
         } else {
             indexCellContent = `<span class="text-muted font-bold">${absoluteIndex}</span>`;
         }
 
-        // ✨ No. 열 앞에 별모양 체크박스(즐겨찾기 토글) 추가
         const isFav = favorites.includes(member.id);
         const starCheckboxHtml = `
-            <button type="button" onclick="toggleFavorite(${member.id})" class="text-base focus:outline-none transition transform hover:scale-125 mr-2" title="${isFav ? '즐겨찾기 해제' : '즐겨찾기 등록'}">
+            <button type="button" onclick="toggleFavorite(${member.id})" class="text-sm sm:text-base focus:outline-none transition transform hover:scale-125 mr-1" title="${isFav ? '해제' : '등록'}">
                 ${isFav ? '⭐' : '☆'}
             </button>
         `;
 
-        html += `<td class="p-4 border-r border-theme text-center flex items-center justify-center gap-1">${starCheckboxHtml}${indexCellContent}</td>`;
+        html += `<td class="p-3 sm:p-4 border-r border-theme text-center whitespace-nowrap"><div class="inline-flex items-center justify-center gap-1">${starCheckboxHtml}${indexCellContent}</div></td>`;
         
         if (showUidCol) {
-            html += `<td class="p-4 border-r border-theme text-muted font-mono select-all">${member.uid}</td>`;
+            html += `<td class="p-3 sm:p-4 border-r border-theme text-muted font-mono select-all">${member.uid}</td>`;
         }
 
         let adminRoleCheckboxHtml = '';
         if (effectiveIsAdmin && member.alliance === '금의위') {
             const isChecked = member.isAdminRole ? 'checked' : '';
-            adminRoleCheckboxHtml = `<label class="inline-flex items-center gap-1 text-[11px] text-yellow-400 cursor-pointer font-normal whitespace-nowrap" title="관리자 권한 부여"><input type="checkbox" ${isChecked} onchange="toggleMemberAdminRole(${member.id}, this)" class="cursor-pointer"> 관리자</label>`;
+            adminRoleCheckboxHtml = `<label class="inline-flex items-center gap-1 text-[10px] text-yellow-400 cursor-pointer"><input type="checkbox" ${isChecked} onchange="toggleMemberAdminRole(${member.id}, this)" class="cursor-pointer"> 관리자</label>`;
         }
 
         let nameCellContent = '';
         if (effectiveIsAdmin) {
             nameCellContent = `
-                <div class="flex items-center gap-2">
-                    <input type="text" value="${member.name}" onchange="updateMemberField(${member.id}, 'name', this.value)" class="w-24 text-xs font-bold bg-main border border-theme px-1.5 py-1 rounded">
+                <div class="flex items-center gap-1.5">
+                    <input type="text" value="${member.name}" onchange="updateMemberField(${member.id}, 'name', this.value)" class="w-20 sm:w-24 text-xs font-bold bg-main border border-theme px-1.5 py-1 rounded">
                     ${adminRoleCheckboxHtml}
                 </div>
             `;
@@ -1198,26 +1111,26 @@ function renderTable() {
         if (effectiveIsAdmin || hasAdminRole) {
             allianceCellContent = `<select onchange="updateMemberField(${member.id}, 'alliance', this.value)" class="text-xs bg-main border border-theme p-1 rounded">${allianceOptions}</select>`;
         } else {
-            allianceCellContent = `<span class="px-2.5 py-1 rounded-lg text-xs bg-panel border border-theme">${member.alliance}</span>`;
+            allianceCellContent = `<span class="px-2 py-0.5 rounded-lg text-xs bg-panel border border-theme">${member.alliance}</span>`;
         }
 
         html += `
-            <td class="p-4 border-r border-theme font-bold">${nameCellContent}</td>
-            <td class="p-4 border-r border-theme text-muted">${jobCellContent}</td>
-            <td class="p-4 border-r border-theme">${allianceCellContent}</td>
+            <td class="p-3 sm:p-4 border-r border-theme font-bold">${nameCellContent}</td>
+            <td class="p-3 sm:p-4 border-r border-theme text-muted">${jobCellContent}</td>
+            <td class="p-3 sm:p-4 border-r border-theme">${allianceCellContent}</td>
         `;
 
         for(let i=0; i<5; i++) {
             const deck = member.decks && member.decks[i];
             if (deck && (deck.g1 || deck.g2 || deck.g3)) {
-                html += `<td class="p-3 border-r border-theme"><div onclick="openDeckModal(${member.id},${i})" class="deck-cell rounded-lg p-2 text-center cursor-pointer hover:bg-panel transition"><div class="text-xs font-bold gold-text mb-1">${deck.g1 || '-'} / ${deck.g2 || '-'} / ${deck.g3 || '-'}</div><div class="text-[10px] text-muted">수정</div></div></td>`;
+                html += `<td class="p-2 sm:p-3 border-r border-theme"><div onclick="openDeckModal(${member.id},${i})" class="deck-cell rounded-lg p-1.5 sm:p-2 text-center cursor-pointer hover:bg-panel transition"><div class="text-[11px] sm:text-xs font-bold gold-text mb-0.5">${deck.g1 || '-'} / ${deck.g2 || '-'} / ${deck.g3 || '-'}</div><div class="text-[9px] sm:text-[10px] text-muted">수정</div></div></td>`;
             } else {
-                html += `<td class="p-3 border-r border-theme"><div onclick="openDeckModal(${member.id},${i})" class="deck-cell rounded-lg p-2 text-center text-muted cursor-pointer hover:bg-panel transition" style="border-style: dashed;">+ 설정</div></td>`;
+                html += `<td class="p-2 sm:p-3 border-r border-theme"><div onclick="openDeckModal(${member.id},${i})" class="deck-cell rounded-lg p-1.5 sm:p-2 text-center text-muted cursor-pointer hover:bg-panel transition" style="border-style: dashed;">+ 설정</div></td>`;
             }
         }
 
         if(effectiveIsAdmin) {
-            html += `<td class="p-3 text-center"><button onclick="deleteMember(${member.id})" class="bg-red-800 text-white px-2.5 py-1 rounded-lg text-xs font-bold">삭제</button></td>`;
+            html += `<td class="p-2 sm:p-3 text-center"><button onclick="deleteMember(${member.id})" class="bg-red-800 text-white px-2 py-1 rounded text-xs">삭제</button></td>`;
         }
 
         tr.innerHTML = html;
@@ -1302,14 +1215,9 @@ function handleAllianceExcelUpload(event) {
                 excelRowsData.push({ uid, name, job, rawDecks });
             });
 
-            let allianceChanges = [];
-
             excelRowsData.forEach(row => {
                 let existingMember = members.find(m => String(m.uid) === String(row.uid));
                 if (existingMember) {
-                    if (existingMember.alliance !== targetAlliance) {
-                        allianceChanges.push({ name: row.name, uid: row.uid, oldAlliance: existingMember.alliance, newAlliance: targetAlliance });
-                    }
                     existingMember.alliance = targetAlliance;
                     existingMember.name = row.name;
                     existingMember.job = row.job;
@@ -1332,7 +1240,6 @@ function handleAllianceExcelUpload(event) {
 
             members.forEach(member => {
                 if (member.alliance === targetAlliance && !uploadedUidsInThisFile.has(String(member.uid))) {
-                    allianceChanges.push({ name: member.name, uid: member.uid, oldAlliance: targetAlliance, newAlliance: "재야 (명단 누락/탈퇴)" });
                     member.alliance = "재야";
                 }
             });
@@ -1340,30 +1247,7 @@ function handleAllianceExcelUpload(event) {
             saveDataToStorage();
             renderFilterButtons();
             renderTable();
-
-            if (duplicates.length > 0 || allianceChanges.length > 0) {
-                let dupContainer = document.getElementById('duplicateListContainer');
-                let alertHtml = '';
-
-                if (allianceChanges.length > 0) {
-                    alertHtml += `<p class="font-bold text-yellow-500 mb-1">🔄 [${targetAlliance}] 소속 변경 및 누락(재야 이동) 인원 (${allianceChanges.length}명):</p>`;
-                    allianceChanges.forEach(ac => {
-                        alertHtml += `<div class="bg-panel p-2 rounded border border-theme flex justify-between mb-2"><span><strong>${ac.name}</strong> (${ac.uid})</span><span class="text-muted">${ac.oldAlliance} ➔ <strong class="text-yellow-400">${ac.newAlliance}</strong></span></div>`;
-                    });
-                }
-
-                if (duplicates.length > 0) {
-                    alertHtml += `<p class="font-bold text-amber-400 mb-1 mt-3">⚠️ 엑셀 내 중복 데이터 감지 (${duplicates.length}건):</p>`;
-                    duplicates.forEach(d => {
-                        alertHtml += `<div class="bg-panel p-2 rounded border border-theme flex justify-between mb-1"><span>닉네임: <strong>${d.name}</strong></span><span class="text-muted">UID: ${d.uid}</span></div>`;
-                    });
-                }
-
-                dupContainer.innerHTML = alertHtml;
-                toggleModal('duplicateAlertModal');
-            } else {
-                alert(`[${targetAlliance}] 연맹 파일이 성공적으로 업로드 및 갱신되었습니다!`);
-            }
+            alert(`[${targetAlliance}] 업로드 완료!`);
         } catch (err) {
             alert("엑셀 오류: " + err.message);
         }
@@ -1377,11 +1261,10 @@ function handleDictFileUpload(event) {
     if (!file) return;
     const reader = new FileReader();
     reader.onload = function(e) {
-        const content = e.target.result;
-        DICT_CONTENTS[currentDictTargetTab] = content;
+        DICT_CONTENTS[currentDictTargetTab] = e.target.result;
         saveDataToStorage();
         switchDictTab(currentDictTargetTab);
-        alert("도감 데이터가 성공적으로 업데이트되었습니다!");
+        alert("도감이 업데이트되었습니다!");
         event.target.value = '';
     };
     reader.readAsText(file, "utf-8");
@@ -1425,5 +1308,4 @@ function downloadShareExcel() {
     XLSX.writeFile(workbook, "금의위_연맹원_현황.xlsx");
 }
 
-// 최초 로드 시 데이터 불러오기 실행
 loadDataFromFirebase();

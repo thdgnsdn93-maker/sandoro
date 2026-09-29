@@ -8,7 +8,10 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <link rel="stylesheet" href="style.css">
 </head>
-<body class="theme-imperial-gold min-h-screen flex flex-col md:flex-row" id="app-body">
+<body class="theme-imperial-gold min-h-screen flex flex-col md:flex-row relative" id="app-body">
+
+    <!-- 📱 모바일용 슬라이드 사이드바 백드롭 (배경 어둡게) -->
+    <div id="mobileDrawerBackdrop" onclick="toggleMobileDrawer()" class="hidden fixed inset-0 bg-black/60 z-40 md:hidden transition-opacity"></div>
 
     <!-- 🔒 UID 로그인 팝업 -->
     <div id="authOverlay" class="fixed inset-0 modal-bg z-50 flex items-center justify-center p-4">
@@ -88,10 +91,10 @@
                     <p class="text-xs font-bold gold-text">📖 천하열전 대도감 (마크다운 파일)</p>
                     <input type="file" id="dictFileInput" accept=".md, .txt" class="hidden" onchange="handleDictFileUpload(event)">
                     <div class="grid grid-cols-2 gap-2 pt-1">
-                        <button onclick="currentDictTargetTab='formation'; document.getElementById('dictFileInput').click();" class="bg-purple-700 text-white py-2 rounded text-[11px] font-bold">1. 진형 및 상성</button>
-                        <button onclick="currentDictTargetTab='synergy'; document.getElementById('dictFileInput').click();" class="bg-purple-700 text-white py-2 rounded text-[11px] font-bold">2. 장수 인연</button>
-                        <button onclick="currentDictTargetTab='generalTactic'; document.getElementById('dictFileInput').click();" class="bg-purple-700 text-white py-2 rounded text-[11px] font-bold">3. 장수 전법</button>
-                        <button onclick="currentDictTargetTab='commonTactic'; document.getElementById('dictFileInput').click();" class="bg-purple-700 text-white py-2 rounded text-[11px] font-bold">4. 공용 전법</button>
+                        <button onclick="currentDictTargetTab='formation'; document.getElementById('dictFileInput').click();" class="bg-purple-700 text-white py-2 rounded text-[11px] font-bold">1. 진형상성</button>
+                        <button onclick="currentDictTargetTab='synergy'; document.getElementById('dictFileInput').click();" class="bg-purple-700 text-white py-2 rounded text-[11px] font-bold">2. 인연</button>
+                        <button onclick="currentDictTargetTab='generalTactic'; document.getElementById('dictFileInput').click();" class="bg-purple-700 text-white py-2 rounded text-[11px] font-bold">3. 장수전법</button>
+                        <button onclick="currentDictTargetTab='commonTactic'; document.getElementById('dictFileInput').click();" class="bg-purple-700 text-white py-2 rounded text-[11px] font-bold">4. 공용전법</button>
                     </div>
                 </div>
             </div>
@@ -218,14 +221,14 @@
         <div class="bg-panel border-2 gold-border rounded-xl shadow-2xl w-full max-w-6xl h-[90vh] relative flex flex-col overflow-hidden">
             <div class="bg-main px-4 py-3 border-b border-theme flex flex-col sm:flex-row items-center justify-between gap-2 shrink-0">
                 <div class="flex items-center gap-1.5 flex-wrap">
-                    <span class="text-base sm:text-lg font-extrabold gold-text mr-1">⚔️ 대도감</span>
+                    <span class="text-base sm:text-lg font-extrabold gold-text mr-1">⚔️️ 대도감</span>
                     <button onclick="switchDictTab('formation')" id="tabBtn-formation" class="px-2.5 py-1 rounded text-[11px] sm:text-xs font-bold bg-yellow-600 text-white">1. 진형상성</button>
                     <button onclick="switchDictTab('synergy')" id="tabBtn-synergy" class="px-2.5 py-1 rounded text-[11px] sm:text-xs font-bold bg-main text-muted">2. 인연</button>
                     <button onclick="switchDictTab('generalTactic')" id="tabBtn-generalTactic" class="px-2.5 py-1 rounded text-[11px] sm:text-xs font-bold bg-main text-muted">3. 장수전법</button>
                     <button onclick="switchDictTab('commonTactic')" id="tabBtn-commonTactic" class="px-2.5 py-1 rounded text-[11px] sm:text-xs font-bold bg-main text-muted">4. 공용전법</button>
                 </div>
                 <div class="flex items-center gap-2">
-                    <button id="editDictBtn" onclick="openDictEditModal()" class="hidden bg-amber-700 text-white px-2.5 py-1 rounded text-xs font-bold">✏️ 수정</button>
+                    <button id="editDictBtn" onclick="openDictEditModal()" class="hidden bg-amber-700 text-white px-2.5 py-1 rounded text-xs font-bold">✏️️ 수정</button>
                     <button onclick="toggleModal('dictModal')" class="p-1.5 rounded-lg border border-theme bg-panel text-xl font-bold">&times;</button>
                 </div>
             </div>
@@ -244,7 +247,7 @@
         </div>
     </div>
 
-    <!-- ✏️️ 도감 편집 모달 -->
+    <!-- ✏ 도감 편집 모달 -->
     <div id="dictEditModal" class="hidden fixed inset-0 modal-bg flex items-center justify-center z-50 p-4">
         <div class="bg-panel border-2 gold-border rounded-xl shadow-2xl w-full max-w-4xl h-[85vh] relative flex flex-col p-4 sm:p-6">
             <button onclick="toggleModal('dictEditModal')" class="absolute top-3 right-3 p-2 rounded-lg border border-theme bg-panel text-xl font-bold">&times;</button>
@@ -260,15 +263,15 @@
         </div>
     </div>
 
-    <!-- 👈 왼쪽 사이드바 네비게이션 (모바일 화면에서는 접힘/숨김, 상단바 제공) -->
-    <aside class="w-full md:w-64 bg-panel border-r border-theme flex flex-col justify-between shrink-0">
+    <!-- 👈 왼쪽 사이드바 네비게이션 (모바일에서는 화면 왼쪽에서 슬라이드로 튀어나오는 드로어 메뉴로 작동) -->
+    <aside id="mobileDrawerMenu" class="fixed inset-y-0 left-0 z-50 w-72 bg-panel border-r border-theme flex flex-col justify-between shrink-0 transform -translate-x-full md:translate-x-0 md:static transition-transform duration-300 shadow-2xl md:shadow-none">
         <div>
-            <div class="p-3 border-b border-theme flex items-center justify-between md:justify-center">
-                <img src="logo.png" alt="Logo" class="h-12 md:h-auto md:max-h-36 object-contain" onerror="this.onerror=null; this.src='연맹 아이콘.png';">
-                <!-- 모바일용 메뉴 접기/펴기 버튼 -->
-                <button onclick="toggleMobileMenu()" class="md:hidden text-muted text-xl font-bold px-3 py-1 border border-theme rounded-lg">☰</button>
+            <div class="p-3 border-b border-theme flex items-center justify-between">
+                <img src="logo.png" alt="Logo" class="h-12 object-contain" onerror="this.onerror=null; this.src='연맹 아이콘.png';">
+                <!-- 모바일 메뉴 닫기 버튼 (X) -->
+                <button onclick="toggleMobileDrawer()" class="md:hidden text-muted text-xl font-bold p-2 hover:text-main">&times;</button>
             </div>
-            <div id="mobileNavMenu" class="hidden md:block p-4 space-y-4">
+            <div class="p-4 space-y-4 overflow-y-auto max-h-[calc(100vh-140px)]">
                 <div>
                     <button onclick="toggleSubMenu('allianceSubMenu')" class="w-full flex justify-between items-center text-xs font-bold text-main uppercase tracking-wider mb-2 px-3 py-1 hover:bg-hover rounded transition">
                         <span>각 연맹 인원 & 편성</span>
@@ -286,16 +289,16 @@
                     </button>
                     <div id="infoSubMenu" class="space-y-1 pl-2">
                         <nav class="space-y-1">
-                            <a href="#" onclick="openDictTabWithScroll('formation'); return false;" class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium text-muted hover:bg-hover hover:text-main transition"><span>⚔</span> 1. 진형 및 상성</a>
-                            <a href="#" onclick="openDictTabWithScroll('synergy'); return false;" class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium text-muted hover:bg-hover hover:text-main transition"><span>🤝</span> 2. 장수 인연</a>
-                            <a href="#" onclick="openDictTabWithScroll('generalTactic'); return false;" class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium text-muted hover:bg-hover hover:text-main transition"><span>🛡️</span> 3. 장수 전법</a>
-                            <a href="#" onclick="openDictTabWithScroll('commonTactic'); return false;" class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium text-muted hover:bg-hover hover:text-main transition"><span>📜</span> 4. 공용 전법</a>
+                            <a href="#" onclick="openDictTabWithScroll('formation'); toggleMobileDrawer(); return false;" class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium text-muted hover:bg-hover hover:text-main transition"><span>⚔</span> 1. 진형 및 상성</a>
+                            <a href="#" onclick="openDictTabWithScroll('synergy'); toggleMobileDrawer(); return false;" class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium text-muted hover:bg-hover hover:text-main transition"><span>🤝</span> 2. 장수 인연</a>
+                            <a href="#" onclick="openDictTabWithScroll('generalTactic'); toggleMobileDrawer(); return false;" class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium text-muted hover:bg-hover hover:text-main transition"><span>🛡️</span> 3. 장수 전법</a>
+                            <a href="#" onclick="openDictTabWithScroll('commonTactic'); toggleMobileDrawer(); return false;" class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium text-muted hover:bg-hover hover:text-main transition"><span>📜</span> 4. 공용 전법</a>
                         </nav>
                     </div>
                 </div>
             </div>
         </div>
-        <div class="hidden md:block p-4 border-t border-theme space-y-1">
+        <div class="p-4 border-t border-theme space-y-1">
             <p class="text-xs font-bold text-main uppercase tracking-wider mb-2 px-3">테마 설정</p>
             <button onclick="openSettingsModal()" class="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-muted hover:bg-hover hover:text-main transition text-left"><span>🎨</span> 테마 변경</button>
             <button onclick="handleLogout()" class="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-red-500 hover:bg-hover transition text-left"><span>🚪</span> 나가기</button>
@@ -305,7 +308,11 @@
     <!-- 💻 메인 컨텐츠 영역 -->
     <div class="flex-1 flex flex-col min-w-0">
         <header class="bg-panel border-b border-theme px-4 sm:px-6 py-3 sm:py-4 flex flex-col sm:flex-row justify-between items-center gap-3">
-            <div class="flex items-center justify-between w-full sm:w-auto">
+            <div class="flex items-center justify-between w-full sm:w-auto gap-2">
+                <!-- 📱 모바일 3줄 햄버거 메뉴 버튼 -->
+                <button onclick="toggleMobileDrawer()" class="md:hidden bg-main border border-theme px-3 py-2 rounded-lg text-main text-lg font-bold flex items-center gap-1.5 shadow">
+                    <span>☰</span> <span class="text-xs">메뉴</span>
+                </button>
                 <h2 class="text-base sm:text-lg font-bold text-main">각 연맹 인원 & 편성 현황</h2>
             </div>
             <div class="w-full sm:max-w-md">
