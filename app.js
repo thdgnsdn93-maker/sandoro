@@ -37,37 +37,33 @@ const COMMON_TACTICS_LIST = [
 
 let DICT_DETAIL_DATA = {
     formation: [
-        { name: "일자진", type: "밸런스 분산형 / 피격률 전열 33%, 균형 34%, 균형 33%", effect: "어그로가 3곳으로 균등 분산되는 기본 밸런스진. 전열 받는 피해 8% 감소[cite: 13]" },
-        { name: "기형진", type: "1탱+2딜 공격진 / 피격률 전열 60%", effect: "강력한 1탱이 60% 피격을 견디고 후열 딜러가 12% 딜증으로 폭딜 투사. 전열 받는 피해 6% 감소 / 후열 가해 피해 12% 증가[cite: 13]" },
-        { name: "안행진", type: "방어 보완 & 누킹진 / 피격률 좌측상단 40%, 우측상단 40%", effect: "전열 물리 방어(통솔) 강화 및 후열 메인 딜러 화력 15% 극대화. 전열 통솔 +20 / 후열 가해 피해 15% 증가[cite: 13]" },
-        { name: "방원진", type: "평타 연타 극딜진 / 피격률 전열상단 40%, 우측상단 40%", effect: "후열 배치 무장에게 상시 연타율 40% 버프를 부여하는 평타 덱 전용 진형. 전열 받는 피해 5% 감소 / 후열 연타율 40% 증가[cite: 13]" },
-        { name: "추형진", type: "돌격 초공격형진 / 피격률 중앙상단 60%", effect: "전열 브루저/물리 딜러의 피해량을 16% 폭증시켜 적 전열을 신속 파쇄. 전열 가해 피해 16% 증가 / 후열 받는 피해 5% 감소[cite: 13]" },
-        { name: "어린진", type: "지략 회피 반격진 / 피격률 후열중앙상단 60%", effect: "후열 60% 자리에 지략 반격 탱커 배치. 전열 피신 12% 증가 / 후열 회심·묘책 8% 증가[cite: 13]" },
-        { name: "구행진", type: "[S2] 전열방어 & 후열연타 / 피격률 우측전열 60%", effect: "우측 전열 탱커가 집중 방어하고 후열 연타 딜러진 보조. 전열 받는 피해 8% 감소 / 후열 연타율 25% 추가[cite: 13]" },
-        { name: "언월진", type: "[S2] 2전열강타 & 후열보호 / 피격률 좌우전열 각 40%", effect: "2명의 전열 공격형 딜러가 강력한 대미지 투사. 전열 가해 피해 14% 증가 / 후열 받는 피해 5% 감소[cite: 13]" }
+        { name: "일자진", type: "진형 분류: 밸런스 분산형 진형 / 전열 받는 피해 8% 감소", effect: "어그로가 3곳으로 균등 분산되는 기본 밸런스진" },
+        { name: "기형진", type: "진형 분류: 1탱 + 2딜 공격진 / 전열 받는 피해 6% 감소", effect: "강력한 1탱이 60% 피격을 견디고 후열 딜러가 12% 딜증으로 폭딜 투사" },
+        { name: "안행진", type: "진형 분류: 방어 보완 & 누킹진 / 전열 통솔 +20", effect: "전열 물리 방어(통솔) 강화 및 후열 메인 딜러 화력 15% 극대화" },
+        { name: "방원진", type: "진형 분류: 평타 연타 극딜진 / 전열 받는 피해 5% 감소", effect: "후열 배치 무장에게 상시 연타율 40% 버프를 부여하는 평타 덱 전용 진형" },
+        { name: "추형진", type: "진형 분류: 돌격 초공격형진 / 전열 가해 피해 16% 증가", effect: "전열 브루저/물리 딜러의 피해량을 16% 폭증시켜 적 전열을 신속 파쇄" },
+        { name: "어린진", type: "진형 분류: 지략 회피 반격진 / 전열 피신 12% 증가", effect: "후열 60% 자리에 지략 반격 탱커를 배치해 반격 확률과 회심/묘책을 극대화" },
+        { name: "구행진", type: "[S2] 진형 분류: 전열 방어 & 후열 연타 보조진", effect: "우측 전열 탱커가 집중 방어하고 후열 연타 딜러진을 보조하는 시즌 2 신규 진형" },
+        { name: "언월진", type: "[S2] 진형 분류: 2전열 강타 & 후열 보호진", effect: "2명의 전열 공격형 딜러가 강력한 대미지를 투사하고 후열 딜러/서포터를 보호" }
     ],
     synergy: [
-        { name: "하북 정장", type: "안량, 문추, 장합 (필요 2명)", effect: "무력 +20[cite: 14]" },
-        { name: "괄목상대", type: "여몽, 노숙 (필요 2명)", effect: "3턴 시작 시 액티브 전법 피해 12% 감소[cite: 14]" },
-        { name: "동오 대도독", type: "주유, 노숙, 여몽, 육손 (필요 3명)", effect: "심리 공격 +8% (책략 피해 비례 자가 회복)[cite: 14]" },
-        { name: "깊은 의리", type: "관우, 관평, 주창, 관은병 (필요 2명)", effect: "관통 +6% (물리 방어 관통)[cite: 14]" },
-        { name: "오자양장", type: "우금, 장합, 서황, 장료, 악진 (필요 2명)", effect: "관통 +6%[cite: 14]" },
-        { name: "호위의 의지", type: "조조, 허저, 전위 (필요 2명)", effect: "일반 공격 피해 +12%[cite: 14]" },
-        { name: "도원결의", type: "유비, 관우, 장비 (필요 3명)", effect: "3번째 턴 행동 전 아군 전체 디버프 일괄 제거[cite: 14]" },
-        { name: "오호상장", type: "관우, 장비, 황충, 조운, 마초 (필요 3명)", effect: "회심(치명타) 확률 +10%[cite: 14]" }
+        { name: "하북 정장", type: "필요 인원: 2명 | 대상: 안량(군), 문추(군), 장합(위)", effect: "무력 +20[cite: 14]" },
+        { name: "괄목상대", type: "필요 인원: 2명 | 대상: 여몽(오), 노숙(오)", effect: "3턴 시작 시 액티브 전법 피해 12% 감소[cite: 14]" },
+        { name: "동오 대도독", type: "필요 인원: 3명 | 대상: 주유(오), 노숙(오), 여몽(오), 육손(오)", effect: "심리 공격 +8% (책략 피해 비례 자가 회복)[cite: 14]" },
+        { name: "깊은 의리", type: "필요 인원: 2명 | 대상: 관우(촉), 관평(촉), 주창(촉), 관은병(촉)", effect: "관통 +6% (물리 방어 관통)[cite: 14]" },
+        { name: "오자양장", type: "필요 인원: 2명 | 대상: 우금(위), 장합(위), 서황(위), 장료(위), 악진(위)", effect: "관통 +6%[cite: 14]" }
     ],
     generalTactic: [
-        { name: "서성 - 백리의 성", type: "지휘 / 방어 / 100%", effect: "전투 시작 후 4턴 동안 전 아군 피해 직전 25% 확률로 방어 획득. 4턴 시작 시 통솔 40 증가 및 전체 적군 홍수 상태 부여[cite: 12]" },
-        { name: "대교 - 국색", type: "지휘 / 보조 / 100%", effect: "매 턴 시작 시 랜덤 적군 2명 받는 피해 20% 증가 및 아군 2명 병력 회복(치유율 180%)[cite: 12]" },
-        { name: "감녕 - 수전의 제왕", type: "패시브 / 병기 / 100%", effect: "일반 공격 피해 150% 증가 및 공격 전 무력 12 증가(최대 4회 중첩)[cite: 12]" },
-        { name: "유비 - 백성과 함께", type: "지휘 / 치유 / 100%", effect: "전투 시작 시 전체 아군 통솔 18 증가. 매 턴 종료 시 전체 아군 회복 및 최저 병력 아군 디버프 제거 후 추가 회복[cite: 12]" },
-        { name: "관우 - 화하 진압", type: "액티브 / 병기 / 50%", effect: "2턴 동안 액티브 발동률 8% 증가. 적 전체 병기 피해 및 제어 상태 대상 탈주병 생성[cite: 12]" }
+        { name: "서성 - 백리의 성", type: "지휘 / 방어 / 100%", effect: "전투 시작 후 4턴 동안 전체 아군이 피해를 받기 직전 25% 확률로 방어 획득. 4턴 시작 시 통솔 40포인트 증가 및 전체 적군 홍수 상태 부여[cite: 12]" },
+        { name: "대교 - 국색", type: "지휘 / 보조 / 100%", effect: "매 턴 시작 시, 랜덤 적군 2명이 받는 피해 20% 증가 및 아군 2명 병력 회복 (치유율 180%)[cite: 12]" },
+        { name: "손책 - 강동 제패", type: "액티브 / 병기 / 65%", effect: "적군 랜덤 2명에게 250%의 병기 피해를 주고, 자신과 랜덤 아군 단일 목표 병력 회복[cite: 12]" },
+        { name: "감녕 - 수전의 제왕", type: "패시브 / 병기 / 100%", effect: "일반 공격 피해 150% 증가 및 공격 전 무력 12포인트 증가 (최대 4회 중첩)[cite: 12]" }
     ],
     commonTactic: [
-        { name: "격려", type: "지휘 / 보조 / 100%", effect: "전투 시 우군 2명의 무력이 7~14포인트 증가합니다[cite: 15]" },
-        { name: "결사의 다짐", type: "지휘 / 보조 / 100%", effect: "아군 1명 결사 획득(회복 및 병기 피해 감소), 무력 최고 아군 다짐 획득(추가 병기 피해)[cite: 15]" },
-        { name: "강철의 의지", type: "액티브 / 보조 / 35~70%", effect: "2턴 동안 우군 2명의 연타 확률 20~42.5%, 회유 20% 증가[cite: 15]" },
-        { name: "강공격", type: "추격 / 병기 / 40%", effect: "일반 공격 후, 현재 공격 목표에게 60~120%의 병기 피해를 즉시 추가로 줍니다[cite: 15]" }
+        { name: "격려", type: "지휘 / 보조 / 100% | 적합: 방패/창/궁/기", effect: "전투 시 우군 2명의 무력이 7 ➔ 14포인트 증가합니다[cite: 15]" },
+        { name: "결사의 다짐", type: "지휘 / 보조 / 100% | 적합: 방패/창/궁/기", effect: "전투 시작 시 랜덤 아군 1명 결사 획득(회복 및 병기 피해 감소), 무력 최고 아군 다짐 획득[cite: 15]" },
+        { name: "강철의 의지", type: "액티브 / 보조 / 35% ➔ 70% | 적합: 방패/창/궁/기", effect: "2턴 동안 우군 2명의 연타 확률 20 ➔ 42.5%, 회유 20% 증가[cite: 15]" },
+        { name: "강공격", type: "추격 / 병기 / 40% | 적합: 방패/창/궁/기", effect: "일반 공격 후, 현재 공격 목표에게 60 ➔ 120%의 병기 피해를 즉시 추가로 줍니다[cite: 15]" }
     ]
 };
 
@@ -154,22 +150,22 @@ function showDictDetail(item) {
     contentArea.innerHTML = `
         <div class="space-y-3 bg-panel p-5 rounded-xl border border-theme shadow-inner">
             <div class="border-b border-theme pb-2">
-                <span class="text-muted text-[11px] block">이름 / 항목</span>
+                <span class="text-muted text-[11px] block">항목 이름</span>
                 <h3 class="text-base font-extrabold gold-text">${item.name}</h3>
             </div>
             <div class="border-b border-theme pb-2">
-                <span class="text-muted text-[11px] block">특성 / 발동률</span>
+                <span class="text-muted text-[11px] block">특성 / 발동률 / 분류</span>
                 <p class="text-sm font-bold text-main mt-0.5">${item.type}</p>
             </div>
             <div>
-                <span class="text-muted text-[11px] block">상세효과</span>
+                <span class="text-muted text-[11px] block">상세 효과</span>
                 <p class="text-sm text-main mt-1 leading-relaxed">${item.effect}</p>
             </div>
         </div>
     `;
 }
 
-// 📚 마크다운 도감 파일 오탈자 검수 및 정밀 파싱 함수
+// 📚 마크다운 도감 파일 파서 (인트로 문구 및 불필요한 설명 완벽 필터링)
 function handleDictMarkdownUpload(event) {
     const file = event.target.files[0];
     if (!file) return;
@@ -191,15 +187,22 @@ function handleDictMarkdownUpload(event) {
                 let trimmed = line.trim();
                 if (!trimmed) return;
 
-                if (trimmed.startsWith('#') || trimmed.startsWith('**') || trimmed.startsWith('-')) {
+                // 인트로 타이틀이나 가이드 문구(# 🛡️, >, --- 등)는 무조건 건너뜀
+                if (trimmed.startsWith('# 🛡️') || trimmed.startsWith('# 📊') || trimmed.startsWith('# 📜') || trimmed.startsWith('>') || trimmed.startsWith('---') || trimmed.startsWith('## 🏛️')) {
+                    return;
+                }
+
+                // 새로운 항목 시작점 감지 (### 또는 - ** 로 시작하는 항목명)
+                if (trimmed.startsWith('###') || (trimmed.startsWith('- **') && !currentItem)) {
                     if (currentItem && currentItem.name) {
                         parsedItems.push(currentItem);
                     }
-                    let cleanName = trimmed.replace(/^[#\-*]+\s*/, '').replace(/\*\*/g, '').trim();
-                    currentItem = { name: cleanName, type: "상세 정보", effect: "" };
+                    let cleanName = trimmed.replace(/^[#\-*]+\s*/, '').replace(/\*\*/g, '').split(':')[0].trim();
+                    currentItem = { name: cleanName, type: "상세 정보 / 분류", effect: "" };
                 } else if (currentItem) {
-                    if (trimmed.includes('특성') || trimmed.includes('발동률') || trimmed.includes('효과') || trimmed.includes('분류')) {
-                        if (!currentItem.type || currentItem.type === "상세 정보") {
+                    // 특성, 발동률, 상세 효과 수집
+                    if (trimmed.includes('특성') || trimmed.includes('발동률') || trimmed.includes('분류') || trimmed.includes('유형')) {
+                        if (currentItem.type === "상세 정보 / 분류") {
                             currentItem.type = trimmed.replace(/^[#\-*]+\s*/, '').replace(/\*\*/g, '').trim();
                         } else {
                             currentItem.effect += (currentItem.effect ? " " : "") + trimmed.replace(/^[#\-*]+\s*/, '').replace(/\*\*/g, '').trim();
@@ -217,8 +220,8 @@ function handleDictMarkdownUpload(event) {
             if (parsedItems.length > 0) {
                 DICT_DETAIL_DATA[activeDictUploadKey] = parsedItems.map(item => ({
                     name: item.name,
-                    type: item.type || "특성 / 발동률",
-                    effect: item.effect || "상세 효과 내용이 없습니다."
+                    type: item.type || "특성 / 발동률 정보",
+                    effect: item.effect || "등록된 상세 효과 내용"
                 }));
 
                 saveDataToStorage();
@@ -227,14 +230,14 @@ function handleDictMarkdownUpload(event) {
                     switchDictTab(activeDictUploadKey);
                 }
 
-                alert(`📚 [오탈자 검수 완료] 총 ${parsedItems.length}개의 항목이 도감에 성공적으로 반영되었습니다!`);
+                alert(`📚 [파싱 완료] 총 ${parsedItems.length}개의 순수 항목 데이터가 도감에 정확히 반영되었습니다!`);
             } else {
-                alert("⚠️️ 마크다운 형식을 올바르게 읽지 못했습니다. 항목 형식을 확인해 주세요.");
+                alert("⚠️ 마크다운 형식을 올바르게 읽지 못했습니다.");
             }
 
             toggleModal('dataUploadModal');
         } catch (err) {
-            alert("마크다운 파싱 중 오류가 발생했습니다: " + err.message);
+            alert("파싱 중 오류 발생: " + err.message);
         }
         event.target.value = '';
     };
@@ -263,7 +266,6 @@ function openDeckModal(memberId, deckIdx) {
     if (titleEl) titleEl.innerText = `⚔️ ${member.name} - 보유덱 ${deckIdx + 1} 덱 수정`;
 
     const deck = (member.decks && member.decks[deckIdx]) || {};
-    
     populateFormationSelect(deck.formation || '일자진');
 
     document.getElementById('deckGen1').value = deck.g1 || '';
