@@ -5,6 +5,7 @@ let currentPage = 1;
 const ADMIN_PASSWORD = "0731";
 const CREATOR_UID = "20029059326";
 
+// 순수 동맹 카테고리 목록 유지
 let categoryNames = ["금의위", "낙원(동맹)", "낙화", "고구려", "재야"];
 let currentFilter = '금의위';
 let searchQuery = '';
@@ -53,6 +54,61 @@ function switchPageView(viewName) {
     }
 }
 
+// 엑셀 명단 업로드 파싱 로직 (UID 및 필수 필드 완벽 대응)
+function handleAllianceExcelUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, {type: 'array'});
+            const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+            const jsonRows = XLSX.utils.sheet_to_json(worksheet, {defval: ""});
+            
+            if(jsonRows.length === 0) return alert("엑셀 파일에 데이터가 없습니다.");
+
+            const allianceToAssign = activeUploadAlliance || categoryNames[0];
+
+            jsonRows.forEach((row, idx) => {
+                // UID 및 필수 데이터 키 매핑 (다양한 엑셀 서식 대응)
+                const uidVal = String(row['캐릭터 ID'] || row['UID'] || row['uid'] || row['ID'] || '').trim();
+                const nameVal = String(row['멤버'] || row['닉네임'] || row['이름'] || `대원_${idx+1}`).trim();
+                const jobVal = String(row['직업'] || '').trim();
+
+                if (!uidVal) return;
+
+                let existing = members.find(m => String(m.uid) === uidVal);
+                if (existing) {
+                    existing.name = nameVal;
+                    if (jobVal) existing.job = jobVal;
+                    existing.alliance = allianceToAssign;
+                } else {
+                    members.push({
+                        id: Date.now() + Math.random() + idx,
+                        uid: uidVal,
+                        name: nameVal,
+                        job: jobVal,
+                        alliance: allianceToAssign,
+                        isAdminRole: false,
+                        decks: []
+                    });
+                }
+            });
+
+            saveDataToStorage();
+            alert(`👥 ${allianceToAssign} 인원 엑셀 데이터 반영 완료!`);
+            renderTable();
+            toggleModal('dataUploadModal');
+        } catch (err) {
+            alert("엑셀 파싱 오류: " + err.message);
+        }
+        event.target.value = '';
+    };
+    reader.readAsArrayBuffer(file);
+}
+
 function handleMemberWeekExcelUpload(event) {
     const file = event.target.files[0];
     if (!file) return;
@@ -68,7 +124,7 @@ function handleMemberWeekExcelUpload(event) {
             if(jsonRows.length === 0) return alert("엑셀 파일에 데이터가 없습니다.");
 
             memberWeekData = jsonRows.map((row, idx) => {
-                const uidVal = String(row['캐릭터 ID'] || '').trim();
+                const uidVal = String(row['캐릭터 ID'] || row['UID'] || '').trim();
                 const nameVal = row['멤버'] || '';
                 const jobVal = row['직업'] || '';
 
@@ -82,7 +138,7 @@ function handleMemberWeekExcelUpload(event) {
                         uid: uidVal,
                         name: nameVal,
                         job: jobVal,
-                        alliance: '금의위',
+                        alliance: categoryNames[0],
                         isAdminRole: false,
                         decks: []
                     });
@@ -93,7 +149,7 @@ function handleMemberWeekExcelUpload(event) {
                     uid: uidVal,
                     name: nameVal,
                     job: jobVal,
-                    alliance: existingMember ? existingMember.alliance : '금의위',
+                    alliance: existingMember ? existingMember.alliance : categoryNames[0],
                     group: row['조별'] || '',
                     position: row['직위'] || '일반 멤버',
                     prosperity: Number(String(row['번영'] || 0).replace(/,/g, '')) || 0,
@@ -297,8 +353,8 @@ async function loadDataFromFirebase() {
                 if (data.categoryNames) categoryNames = data.categoryNames;
                 if (data.DICT_CONTENTS) DICT_CONTENTS = data.DICT_CONTENTS;
                 
-                if (currentFilter !== '금의위' && !categoryNames.includes(currentFilter)) {
-                    currentFilter = categoryNames[0] || '금의위';
+                if (currentFilter !== '⭐ 즐겨찾기' && !categoryNames.includes(currentFilter)) {
+                    currentFilter = categoryNames[0];
                 }
 
                 saveDataToStorage();
@@ -320,8 +376,8 @@ async function loadDataFromFirebase() {
     if (localCategories) categoryNames = JSON.parse(localCategories);
     if (localDict) DICT_CONTENTS = JSON.parse(localDict);
 
-    if (currentFilter !== '금의위' && !categoryNames.includes(currentFilter)) {
-        currentFilter = categoryNames[0] || '금의위';
+    if (currentFilter !== '⭐ 즐겨찾기' && !categoryNames.includes(currentFilter)) {
+        currentFilter = categoryNames[0];
     }
 
     renderFilterButtons();
@@ -467,7 +523,6 @@ function applyAdminUIState() {
     const delSelectedBtn = document.getElementById('delSelectedBtn');
     const spyBtn = document.getElementById('spyCheckBtn');
     
-    const selectAllHeader = document.getElementById('selectAllHeader');
     const uidColHeader = document.getElementById('uidColHeader');
     const delColHeader = document.getElementById('delColHeader');
     
@@ -476,10 +531,8 @@ function applyAdminUIState() {
     const showUidCol = effectiveIsAdmin || hasAdminRole;
 
     if (effectiveIsAdmin) {
-        if(selectAllHeader) selectAllHeader.classList.remove('hidden');
         if(delColHeader) delColHeader.classList.remove('hidden');
     } else {
-        if(selectAllHeader) selectAllHeader.classList.add('hidden');
         if(delColHeader) delColHeader.classList.add('hidden');
     }
 
@@ -539,7 +592,7 @@ function addCategoryInput() {
 function saveCategorySettings() {
     const inputs = document.querySelectorAll('.cat-input');
     categoryNames = Array.from(inputs).map(input => input.value.trim()).filter(val => val !== '');
-    if (currentFilter !== '금의위' && !categoryNames.includes(currentFilter)) currentFilter = categoryNames[0] || '금의위';
+    if (currentFilter !== '⭐ 즐겨찾기' && !categoryNames.includes(currentFilter)) currentFilter = categoryNames[0];
     saveDataToStorage();
     renderFilterButtons();
     if (currentActiveView === 'dashboard') renderTable();
@@ -582,7 +635,11 @@ function applyTheme() {
 function renderFilterButtons() {
     const container = document.getElementById('filter-buttons');
     const sidebarContainer = document.getElementById('sidebar-filter-buttons');
-    let html = '', sidebarHtml = '';
+    
+    // ⭐ 즐겨찾기 버튼을 맨 앞에 항상 고정 배치
+    let html = `<button onclick="switchPageView('dashboard'); filterTable('⭐ 즐겨찾기');" class="px-3 py-2 rounded-lg text-xs font-bold transition whitespace-nowrap ${currentFilter === '⭐ 즐겨찾기' && currentActiveView === 'dashboard' ? 'bg-yellow-600 text-white shadow' : 'bg-panel hover:bg-hover border border-theme text-muted'}">⭐ 즐겨찾기</button>`;
+    
+    let sidebarHtml = '';
     
     categoryNames.forEach((cat, index) => {
         const isSelected = currentFilter === cat && currentActiveView === 'dashboard';
@@ -613,10 +670,6 @@ function filterTable(filter) {
 function changePageSize() { currentPage = 1; renderTable(); }
 function changePage(p) { currentPage = p; renderTable(); }
 
-function toggleSelectAll(cb) {
-    document.querySelectorAll('.row-checkbox').forEach(box => box.checked = cb.checked);
-}
-
 function deleteSelectedMembers() {
     const sel = document.querySelectorAll('.row-checkbox:checked');
     if (sel.length === 0) return alert("삭제할 대원을 선택해주세요.");
@@ -641,7 +694,7 @@ function renderTable() {
     const showUidCol = effectiveIsAdmin || hasAdminRole;
 
     let filtered = members.filter(m => {
-        let match = (m.alliance === currentFilter);
+        let match = currentFilter === '⭐ 즐겨찾기' ? favorites.includes(m.id) : (m.alliance === currentFilter);
         return match && m.name.toLowerCase().includes(searchQuery);
     });
 
@@ -660,7 +713,7 @@ function renderTable() {
     renderPagination(totalPages);
 
     if(displayedList.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="13" class="p-6 text-center text-muted">등록된 인원이 없습니다.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="12" class="p-6 text-center text-muted">등록된 인원이 없습니다.</td></tr>`;
         return;
     }
 
@@ -669,25 +722,20 @@ function renderTable() {
         tr.className = `border-b border-theme transition bg-hover`;
         let html = '';
         
-        // 1. 선택 체크박스 열 (관리자 모드 전용)
-        if(effectiveIsAdmin) {
-            html += `<td class="p-3 sm:p-4 border-r border-theme text-center"><input type="checkbox" class="row-checkbox cursor-pointer" data-id="${member.id}"></td>`;
-        }
-        
-        // 2. 별표(즐겨찾기) 열
+        // 1. 별표(즐겨찾기) 열
         const isFav = favorites.includes(member.id);
         html += `<td class="p-3 sm:p-4 border-r border-theme text-center"><button type="button" onclick="toggleFavorite(${member.id})" class="text-sm">${isFav ? '⭐' : '☆'}</button></td>`;
         
-        // 3. No. 열 (숫자만 출력)
+        // 2. No. 열 (숫자만 출력)
         const absoluteIndex = (pageSizeVal !== 'all') ? ((currentPage - 1) * parseInt(pageSizeVal, 10)) + index + 1 : index + 1;
         html += `<td class="p-3 sm:p-4 border-r border-theme text-center font-bold text-muted">${absoluteIndex}</td>`;
         
-        // 4. UID 열
+        // 3. UID 열
         if (showUidCol) {
             html += `<td class="p-3 sm:p-4 border-r border-theme font-mono"><input type="text" value="${member.uid || ''}" onchange="updateMemberField(${member.id}, 'uid', this.value)" class="bg-main border border-theme px-2 py-1 rounded text-xs w-28 text-main"></td>`;
         }
         
-        // 5. 닉네임 열 (제작자 로그인 시 닉네임 옆에 관리자 권한 부여 체크박스 표시)
+        // 4. 닉네임 열 (제작자 로그인 시 닉네임 옆에 관리자 권한 부여 체크박스 표시)
         if (effectiveIsAdmin) {
             let adminCheckboxHtml = '';
             if (isCreator && String(member.uid) !== CREATOR_UID) {
@@ -704,7 +752,7 @@ function renderTable() {
             html += `<td class="p-3 sm:p-4 border-r border-theme font-bold">${member.name}${badge}</td>`;
         }
 
-        // 6. 직업 열
+        // 5. 직업 열
         if (effectiveIsAdmin) {
             let jobOptions = `<option value="">- 선택 -</option>`;
             AVAILABLE_JOBS.forEach(j => {
@@ -715,7 +763,7 @@ function renderTable() {
             html += `<td class="p-3 sm:p-4 border-r border-theme text-muted">${member.job || '-'}</td>`;
         }
 
-        // 7. 소속 열
+        // 6. 소속 열
         if (effectiveIsAdmin) {
             let catOptions = '';
             categoryNames.forEach(c => {
@@ -726,7 +774,7 @@ function renderTable() {
             html += `<td class="p-3 sm:p-4 border-r border-theme">${member.alliance}</td>`;
         }
 
-        // 8. 보유덱 1~5 열
+        // 7. 보유덱 1~5 열
         for(let i=0; i<5; i++) {
             const deck = member.decks && member.decks[i];
             if (deck && (deck.g1 || deck.g2 || deck.g3)) {
@@ -736,7 +784,7 @@ function renderTable() {
             }
         }
         
-        // 9. 관리(삭제) 열 (관리자 모드 전용)
+        // 8. 관리(삭제) 열 (관리자 모드 전용)
         if(effectiveIsAdmin) {
             html += `<td class="p-2 text-center"><button onclick="deleteMember(${member.id})" class="bg-red-800 hover:bg-red-700 text-white px-2 py-1 rounded text-xs">삭제</button></td>`;
         }
@@ -771,6 +819,22 @@ function toggleFavorite(id) {
     renderTable();
 }
 
+function renderPagination(totalPages) {
+    const container = document.getElementById('paginationContainer');
+    if (!container) return;
+    if (totalPages <= 1) {
+        container.innerHTML = '';
+        return;
+    }
+
+    let html = '';
+    for (let i = 1; i <= totalPages; i++) {
+        const activeClass = i === currentPage ? 'bg-yellow-600 text-white font-bold' : 'bg-panel border border-theme text-muted hover:bg-hover';
+        html += `<button onclick="changePage(${i})" class="px-3 py-1 rounded text-xs transition ${activeClass}">${i}</button>`;
+    }
+    container.innerHTML = html;
+}
+
 function downloadShareExcel() {
     let exportData = members.map((m, idx) => ({
         "No": idx + 1, "UID": m.uid, "닉네임": m.name, "직업": m.job || "", "소속": m.alliance || ""
@@ -783,7 +847,7 @@ function downloadShareExcel() {
 
 function openSettingsModal() { toggleModal('settingsModal'); }
 function toggleModal(id) { document.getElementById(id).classList.toggle('hidden'); }
-function addNewMember() { members.push({ id: Date.now(), uid: "0000", name: "신규장수", alliance: currentFilter, decks: [], isAdminRole: false }); saveDataToStorage(); renderTable(); }
+function addNewMember() { members.push({ id: Date.now(), uid: "0000", name: "신규장수", alliance: currentFilter === '⭐ 즐겨찾기' ? categoryNames[0] : currentFilter, decks: [], isAdminRole: false }); saveDataToStorage(); renderTable(); }
 function deleteMember(id) { if(confirm("정말 삭제하시겠습니까?")) { members = members.filter(m => m.id !== id); saveDataToStorage(); renderTable(); } }
 
 loadDataFromFirebase();
