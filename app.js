@@ -35,7 +35,6 @@ const COMMON_TACTICS_LIST = [
     "태평요술 (효과: 책략 피해 극대화 및 발동 확률 증가)"
 ];
 
-// 도감 데이터 (formation 목록이 진형 선택 Selectbox에 동적으로 연동됨)
 let DICT_DETAIL_DATA = {
     formation: [
         { name: "기략진", type: "진형 / 상성", effect: "책략 피해 및 속도 보너스 부여" },
@@ -97,7 +96,6 @@ function switchPageView(viewName) {
     }
 }
 
-// 📚 도감 탭 전환 및 좌측 리스트 렌더링
 function switchDictTab(tabKey) {
     currentDictTargetTab = tabKey;
     ['formation', 'synergy', 'generalTactic', 'commonTactic'].forEach(t => {
@@ -162,7 +160,78 @@ function showDictDetail(item) {
     `;
 }
 
-// ⚔️ 덱 설정 모달 열기 및 진형 목록 도감 연동
+// 📚 마크다운 도감 파일 오탈자 검수 및 정밀 파싱 함수
+function handleDictMarkdownUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const rawContent = e.target.result;
+            if (!rawContent.trim()) {
+                alert("파일 내용이 비어있습니다.");
+                return;
+            }
+
+            const lines = rawContent.split(/\r?\n/);
+            let parsedItems = [];
+            let currentItem = null;
+
+            lines.forEach(line => {
+                let trimmed = line.trim();
+                if (!trimmed) return;
+
+                if (trimmed.startsWith('#') || trimmed.startsWith('**') || trimmed.startsWith('-')) {
+                    if (currentItem && currentItem.name) {
+                        parsedItems.push(currentItem);
+                    }
+                    let cleanName = trimmed.replace(/^[#\-*]+\s*/, '').replace(/\*\*/g, '').trim();
+                    currentItem = { name: cleanName, type: "상세 정보", effect: "" };
+                } else if (currentItem) {
+                    if (trimmed.includes('특성') || trimmed.includes('발동률') || trimmed.includes('효과')) {
+                        if (!currentItem.type || currentItem.type === "상세 정보") {
+                            currentItem.type = trimmed.replace(/^[#\-*]+\s*/, '').replace(/\*\*/g, '').trim();
+                        } else {
+                            currentItem.effect += (currentItem.effect ? " " : "") + trimmed.replace(/^[#\-*]+\s*/, '').replace(/\*\*/g, '').trim();
+                        }
+                    } else {
+                        currentItem.effect += (currentItem.effect ? " " : "") + trimmed.replace(/^[#\-*]+\s*/, '').replace(/\*\*/g, '').trim();
+                    }
+                }
+            });
+
+            if (currentItem && currentItem.name) {
+                parsedItems.push(currentItem);
+            }
+
+            if (parsedItems.length > 0) {
+                DICT_DETAIL_DATA[activeDictUploadKey] = parsedItems.map(item => ({
+                    name: item.name,
+                    type: item.type || "상세 정보 / 효과",
+                    effect: item.effect || "등록된 상세 효과 내용이 없습니다."
+                }));
+
+                saveDataToStorage();
+                
+                if (document.getElementById('dictModal') && !document.getElementById('dictModal').classList.contains('hidden')) {
+                    switchDictTab(activeDictUploadKey);
+                }
+
+                alert(`📚 [오탈자 검수 완료] 총 ${parsedItems.length}개의 항목이 도감에 성공적으로 반영되었습니다!`);
+            } else {
+                alert("⚠️ 마크다운 형식을 올바르게 읽지 못했습니다. 항목 형식을 확인해 주세요.");
+            }
+
+            toggleModal('dataUploadModal');
+        } catch (err) {
+            alert("마크다운 파싱 중 오류가 발생했습니다: " + err.message);
+        }
+        event.target.value = '';
+    };
+    reader.readAsText(file, "UTF-8");
+}
+
 let currentEditingMemberId = null;
 let currentEditingDeckIdx = 0;
 
@@ -186,7 +255,6 @@ function openDeckModal(memberId, deckIdx) {
 
     const deck = (member.decks && member.decks[deckIdx]) || {};
     
-    // 도감에서 진형 목록 동적 로드 후 선택값 반영
     populateFormationSelect(deck.formation || '기략진');
 
     document.getElementById('deckGen1').value = deck.g1 || '';
@@ -298,25 +366,6 @@ function saveDeckData() {
     renderTable();
     toggleModal('deckModal');
     alert("덱 편성이 성공적으로 수정되었습니다!");
-}
-
-function handleDictMarkdownUpload(event) {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        try {
-            const content = e.target.result;
-            if (!content.trim()) return alert("파일 내용이 비어있습니다.");
-            alert("📚 도감 마크다운이 업로드되었습니다!");
-            toggleModal('dataUploadModal');
-        } catch (err) {
-            alert("오류 발생: " + err.message);
-        }
-        event.target.value = '';
-    };
-    reader.readAsText(file, "UTF-8");
 }
 
 function handleAllianceExcelUpload(event) {
@@ -628,7 +677,7 @@ function openDataUploadModal() {
     toggleModal('adminControlModal');
     document.getElementById('allianceUploadButtonsBox').innerHTML = categoryNames.map(cat => `
         <div class="flex items-center justify-between bg-panel p-2.5 rounded-lg border border-theme">
-            <span class="text-xs font-bold gold-text">⚔️ ${getDisplayCategoryName(cat)} 업로드</span>
+            <span class="text-xs font-bold gold-text">⚔️️ ${getDisplayCategoryName(cat)} 업로드</span>
             <button onclick="activeUploadAlliance='${cat}'; document.getElementById('allianceExcelInput').click();" class="bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold">선택</button>
         </div>`).join('');
     toggleModal('dataUploadModal');
