@@ -188,9 +188,9 @@ function applyAdminUIState() {
             btn.className = "bg-amber-600 hover:bg-amber-500 px-4 py-2 rounded-lg font-bold text-white text-xs shadow transition flex items-center gap-1.5";
         }
         if(addBtn) addBtn.classList.add('hidden');
-        if(delSelectedBtn) delSelectedBtn.classList.add('hidden');
-        if(delHeader) delHeader.classList.add('hidden');
-        if(selectAllHeader) selectAllHeader.classList.add('hidden');
+        if(delSelectedBtn) addBtn.classList.add('hidden');
+        if(delHeader) addBtn.classList.add('hidden');
+        if(selectAllHeader) addBtn.classList.add('hidden');
         if(uidHeader) uidHeader.classList.add('hidden');
     }
     renderFilterButtons();
@@ -532,18 +532,20 @@ function applyDeckUnlockUIState() {
     }
 }
 
-function handleDeckInputSearch(slotNum, type) {
+// ✨ 장수 및 공용 전법 검색 입력 처리 (ID 매핑 수정 완료)
+function handleDeckInputSearch(slotNum, tacticType) {
     if (!isDeckEditUnlocked) return;
 
     let inputId = '';
     let listId = '';
 
-    if (type === 'g') {
+    if (tacticType === 'g') {
         inputId = `deckG${slotNum}`;
         listId = `autocomplete-list-g${slotNum}`;
     } else {
-        inputId = `deckT${slotNum}_${type === 't2' ? '2' : '3'}`;
-        listId = `autocomplete-list-t${slotNum}_${type === 't2' ? '2' : '3'}`;
+        // tacticType이 't2_2' 또는 't2_3' 등일 때 정확한 ID 매핑
+        inputId = `deckT${slotNum}_${tacticType.slice(-1)}`;
+        listId = `autocomplete-list-t${slotNum}_${tacticType.slice(-1)}`;
     }
 
     const inputElem = document.getElementById(inputId);
@@ -558,7 +560,7 @@ function handleDeckInputSearch(slotNum, type) {
     }
 
     let sourceList = [];
-    if (type === 'g') {
+    if (tacticType === 'g') {
         const rawText = DICT_CONTENTS['generalTactic'] || "";
         let parsed = parseMarkdownByTarget(rawText);
         parsed.forEach(p => sourceList.push(p.title));
@@ -576,16 +578,16 @@ function handleDeckInputSearch(slotNum, type) {
 
     let html = '';
     matched.forEach(name => {
-        html += `<div onclick="selectDeckAutocompleteValue(${slotNum}, '${type}', '${name}')" class="p-2 hover:bg-hover cursor-pointer text-xs text-main">${name}</div>`;
+        html += `<div onclick="selectDeckAutocompleteValue(${slotNum}, '${tacticType}', '${name}')" class="p-2 hover:bg-hover cursor-pointer text-xs text-main">${name}</div>`;
     });
 
     listContainer.innerHTML = html;
     listContainer.classList.remove('hidden');
 }
 
-// ✨ 고유 전법 및 공용 전법 선택 시 괄호/부가 설명/기호 없이 오직 순수 이름만 깔끔하게 추출되도록 수정된 함수
-function selectDeckAutocompleteValue(slotNum, type, name) {
-    if (type === 'g') {
+// ✨ 선택 시 괄호/부가 설명 제거 및 순수 전법 이름만 깔끔하게 입력되도록 수정된 함수
+function selectDeckAutocompleteValue(slotNum, tacticType, name) {
+    if (tacticType === 'g') {
         document.getElementById(`deckG${slotNum}`).value = name;
         document.getElementById(`autocomplete-list-g${slotNum}`).classList.add('hidden');
 
@@ -611,11 +613,15 @@ function selectDeckAutocompleteValue(slotNum, type, name) {
         let cleanNameMatch = name.match(/^([^(]+)/);
         let cleanTacticName = cleanNameMatch ? cleanNameMatch[1].trim() : name;
 
-        let targetInputId = `deckT${slotNum}_${type === 't2' ? '2' : '3'}`;
-        let targetListId = `autocomplete-list-t${slotNum}_${type === 't2' ? '2' : '3'}`;
+        let targetIndex = tacticType.slice(-1);
+        let targetInputId = `deckT${slotNum}_${targetIndex}`;
+        let targetListId = `autocomplete-list-t${slotNum}_${targetIndex}`;
         
-        document.getElementById(targetInputId).value = cleanTacticName;
-        document.getElementById(targetListId).classList.add('hidden');
+        const inputElem = document.getElementById(targetInputId);
+        const listElem = document.getElementById(targetListId);
+
+        if (inputElem) inputElem.value = cleanTacticName;
+        if (listElem) listElem.classList.add('hidden');
     }
 
     updateDeckFormationBonusInfo();
