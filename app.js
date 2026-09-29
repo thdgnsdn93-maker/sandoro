@@ -59,7 +59,7 @@ function switchPageView(viewName) {
     }
 }
 
-// 일반 연맹 명단 업로드 파싱 로직 (닉네임 인식 필드 대폭 확장, 덱 보존)
+// 일반 연맹 명단 업로드 파싱 로직 (닉네임 및 닉네임(이전닉네임) 형태 완벽 지원, 덱 보존)
 function handleAllianceExcelUpload(event) {
     const file = event.target.files[0];
     if (!file) return;
@@ -78,13 +78,24 @@ function handleAllianceExcelUpload(event) {
 
             jsonRows.forEach((row, idx) => {
                 let rawRow = {};
+                let rawNameKey = '';
+                
                 Object.keys(row).forEach(k => {
-                    rawRow[k.trim().toLowerCase().replace(/\s+/g, '')] = String(row[k]).trim();
+                    const cleanKey = k.trim().toLowerCase().replace(/\s+/g, '');
+                    const val = String(row[k]).trim();
+                    rawRow[cleanKey] = val;
+                    if (cleanKey.includes('닉네임') || cleanKey.includes('멤버') || cleanKey.includes('이름') || cleanKey.includes('캐릭터') || cleanKey.includes('유저') || cleanKey.includes('군주')) {
+                        if (!rawNameKey && val) rawNameKey = val;
+                    }
                 });
 
                 const uidVal = rawRow['캐릭터id'] || rawRow['uid'] || rawRow['id'] || rawRow['캐릭터아이디'] || '';
-                // 닉네임 인식 필드 확장 (캐릭터, 캐릭터명, 유저명, 성명, 군주명 등 추가)
-                const nameVal = rawRow['멤버'] || rawRow['닉네임'] || rawRow['이름'] || rawRow['캐릭터이름'] || rawRow['캐릭터'] || rawRow['캐릭터명'] || rawRow['유저명'] || rawRow['성명'] || rawRow['군주명'] || `대원_${idx+1}`;
+                
+                let rawNameVal = rawRow['멤버'] || rawRow['닉네임'] || rawRow['이름'] || rawRow['캐릭터이름'] || rawRow['캐릭터'] || rawRow['캐릭터명'] || rawRow['유저명'] || rawRow['성명'] || rawRow['군주명'] || rawNameKey || `대원_${idx+1}`;
+                
+                // "닉네임(이전닉네임)" 형태나 특수 공백이 포함된 경우 처리
+                // 그대로 유지하되 앞뒤 공백 정리 (원하시는 경우 괄호 포함 전체를 닉네임으로 수용)
+                const nameVal = String(rawNameVal).trim();
                 const jobVal = rawRow['직업'] || '';
 
                 if (!uidVal) return;
@@ -138,12 +149,18 @@ function handleMemberWeekExcelUpload(event) {
 
             memberWeekData = jsonRows.map((row, idx) => {
                 let rawRow = {};
+                let rawNameKey = '';
                 Object.keys(row).forEach(k => {
-                    rawRow[k.trim().toLowerCase().replace(/\s+/g, '')] = String(row[k]).trim();
+                    const cleanKey = k.trim().toLowerCase().replace(/\s+/g, '');
+                    const val = String(row[k]).trim();
+                    rawRow[cleanKey] = val;
+                    if (cleanKey.includes('닉네임') || cleanKey.includes('멤버') || cleanKey.includes('이름') || cleanKey.includes('캐릭터') || cleanKey.includes('유저') || cleanKey.includes('군주')) {
+                        if (!rawNameKey && val) rawNameKey = val;
+                    }
                 });
 
                 const uidVal = rawRow['캐릭터id'] || rawRow['uid'] || rawRow['id'] || '';
-                const nameVal = rawRow['멤버'] || rawRow['닉네임'] || rawRow['이름'] || rawRow['캐릭터'] || rawRow['캐릭터명'] || rawRow['유저명'] || rawRow['성명'] || rawRow['군주명'] || '';
+                const nameVal = rawRow['멤버'] || rawRow['닉네임'] || rawRow['이름'] || rawRow['캐릭터'] || rawRow['캐릭터명'] || rawRow['유저명'] || rawRow['성명'] || rawRow['군주명'] || rawNameKey || '';
                 const jobVal = rawRow['직업'] || '';
 
                 if (uidVal) uploadedUids.add(uidVal);
