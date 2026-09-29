@@ -36,7 +36,7 @@ const COMMON_TACTICS_LIST = [
     "태평요술 (효과: 책략 피해 극대화 및 발동 확률 증가)"
 ];
 
-// 기본 도감 템플릿
+// 기본 도감 템플릿 (3번 무장고유전법은 좌측 장수 이름 / 우측 고유전법 상세)
 const DEFAULT_DICT_DATA = {
     formation: [
         { name: "일자진", type: "밸런스 분산형 / 전열 받는 피해 8% 감소", effect: "어그로가 3곳으로 균등 분산되는 기본 밸런스진" },
@@ -56,10 +56,10 @@ const DEFAULT_DICT_DATA = {
         { name: "오자양장", type: "필요 인원: 2명 | 대상: 우금, 장합, 서황, 장료, 악진", effect: "관통 +6%" }
     ],
     generalTactic: [
-        { name: "서성 - 백리의 성", type: "지휘 / 방어 / 100%", effect: "전투 시작 후 4턴 동안 전체 아군이 피해를 받기 직전 25% 확률로 방어 획득. 4턴 시작 시 통솔 40포인트 증가 및 전체 적군 홍수 상태 부여" },
-        { name: "대교 - 국색", type: "지휘 / 보조 / 100%", effect: "매 턴 시작 시, 랜덤 적군 2명이 받는 피해 20% 증가 및 아군 2명 병력 회복 (치유율 180%)" },
-        { name: "손책 - 강동 제패", type: "액티브 / 병기 / 65%", effect: "적군 랜덤 2명에게 250%의 병기 피해를 주고, 자신과 랜덤 아군 단일 목표 병력 회복" },
-        { name: "감녕 - 수전의 제왕", type: "패시브 / 병기 / 100%", effect: "일반 공격 피해 150% 증가 및 공격 전 무력 12포인트 증가 (최대 4회 중첩)" }
+        { name: "서성", type: "고유전법: 백리의 성 (지휘 / 방어 / 100%)", effect: "전투 시작 후 4턴 동안 전체 아군이 피해를 받기 직전 25% 확률로 방어 획득. 4턴 시작 시 통솔 40포인트 증가 및 전체 적군 홍수 상태 부여" },
+        { name: "대교", type: "고유전법: 국색 (지휘 / 보조 / 100%)", effect: "매 턴 시작 시, 랜덤 적군 2명이 받는 피해 20% 증가 및 아군 2명 병력 회복 (치유율 180%)" },
+        { name: "손책", type: "고유전법: 강동 제패 (액티브 / 병기 / 65%)", effect: "적군 랜덤 2명에게 250%의 병기 피해를 주고, 자신과 랜덤 아군 단일 목표 병력 회복" },
+        { name: "감녕", type: "고유전법: 수전의 제왕 (패시브 / 병기 / 100%)", effect: "일반 공격 피해 150% 증가 및 공격 전 무력 12포인트 증가 (최대 4회 중첩)" }
     ],
     commonTactic: [
         { name: "격려", type: "지휘 / 보조 / 100% | 적합: 방패/창/궁/기", effect: "전투 시 우군 2명의 무력이 7 ➔ 14포인트 증가합니다" },
@@ -75,9 +75,9 @@ function getTacticTooltip(skillName) {
     if (!skillName) return "";
     const cleanName = skillName.split(' ')[0].trim();
     const allTactics = [...(DICT_DETAIL_DATA.generalTactic || []), ...(DICT_DETAIL_DATA.commonTactic || [])];
-    const found = allTactics.find(t => t.name.includes(cleanName));
+    const found = allTactics.find(t => t.name.includes(cleanName) || t.type.includes(cleanName));
     if (found) {
-        return `[${found.name}]\n유형/발동: ${found.type}\n효과: ${found.effect}`;
+        return `[${found.name}] ${found.type}\n효과: ${found.effect}`;
     }
     return `전법명: ${skillName}`;
 }
@@ -96,7 +96,7 @@ function updateFormationAndSynergyBonusText() {
 
     let matchedSynergies = [];
     (DICT_DETAIL_DATA.synergy || []).forEach(syn => {
-        const matchedCount = currentGenerators.filter(g => syn.type.includes(g)).length;
+        const matchedCount = currentGenerators.filter(g => syn.type.includes(g) || syn.name.includes(g)).length;
         if (matchedCount >= 2) {
             matchedSynergies.push(`✨ 인연보너스[${syn.name}]: ${syn.effect}`);
         }
@@ -189,14 +189,16 @@ function selectDictItem(tabKey, index, btnElement) {
 
 function showDictDetail(item) {
     const contentArea = document.getElementById('dictContentArea');
+    const isGeneralTactic = currentDictTargetTab === 'generalTactic';
+    
     contentArea.innerHTML = `
         <div class="space-y-3 bg-panel p-5 rounded-xl border border-theme shadow-inner">
             <div class="border-b border-theme pb-2">
-                <span class="text-muted text-[11px] block">항목 이름</span>
+                <span class="text-muted text-[11px] block">${isGeneralTactic ? '장수 이름' : '항목 이름'}</span>
                 <h3 class="text-base font-extrabold gold-text">${item.name}</h3>
             </div>
             <div class="border-b border-theme pb-2">
-                <span class="text-muted text-[11px] block">특성 / 발동률 / 분류</span>
+                <span class="text-muted text-[11px] block">${isGeneralTactic ? '고유전법 명칭 및 유형' : '특성 / 발동률 / 분류'}</span>
                 <p class="text-sm font-bold text-main mt-0.5">${item.type}</p>
             </div>
             <div>
@@ -207,7 +209,7 @@ function showDictDetail(item) {
     `;
 }
 
-// 📌 마크다운 도감 파일 완벽 정밀 파서 (항목별 1:1 분리)
+// 📌 마크다운 업로드 파서: 3번 무장고유전법은 '장수 이름'만 좌측에 추출하도록 최적화
 function handleDictMarkdownUpload(event) {
     const file = event.target.files[0];
     if (!file) return;
@@ -221,13 +223,16 @@ function handleDictMarkdownUpload(event) {
             const lines = rawContent.split(/\r?\n/);
             let parsedItems = [];
             let currentItem = null;
+            const excludeKeywords = ['인연 효과', '대상 무장', '필요 인원', '진형 분류', '상세', '특성', '효과', '발동', '유형', '장수', '고유전법'];
 
             lines.forEach(line => {
                 let trimmed = line.trim();
                 if (!trimmed) return;
+                if (trimmed.startsWith('>') || trimmed.startsWith('---')) return;
 
-                // 새로운 항목 시작 조건 (### 헤더, 번호 매기기, 또는 볼드 처리된 항목명)
-                if (trimmed.startsWith('###') || trimmed.match(/^[0-9]+\.\s+/) || trimmed.startsWith('- **') || trimmed.startsWith('**')) {
+                const isNewItemHeader = trimmed.startsWith('###') || trimmed.match(/^[0-9]+\.\s+/) || trimmed.startsWith('- **') || trimmed.startsWith('**');
+
+                if (isNewItemHeader) {
                     if (currentItem && currentItem.name) {
                         parsedItems.push(currentItem);
                     }
@@ -236,13 +241,15 @@ function handleDictMarkdownUpload(event) {
                         .replace(/\*\*/g, '')
                         .split(':')[0]
                         .split('(')[0]
+                        .split('-')[0] // 3번 전법 탭에서 "장수 - 전법" 형태일 경우 장수 이름만 좌측에 추출
                         .trim();
 
-                    currentItem = { name: cleanName, type: "상세 특성 정보", effect: "" };
+                    if (cleanName && !excludeKeywords.some(kw => cleanName.includes(kw))) {
+                        currentItem = { name: cleanName, type: "전법 상세 정보", effect: "" };
+                    }
                 } else if (currentItem) {
-                    // 특성/유형과 상세 효과 분리 감지
-                    if (trimmed.includes('특성') || trimmed.includes('발동률') || trimmed.includes('분류') || trimmed.includes('유형') || trimmed.includes('효과')) {
-                        if (currentItem.type === "상세 특성 정보" && !trimmed.startsWith('상세')) {
+                    if (trimmed.includes('전법') || trimmed.includes('유형') || trimmed.includes('발동') || trimmed.includes('지휘') || trimmed.includes('액티브') || trimmed.includes('패시브')) {
+                        if (currentItem.type === "전법 상세 정보") {
                             currentItem.type = trimmed.replace(/^[#\-*]+\s*/, '').replace(/\*\*/g, '').trim();
                         } else {
                             currentItem.effect += (currentItem.effect ? " " : "") + trimmed.replace(/^[#\-*]+\s*/, '').replace(/\*\*/g, '').trim();
@@ -260,7 +267,7 @@ function handleDictMarkdownUpload(event) {
             if (parsedItems.length > 0) {
                 DICT_DETAIL_DATA[activeDictUploadKey] = parsedItems.map(item => ({
                     name: item.name,
-                    type: item.type || "특성 / 발동률 정보",
+                    type: item.type || "고유전법 상세 정보",
                     effect: item.effect || "상세 효과 내용"
                 }));
 
@@ -268,7 +275,7 @@ function handleDictMarkdownUpload(event) {
                 if (document.getElementById('dictModal') && !document.getElementById('dictModal').classList.contains('hidden')) {
                     switchDictTab(activeDictUploadKey);
                 }
-                alert(`📚 총 ${parsedItems.length}개 항목이 개수별로 정확히 분리되어 도감에 반영되었습니다!`);
+                alert(`📚 총 ${parsedItems.length}개의 항목이 정확하게 분리되어 반영되었습니다!`);
             } else {
                 alert("⚠️ 마크다운 형식을 올바르게 읽지 못했습니다.");
             }
