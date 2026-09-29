@@ -206,7 +206,7 @@ function applyAdminUIState() {
         if(addBtn) addBtn.classList.add('hidden');
         if(delSelectedBtn) delSelectedBtn.classList.add('hidden');
         if(delHeader) delHeader.classList.add('hidden');
-        if(selectAllHeader) delHeader.classList.add('hidden');
+        if(selectAllHeader) selectAllHeader.classList.add('hidden');
         if(uidHeader) uidHeader.classList.add('hidden');
     }
     renderFilterButtons();
@@ -1068,29 +1068,32 @@ function handleExcelUpload(event) {
             
             if(jsonRows.length === 0) return alert("엑셀 파일에 데이터가 없습니다.");
 
-            let parsedMembers = [];
+            let newParsedMembers = [];
+            let seenUids = new Set();
+            let seenNames = new Set();
+            let duplicates = [];
+
             jsonRows.forEach((row) => {
                 let uid = '';
                 let name = '';
                 let rawJob = '';
-                let rawDecks = '';
                 let rawAlliance = categoryNames[0];
+                let rawDecks = '';
 
                 for (let key in row) {
                     let cleanKey = String(key).trim().replace(/\s+/g, '');
                     let val = String(row[key] || '').trim();
 
-                    // ✨ '닉네임(이전닉네임)' 형태의 컬럼명을 유연하게 인식하도록 수정
                     if (cleanKey.includes('UID') || cleanKey === '아이디' || cleanKey === '번호') {
                         if (val) uid = val;
                     } else if (cleanKey.includes('닉네임') || cleanKey.includes('이름') || cleanKey.includes('유저')) {
                         if (val) name = val;
                     } else if (cleanKey.includes('직업') || cleanKey.includes('역할')) {
                         if (val) rawJob = val;
-                    } else if (cleanKey.includes('덱') || cleanKey.includes('조합') || cleanKey.includes('부대')) {
-                        if (val) rawDecks = val;
                     } else if (cleanKey.includes('소속') || cleanKey.includes('동맹') || cleanKey.includes('길드')) {
                         if (val) rawAlliance = val;
+                    } else if (cleanKey.includes('덱') || cleanKey.includes('조합') || cleanKey.includes('부대')) {
+                        if (val) rawDecks = val;
                     }
                 }
 
@@ -1104,6 +1107,14 @@ function handleExcelUpload(event) {
                 if (!name || name.includes('닉네임')) return;
                 if (!uid) uid = String(Math.floor(1000 + Math.random() * 9000));
 
+                // ✨ 중복 체크 로직
+                if (seenUids.has(uid) || seenNames.has(name)) {
+                    duplicates.push({ uid, name });
+                } else {
+                    seenUids.add(uid);
+                    seenNames.add(name);
+                }
+
                 let job = AVAILABLE_JOBS.includes(rawJob) ? rawJob : "";
                 
                 let alliance = categoryNames[0];
@@ -1113,31 +1124,38 @@ function handleExcelUpload(event) {
                 }
 
                 let decks = [];
-                if (rawDecks) {
+                if (rawDecks && rawDecks !== alliance && !categoryNames.includes(rawDecks)) {
                     decks = [{ formation: '기형진', g1: rawDecks, t1_1: '', t1_2: '', t1_3: '', g2: '', t2_1: '', t2_2: '', t2_3: '', g3: '', t3_1: '', t3_2: '', t3_3: '' }];
                 }
 
-                parsedMembers.push({ uid, name, job, alliance, decks });
+                newParsedMembers.push({ 
+                    id: Date.now() + Math.random(), 
+                    uid, 
+                    name, 
+                    job, 
+                    alliance, 
+                    decks 
+                });
             });
 
-            parsedMembers.forEach(newM => {
-                let existingIndex = members.findIndex(m => String(m.uid) === String(newM.uid));
-                if (existingIndex !== -1) {
-                    members[existingIndex].name = newM.name;
-                    members[existingIndex].job = newM.job;
-                    members[existingIndex].alliance = newM.alliance;
-                    if (newM.decks.length > 0 && (!members[existingIndex].decks || members[existingIndex].decks.length === 0)) {
-                        members[existingIndex].decks = newM.decks;
-                    }
-                } else {
-                    members.push({ id: Date.now() + Math.random(), ...newM });
-                }
-            });
-
+            // 덮어쓰기 적용
+            members = newParsedMembers;
             saveDataToStorage();
             renderFilterButtons();
             renderTable();
-            alert("맹원 엑셀 데이터가 성공적으로 업로드 및 반영되었습니다!");
+
+            // ✨ 중복 인원이 존재할 경우 관리자 알림 팝업 오픈
+            if (duplicates.length > 0) {
+                let dupContainer = document.getElementById('duplicateListContainer');
+                let dupHtml = `<p class="font-bold text-amber-400 mb-2">총 ${duplicates.length건}의 중복 데이터가 감지되었습니다:</p>`;
+                duplicates.forEach(d => {
+                    dupHtml += `<div class="bg-panel p-2 rounded border border-theme flex justify-between"><span>닉네임: <strong>${d.name}</strong></span><span class="text-muted">UID: ${d.uid}</span></div>`;
+                });
+                dupContainer.innerHTML = dupHtml;
+                toggleModal('duplicateAlertModal');
+            } else {
+                alert("엑셀 데이터로 완전히 덮어씌워졌습니다!");
+            }
         } catch (err) {
             alert("엑셀 오류: " + err.message);
         }
