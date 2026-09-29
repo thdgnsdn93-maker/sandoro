@@ -1130,7 +1130,7 @@ function handleExcelUpload(event) {
 
                 let job = AVAILABLE_JOBS.includes(rawJob) ? rawJob : "";
                 
-                // ✨ 기존 대원을 우선적으로 찾고, 기존 소속을 완벽하게 보호
+                // ✨ 기존 대원을 우선적으로 탐색하여 기존 소속 완벽 방어
                 let existingMatch = members.find(m => String(m.uid) === String(uid));
                 let alliance = "";
 
@@ -1147,9 +1147,9 @@ function handleExcelUpload(event) {
                     if (matchedCat) {
                         alliance = matchedCat;
                     } else if (existingMatch) {
-                        alliance = existingMatch.alliance; // 엑셀에 소속 정보가 없거나 비어있어도 기존 소속 유지!
+                        alliance = existingMatch.alliance; // 엑셀에 소속 정보가 없거나 비어 있어도 기존 소속 유지!
                     } else {
-                        alliance = categoryNames[0]; // 신규 인원일 경우 첫 번째 기본 카테고리로 지정
+                        alliance = categoryNames[0]; // 신규 인원일 경우 기본 카테고리 지정
                     }
                 }
 
@@ -1157,7 +1157,7 @@ function handleExcelUpload(event) {
                 excelRowsData.push({ uid, name, job, alliance, rawDecks });
             });
 
-            // 1. 기존 명단과 대조하여 갱신 (소속 변경 시에만 변경 감지)
+            // 1. 기존 명단과 대조하여 최신화 (실제로 소속이 바뀐 경우에만 변경 감지)
             excelRowsData.forEach(row => {
                 let existingMember = members.find(m => String(m.uid) === String(row.uid));
                 if (existingMember) {
@@ -1183,11 +1183,8 @@ function handleExcelUpload(event) {
                 }
             });
 
-            // 2. ✨ 새 엑셀 명단에서 완전히 빠진 인원만 '재야' 소속으로 이동 (업로드할 때 파일에 소속 열이 없다고 전체가 재야로 바뀌지 않도록 안전장치 적용)
-            // 만약 업로드한 파일이 전체 명단 파일이 아니라 일부 인원만 있는 파일이라면 빠진 인원이 재야로 갈 수 있으므로, 
-            // 엑셀 파일 내에 유효한 데이터가 충분히 있을 때만 누락 인원을 재야로 처리하거나 안전하게 유지합니다.
-            let isFullUpload = uploadedUids.size > 10; // 대규모 업로드일 때만 누락자 재야 처리 적용
-            if (isFullUpload) {
+            // 2. ✨ 기존 인원 중 새 엑셀 명단에 아예 존재하지 않는 인원만 '재야'로 변경 (일부 인원만 올린 파일일 경우 기존 인원이 재야로 빠지지 않도록 엑셀 전체 인원이 50명 이상일 때만 누락자 재야 처리 적용)
+            if (uploadedUids.size >= 50) {
                 members.forEach(member => {
                     if (!uploadedUids.has(String(member.uid)) && member.alliance !== "재야") {
                         allianceChanges.push({ name: member.name, uid: member.uid, oldAlliance: member.alliance, newAlliance: "재야 (탈퇴/누락)" });
