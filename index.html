@@ -37,11 +37,11 @@
         </div>
     </div>
 
-    <!-- 🛡️ 관리자 제어판 모달 -->
+    <!-- 🛡️️ 관리자 제어판 모달 -->
     <div id="adminControlModal" class="hidden fixed inset-0 modal-bg flex items-center justify-center z-50 p-4">
         <div class="bg-panel border-2 gold-border rounded-xl shadow-2xl w-full max-w-md p-6 relative">
             <button onclick="toggleModal('adminControlModal')" class="absolute top-4 right-4 p-2 rounded-lg border border-theme bg-panel hover:bg-hover text-muted text-xl font-bold transition">&times;</button>
-            <h2 class="text-2xl font-bold gold-text mb-4 flex items-center gap-2">🛡️️ 관리자 제어판</h2>
+            <h2 class="text-2xl font-bold gold-text mb-4 flex items-center gap-2">🛡 관리자 제어판</h2>
             <div class="space-y-3">
                 <button onclick="openCategoryModal()" class="w-full bg-blue-700 hover:bg-blue-600 text-white py-3 rounded-lg text-sm font-bold shadow transition">📁 카테고리 편집</button>
                 <button onclick="openDataUploadModal()" class="w-full bg-emerald-700 hover:bg-emerald-600 text-white py-3 rounded-lg text-sm font-bold shadow transition">📤 데이터 업로드 센터 (인원/도감)</button>
@@ -52,6 +52,29 @@
             <div class="mt-6 flex justify-between">
                 <button onclick="turnOffAdminMode()" class="bg-red-800 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-xs font-bold transition">관리자 모드 끄기</button>
                 <button onclick="toggleModal('adminControlModal')" class="px-4 py-2 bg-gray-700 text-white rounded-lg text-xs">닫기</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 🕵️ 스파이/중복 검사 결과 모달 -->
+    <div id="spyCheckModal" class="hidden fixed inset-0 modal-bg flex items-center justify-center z-50 p-4">
+        <div class="bg-panel border-2 border-red-500/50 rounded-xl shadow-2xl w-full max-w-lg p-6 relative max-h-[90vh] overflow-y-auto">
+            <button onclick="toggleModal('spyCheckModal')" class="absolute top-4 right-4 p-2 rounded-lg border border-theme bg-panel text-xl font-bold hover:bg-red-500/20 transition">&times;</button>
+            <h2 class="text-xl font-bold text-red-500 mb-4 flex items-center gap-2">🕵️ 스파이 & 이상 계정 검사 리포트</h2>
+            
+            <div class="space-y-4">
+                <div class="bg-main border border-theme p-4 rounded-lg">
+                    <h3 class="text-sm font-bold gold-text mb-2 flex items-center gap-1.5"><span>⚠️</span> 중복 UID 검출 (다중 계정 의심)</h3>
+                    <div id="duplicateUidList" class="space-y-1 text-xs text-muted"></div>
+                </div>
+                
+                <div class="bg-main border border-theme p-4 rounded-lg">
+                    <h3 class="text-sm font-bold text-orange-400 mb-2 flex items-center gap-1.5"><span>❓</span> UID 미설정 및 이상 계정</h3>
+                    <div id="suspiciousUidList" class="space-y-1 text-xs text-muted"></div>
+                </div>
+            </div>
+            <div class="mt-6 flex justify-end">
+                <button onclick="toggleModal('spyCheckModal')" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-xs transition">닫기</button>
             </div>
         </div>
     </div>
@@ -155,6 +178,10 @@
             <div class="flex flex-wrap gap-2 items-center justify-end w-full sm:w-auto">
                 <button onclick="addNewMember()" id="addMemberBtn" class="hidden bg-emerald-700 hover:bg-emerald-600 px-3 py-2 rounded-lg font-bold text-white text-xs shadow transition">+ 인원 추가</button>
                 <button onclick="deleteSelectedMembers()" id="delSelectedBtn" class="hidden bg-red-800 hover:bg-red-700 px-3 py-2 rounded-lg font-bold text-white text-xs shadow transition">🗑️ 선택 삭제</button>
+                
+                <!-- 🕵️ 스파이 확인 버튼 (관리자 전용) -->
+                <button onclick="runSpyCheck()" id="spyCheckBtn" class="hidden bg-purple-700 hover:bg-purple-600 px-3 py-2 rounded-lg font-bold text-white text-xs shadow transition flex items-center gap-1.5 border border-purple-500/50"><span>🕵️</span> 스파이/중복 검사</button>
+
                 <button onclick="toggleAdminMode()" id="editModeBtn" class="bg-amber-600 hover:bg-amber-500 px-3 sm:px-4 py-2 rounded-lg font-bold text-white text-xs shadow transition flex items-center gap-1.5"><span>🛡</span> 관리자 모드</button>
             </div>
         </header>
@@ -207,9 +234,8 @@
             <div id="paginationContainer" class="flex justify-center items-center gap-1.5 sm:gap-2 mt-6 py-2 overflow-x-auto"></div>
         </main>
 
-        <!-- ✨ [페이지 2] shadcn-admin 스타일 맹원 주간활동 통계 룸 뷰 -->
+        <!-- ✨ [페이지 2] 맹원 주간활동 통계 룸 뷰 -->
         <main id="view-stats" class="hidden flex-1 p-3 sm:p-6 md:p-8 overflow-y-auto space-y-6">
-            <!-- 📊 상단 요약 카드 -->
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div class="bg-panel border border-theme p-5 rounded-xl shadow">
                     <p class="text-xs text-muted font-medium mb-1">총 맹원 인원수</p>
@@ -241,19 +267,17 @@
                 </div>
             </div>
 
-            <!-- 🌟 활약도 평가 요약 카드 섹션 (우수: 전체공개 / 저조: 관리자 전용) -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div class="bg-panel border border-theme p-5 rounded-xl shadow">
-                    <h3 class="text-sm font-bold gold-text mb-3 flex items-center gap-1.5"><span>🏆</span> 우수 활약 맹원 TOP 3 (전체 공개)</h3>
+                    <h3 class="text-sm font-bold gold-text mb-3 flex items-center gap-1.5"><span>🏆</span> 우수 활약 맹원 TOP 10 (전체 공개)</h3>
                     <div id="topExecutivesList" class="space-y-2 text-xs text-main"></div>
                 </div>
                 <div id="adminLowBoxWrapper" class="bg-panel border border-theme p-5 rounded-xl shadow hidden">
-                    <h3 class="text-sm font-bold text-red-400 mb-3 flex items-center gap-1.5"><span>🔒 [관리자 전용] 저조한 지표 맹원 관리</span></h3>
+                    <h3 class="text-sm font-bold text-red-400 mb-3 flex items-center gap-1.5"><span>🔒 [관리자 전용] 저조한 지표 맹원 관리 (하위 5%)</span></h3>
                     <div id="lowExecutivesList" class="space-y-2 text-xs text-main"></div>
                 </div>
             </div>
 
-            <!-- 📊 메인 데이터 테이블 카드 (정렬 기능 포함) -->
             <div class="bg-panel border border-theme rounded-xl shadow-xl overflow-hidden flex flex-col">
                 <div class="p-4 sm:p-5 border-b border-theme flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-main/30">
                     <div class="flex items-center gap-3">
