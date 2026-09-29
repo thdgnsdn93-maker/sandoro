@@ -70,6 +70,22 @@ const DEFAULT_DICT_DATA = {
 
 let DICT_DETAIL_DATA = JSON.parse(localStorage.getItem('dictDetailData')) || DEFAULT_DICT_DATA;
 
+// 🛡️ [자동 정제 세이프가드] 로컬 스토리지에 남아있는 불필요한 목차 항목("2. 진형" 등) 즉시 필터링 후 저장
+const INVALID_DICT_NAMES = ['진형 및 상성', '무장 인연', '무장고유전법', '공용전법', '진형', '인연', '고유전법', '공용전법'];
+Object.keys(DICT_DETAIL_DATA).forEach(tabKey => {
+    if (Array.isArray(DICT_DETAIL_DATA[tabKey])) {
+        DICT_DETAIL_DATA[tabKey] = DICT_DETAIL_DATA[tabKey].filter(item => {
+            if (!item || !item.name) return false;
+            const name = item.name.trim();
+            if (/^[0-9]+\.\s*$/.test(name)) return false;
+            if (INVALID_DICT_NAMES.includes(name)) return false;
+            if (/^[0-9]+\.\s*(진형|인연|고유전법|공용전법)/.test(name)) return false;
+            return true;
+        });
+    }
+});
+localStorage.setItem('dictDetailData', JSON.stringify(DICT_DETAIL_DATA));
+
 function getTacticTooltip(skillName) {
     if (!skillName) return "";
     const cleanName = skillName.split(' ')[0].trim();
@@ -208,7 +224,7 @@ function showDictDetail(item) {
     `;
 }
 
-// 📌 [핵심 개선 파서] 마크다운 문서 내의 각 항목(이름과 상세내용)을 완벽하게 분리하는 로직
+// 📌 [엄격한 정제 파서] 문서 타이틀/목차는 무조건 걸러내고 순수 데이터 항목만 추출
 function handleDictMarkdownUpload(event) {
     const file = event.target.files[0];
     if (!file) return;
@@ -228,13 +244,9 @@ function handleDictMarkdownUpload(event) {
                 if (!trimmed) return;
                 if (trimmed.startsWith('>') || trimmed.startsWith('---')) return;
 
-                // 마크다운에서 새로운 항목 제목으로 인식할 패턴 (예: ### 이름, **이름**, 1. 이름 등)
                 const isHeader = trimmed.startsWith('###') || trimmed.startsWith('##') || trimmed.match(/^[0-9]+\.\s+/) || (trimmed.startsWith('**') && trimmed.endsWith('**'));
 
                 if (isHeader) {
-                    if (currentItem && currentItem.name) {
-                        parsedItems.push(currentItem);
-                    }
                     let cleanName = trimmed
                         .replace(/^[#\-*0-9.\s]+/, '')
                         .replace(/\*\*/g, '')
@@ -243,7 +255,12 @@ function handleDictMarkdownUpload(event) {
                         .split('-')[0]
                         .trim();
 
-                    if (cleanName && cleanName.length < 25) {
+                    const isIgnoredTitle = INVALID_DICT_NAMES.some(kw => cleanName === kw || cleanName.match(new RegExp(`^[0-9]+\\.\\s*${kw}$`, 'i')));
+
+                    if (cleanName && cleanName.length >= 2 && !isIgnoredTitle) {
+                        if (currentItem && currentItem.name) {
+                            parsedItems.push(currentItem);
+                        }
                         currentItem = { name: cleanName, type: "상세 정보", effect: "" };
                     }
                 } else if (currentItem) {
@@ -274,9 +291,9 @@ function handleDictMarkdownUpload(event) {
                 if (document.getElementById('dictModal') && !document.getElementById('dictModal').classList.contains('hidden')) {
                     switchDictTab(activeDictUploadKey);
                 }
-                alert(`📚 총 ${parsedItems.length}개의 항목이 정확하게 분리되어 반영되었습니다!`);
+                alert(`📚 총 ${parsedItems.length}개의 순수 항목이 정확히 추출되어 반영되었습니다!`);
             } else {
-                alert("⚠️ 마크다운 형식을 올바르게 읽지 못했습니다. 문서의 제목 형식을 확인해주세요.");
+                alert("⚠️ 유효한 항목을 찾지 못했습니다. 문서 형식을 확인해주세요.");
             }
             toggleModal('dataUploadModal');
         } catch (err) { alert("파싱 오류: " + err.message); }
