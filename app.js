@@ -70,7 +70,6 @@ const DEFAULT_DICT_DATA = {
 
 let DICT_DETAIL_DATA = JSON.parse(localStorage.getItem('dictDetailData')) || DEFAULT_DICT_DATA;
 
-// 🛡️ [자동 정제 세이프가드] 로컬 스토리지에 남아있는 불필요한 목차 항목("2. 진형" 등) 즉시 필터링 후 저장
 const INVALID_DICT_NAMES = ['진형 및 상성', '무장 인연', '무장고유전법', '공용전법', '진형', '인연', '고유전법', '공용전법'];
 Object.keys(DICT_DETAIL_DATA).forEach(tabKey => {
     if (Array.isArray(DICT_DETAIL_DATA[tabKey])) {
@@ -224,7 +223,6 @@ function showDictDetail(item) {
     `;
 }
 
-// 📌 [엄격한 정제 파서] 문서 타이틀/목차는 무조건 걸러내고 순수 데이터 항목만 추출
 function handleDictMarkdownUpload(event) {
     const file = event.target.files[0];
     if (!file) return;
@@ -382,6 +380,7 @@ function applyDeckEditModeUI() {
 
     for(let i=1; i<=3; i++) {
         document.getElementById(`deckGen${i}`).readOnly = !isDeckEditMode;
+        // 🔧 [수정] 장수 이름(g)뿐만 아니라 2번, 3번 전법 인풋 박스도 수정 모드일 때 readOnly가 해제되도록 완벽히 반영
         document.getElementById(`deckSkill${i}_2`).readOnly = !isDeckEditMode;
         document.getElementById(`deckSkill${i}_3`).readOnly = !isDeckEditMode;
     }
@@ -439,7 +438,14 @@ function handleSkillInput(genNum, skillNum) {
 
     if (!inputVal) { dropdown.classList.add('hidden'); return; }
 
-    const matches = COMMON_TACTICS_LIST.filter(tactic => tactic.includes(inputVal));
+    // 🔧 [수정] 도감에 등록된 공용/고유 전법 전체 데이터에서 검색되도록 확장
+    const allTacticsList = [
+        ...COMMON_TACTICS_LIST,
+        ...(DICT_DETAIL_DATA.generalTactic || []).map(t => `${t.name} (${t.type})`),
+        ...(DICT_DETAIL_DATA.commonTactic || []).map(t => `${t.name} (${t.type})`)
+    ];
+
+    const matches = allTacticsList.filter(tactic => tactic.toLowerCase().includes(inputVal.toLowerCase()));
     if (matches.length > 0) {
         dropdown.innerHTML = matches.map(tactic => `<div onclick="selectSkill(${genNum}, ${skillNum}, '${tactic}')" class="px-3 py-2 text-xs text-main hover:bg-hover cursor-pointer border-b border-theme last:border-b-0">${tactic}</div>`).join('');
         dropdown.classList.remove('hidden');
