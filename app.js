@@ -191,7 +191,7 @@ function applyAdminUIState() {
         if(delSelectedBtn) addBtn.classList.add('hidden');
         if(delHeader) addBtn.classList.add('hidden');
         if(selectAllHeader) addBtn.classList.add('hidden');
-        if(uidHeader) addBtn.classList.add('hidden');
+        if(uidHeader) uidHeader.classList.add('hidden');
     }
     renderFilterButtons();
     renderTable();
@@ -368,7 +368,7 @@ function openDeckModal(memberId, deckIndex) {
     toggleModal('deckEditModal');
 }
 
-// ✨ 수정 모드가 아닐 때(잠금 상태일 때)만 마우스 오버 시 전법 효과 툴팁 표시
+// ✨ 잠금 상태(수정 모드 아님)일 때만 마우스 오버 시 전법 효과 툴팁 표시
 function showTacticTooltip(tacticName) {
     if (isDeckEditUnlocked) return; 
     if (!tacticName) return;
@@ -493,9 +493,12 @@ function applyDeckUnlockUIState() {
         formationSelect.disabled = false;
 
         inputs.forEach(id => {
-            document.getElementById(id).removeAttribute('readonly');
-            document.getElementById(id).onmouseenter = null;
-            document.getElementById(id).onmouseleave = null;
+            const el = document.getElementById(id);
+            if(el) {
+                el.removeAttribute('readonly');
+                el.onmouseenter = null;
+                el.onmouseleave = null;
+            }
         });
 
         ['deckT1_1', 'deckT2_1', 'deckT3_1'].forEach(id => {
@@ -529,7 +532,7 @@ function applyDeckUnlockUIState() {
     }
 }
 
-// ✨ 공용 전법 및 장수 전법 검색 및 연관 검색어 출력 로직 수정
+// ✨ 공용 전법 및 장수 전법 자동 완성 검색 함수 (ID 정밀 매핑)
 function handleDeckInputSearch(slotNum, type) {
     if (!isDeckEditUnlocked) return;
 
@@ -603,7 +606,7 @@ function selectDeckAutocompleteValue(slotNum, type, name) {
         document.getElementById(`deckT${slotNum}_1`).value = uniqueTactic;
 
     } else {
-        // ✨ 공용 전법 선택 시 순수 전법 이름만 깔끔하게 입력되도록 지정
+        // ✨ 공용 전법 선택 시 순수 전법 이름만 깔끔하게 들어가도록 수정
         let targetInputId = `deckT${slotNum}_${type === 't2' ? '2' : '3'}`;
         let targetListId = `autocomplete-list-t${slotNum}_${type === 't2' ? '2' : '3'}`;
         
