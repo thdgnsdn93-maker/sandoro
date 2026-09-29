@@ -53,6 +53,7 @@ function switchPageView(viewName) {
     }
 }
 
+// 📊 통계룸 엑셀 업로드 (통계룸 데이터를 기준으로 편성 맹원 목록까지 100% 동기화)
 function handleMemberWeekExcelUpload(event) {
     const file = event.target.files[0];
     if (!file) return;
@@ -72,17 +73,18 @@ function handleMemberWeekExcelUpload(event) {
                 const nameVal = row['멤버'] || '';
                 const jobVal = row['직업'] || '';
 
+                // 🌟 통계룸(엑셀)에 있는 모든 인원이 편성 대시보드(members)에도 빠짐없이 존재하도록 동기화
                 let existingMember = members.find(m => String(m.uid) === uidVal);
                 if (existingMember) {
                     existingMember.name = nameVal;
                     if (jobVal) existingMember.job = jobVal;
                 } else {
                     members.push({
-                        id: Date.now() + Math.random(),
+                        id: Date.now() + Math.random() + idx,
                         uid: uidVal,
                         name: nameVal,
                         job: jobVal,
-                        alliance: '금의위',
+                        alliance: '금의위', // 기본 소속
                         isAdminRole: false,
                         decks: []
                     });
@@ -106,7 +108,7 @@ function handleMemberWeekExcelUpload(event) {
 
             saveDataToStorage();
             localStorage.setItem('memberWeekData', JSON.stringify(memberWeekData));
-            alert(`📊 최신 주간활동 데이터 ${memberWeekData.length}건이 반영 및 편성 대시보드와 동기화되었습니다!`);
+            alert(`📊 주간활동 데이터 ${memberWeekData.length}건 반영 완료! (편성 대시보드 인원도 통계룸과 일치하도록 동기화되었습니다)`);
             
             if (currentActiveView === 'stats') {
                 renderStatsTable();
