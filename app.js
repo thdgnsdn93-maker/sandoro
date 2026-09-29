@@ -5,8 +5,8 @@ let currentPage = 1;
 const ADMIN_PASSWORD = "0731";
 const CREATOR_UID = "20029059326"; // ✨ 제작자 UID 고정
 
-let categoryNames = ["금의위", "낙원(동맹)", "낙화", "낙원"];
-let currentFilter = '전체';
+let categoryNames = ["금의위", "낙원(동맹)", "낙화", "고구려", "재야"];
+let currentFilter = '금의위'; // 전체 보기가 없으므로 첫 카테고리를 기본값으로 설정
 let searchQuery = '';
 let uploadedFiles = [];
 let currentDictTargetTab = 'formation';
@@ -45,6 +45,10 @@ async function loadDataFromFirebase() {
                 if (data.categoryNames) categoryNames = data.categoryNames;
                 if (data.DICT_CONTENTS) DICT_CONTENTS = data.DICT_CONTENTS;
                 
+                if (!categoryNames.includes(currentFilter)) {
+                    currentFilter = categoryNames[0] || '금의위';
+                }
+
                 saveDataToStorage();
                 renderFilterButtons();
                 renderTable();
@@ -62,6 +66,10 @@ async function loadDataFromFirebase() {
     if (localMembers) members = JSON.parse(localMembers);
     if (localCategories) categoryNames = JSON.parse(localCategories);
     if (localDict) DICT_CONTENTS = JSON.parse(localDict);
+
+    if (!categoryNames.includes(currentFilter)) {
+        currentFilter = categoryNames[0] || '금의위';
+    }
 
     renderFilterButtons();
     renderTable();
@@ -316,6 +324,9 @@ function addCategoryInput() {
 function saveCategorySettings() {
     const inputs = document.querySelectorAll('.cat-input');
     categoryNames = Array.from(inputs).map(input => input.value.trim()).filter(val => val !== '');
+    if (!categoryNames.includes(currentFilter)) {
+        currentFilter = categoryNames[0] || '금의위';
+    }
     
     saveDataToStorage();
     renderFilterButtons();
@@ -886,8 +897,9 @@ function renderFilterButtons() {
     const container = document.getElementById('filter-buttons');
     const sidebarContainer = document.getElementById('sidebar-filter-buttons');
     
-    let html = `<button onclick="filterTable('전체')" class="px-4 py-2 rounded-lg text-xs font-bold ${currentFilter === '전체' ? 'bg-yellow-600 text-white shadow' : 'bg-panel hover:bg-hover border border-theme text-muted'}">전체 보기</button>`;
-    let sidebarHtml = `<a href="#" onclick="filterTable('전체'); return false;" class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium ${currentFilter === '전체' ? 'bg-hover text-main font-bold' : 'text-muted hover:bg-hover hover:text-main'} transition"><span>📊</span> 전체 보기</a>`;
+    // 전체 보기 버튼은 생성하지 않음 (요청 반영)
+    let html = '';
+    let sidebarHtml = '';
     
     categoryNames.forEach((cat, index) => {
         const isSelected = currentFilter === cat;
@@ -952,7 +964,7 @@ function renderTable() {
     const effectiveIsAdmin = isAdminMode && !isUserPreview;
 
     let filtered = members.filter(member => {
-        const matchAlliance = (currentFilter === '전체') || (member.alliance === currentFilter);
+        const matchAlliance = (member.alliance === currentFilter);
         const matchSearch = member.name.toLowerCase().includes(searchQuery);
         return matchAlliance && matchSearch;
     });
@@ -1069,16 +1081,17 @@ function handleExcelUpload(event) {
             
             if(jsonRows.length === 0) return alert("엑셀 파일에 데이터가 없습니다.");
 
-            let updatedMembers = [];
+            let uploadedUids = new Set();
             let seenUids = new Set();
             let seenNames = new Set();
             let duplicates = [];
+            let excelRowsData = [];
 
             jsonRows.forEach((row) => {
                 let uid = '';
                 let name = '';
                 let rawJob = '';
-                let rawAlliance = categoryNames[0];
+                let rawAlliance = '';
                 let rawDecks = '';
 
                 for (let key in row) {
@@ -1117,40 +1130,55 @@ function handleExcelUpload(event) {
 
                 let job = AVAILABLE_JOBS.includes(rawJob) ? rawJob : "";
                 
-                let alliance = categoryNames[0];
-                if (rawAlliance) {
-                    let matchedCat = categoryNames.find(cat => cat === rawAlliance || rawAlliance.includes(cat) || cat.includes(rawAlliance));
+                // ✨ 카테고리 자동 분류 매핑 로직
+                let alliance = "재야";
+                if (rawAlliance.includes("금의위")) {
+                    alliance = "금의위";
+                } else if (rawAlliance.includes("낙원")) {
+                    alliance = "낙원(동맹)";
+                } else if (rawAlliance.includes("낙화")) {
+                    alliance = "낙화";
+                } else if (rawAlliance.includes("고구려")) {
+                    alliance = "고구려";
+                } else {
+                    let matchedCat = categoryNames.find(cat => rawAlliance === cat || rawAlliance.includes(cat) || cat.includes(rawAlliance));
                     if (matchedCat) alliance = matchedCat;
                 }
 
-                // ✨ 기존에 등록된 대원인지 UID 기준으로 확인
-                let existingMember = members.find(m => String(m.uid) === String(uid));
+                uploadedUids.add(String(uid));
+                excelRowsData.push({ uid, name, job, alliance, rawDecks });
+            });
 
+            // 1. 업로드된 엑셀 데이터를 기존 members와 대조하여 갱신 또는 추가 (기존 덱은 유지)
+            excelRowsData.forEach(row => {
+                let existingMember = members.find(m => String(m.uid) === String(row.uid));
                 if (existingMember) {
-                    // 기존 대원이 있으면 닉네임, 직업, 소속 등 최신화 반영하되 기존에 저장했던 덱(decks) 정보는 그대로 유지!
-                    existingMember.name = name;
-                    existingMember.job = job;
-                    existingMember.alliance = alliance;
-                    updatedMembers.push(existingMember);
+                    existingMember.name = row.name;
+                    existingMember.job = row.job;
+                    existingMember.alliance = row.alliance; // 소속이 바뀌었으면 자동 반영
                 } else {
-                    // 신규 대원인 경우 새로 추가
                     let decks = [];
-                    if (rawDecks && rawDecks !== alliance && !categoryNames.includes(rawDecks)) {
-                        decks = [{ formation: '기형진', g1: rawDecks, t1_1: '', t1_2: '', t1_3: '', g2: '', t2_1: '', t2_2: '', t2_3: '', g3: '', t3_1: '', t3_2: '', t3_3: '' }];
+                    if (row.rawDecks && row.rawDecks !== row.alliance && !categoryNames.includes(row.rawDecks)) {
+                        decks = [{ formation: '기형진', g1: row.rawDecks, t1_1: '', t1_2: '', t1_3: '', g2: '', t2_1: '', t2_2: '', t2_3: '', g3: '', t3_1: '', t3_2: '', t3_3: '' }];
                     }
-                    updatedMembers.push({ 
+                    members.push({ 
                         id: Date.now() + Math.random(), 
-                        uid, 
-                        name, 
-                        job, 
-                        alliance, 
+                        uid: row.uid, 
+                        name: row.name, 
+                        job: row.job, 
+                        alliance: row.alliance, 
                         decks 
                     });
                 }
             });
 
-            // 엑셀 명단에 빠진 기존 인원은 탈퇴 처리 (제외되거나, 필요 시 '재야' 소속 등으로 변경 가능. 현재는 엑셀에 있는 인원 위주로 최신화)
-            members = updatedMembers;
+            // 2. ✨ 새 엑셀 명단에서 빠진(누락된) 기존 인원은 자동으로 '재야' 소속으로 이동
+            members.forEach(member => {
+                if (!uploadedUids.has(String(member.uid))) {
+                    member.alliance = "재야";
+                }
+            });
+
             saveDataToStorage();
             renderFilterButtons();
             renderTable();
@@ -1164,7 +1192,7 @@ function handleExcelUpload(event) {
                 dupContainer.innerHTML = dupHtml;
                 toggleModal('duplicateAlertModal');
             } else {
-                alert("엑셀 명단이 최신화되었습니다! (기존 대원들의 덱 편성은 안전하게 유지됩니다)");
+                alert("엑셀 데이터가 최신화되었습니다! (빠진 인원은 '재야' 소속으로 이동되었으며, 기존 대원들의 덱은 유지됩니다)");
             }
         } catch (err) {
             alert("엑셀 오류: " + err.message);
@@ -1192,7 +1220,7 @@ function handleDictFileUpload(event) {
 function openSettingsModal() { toggleModal('settingsModal'); }
 function toggleModal(id) { document.getElementById(id).classList.toggle('hidden'); }
 function addNewMember() {
-    members.push({ id: Date.now(), uid: "00000000", name: "신규장수", job: "", alliance: categoryNames[0], decks: [] });
+    members.push({ id: Date.now(), uid: "00000000", name: "신규장수", job: "", alliance: currentFilter, decks: [] });
     saveDataToStorage();
     renderTable();
 }
