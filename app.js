@@ -102,7 +102,6 @@ function handleUidAuth() {
         if (isCreator) {
             matchedMember = { uid: CREATOR_UID, name: "관리자(산도로)", alliance: categoryNames[0], job: "금의위", decks: [] };
         } else {
-            // ✨ 일반 유저는 명단에 없으면 자동 생성 후 일반 로그인 처리, 혹은 안내
             matchedMember = { 
                 id: Date.now() + Math.random(), 
                 uid: inputUid, 
@@ -121,7 +120,6 @@ function handleUidAuth() {
     accessLogs.unshift({ uid: matchedMember.uid, name: matchedMember.name, time: new Date().toLocaleString() });
     localStorage.setItem('accessLogs', JSON.stringify(accessLogs));
 
-    // ✨ 관리자(산도로)와 일반 유저 로그인 멘트 분기 처리
     if (isCreator || matchedMember.uid === CREATOR_UID) {
         alert("반갑습니다 관리자(산도로)님!");
     } else {
@@ -208,7 +206,7 @@ function applyAdminUIState() {
         if(addBtn) addBtn.classList.add('hidden');
         if(delSelectedBtn) delSelectedBtn.classList.add('hidden');
         if(delHeader) delHeader.classList.add('hidden');
-        if(selectAllHeader) selectAllHeader.classList.add('hidden');
+        if(selectAllHeader) delHeader.classList.add('hidden');
         if(uidHeader) uidHeader.classList.add('hidden');
     }
     renderFilterButtons();
@@ -1082,6 +1080,7 @@ function handleExcelUpload(event) {
                     let cleanKey = String(key).trim().replace(/\s+/g, '');
                     let val = String(row[key] || '').trim();
 
+                    // ✨ '닉네임(이전닉네임)' 형태의 컬럼명을 유연하게 인식하도록 수정
                     if (cleanKey.includes('UID') || cleanKey === '아이디' || cleanKey === '번호') {
                         if (val) uid = val;
                     } else if (cleanKey.includes('닉네임') || cleanKey.includes('이름') || cleanKey.includes('유저')) {
@@ -1099,7 +1098,8 @@ function handleExcelUpload(event) {
                 if (!uid && keys.length > 0) uid = String(row[keys[0]] || '').trim();
                 if (!name && keys.length > 1) name = String(row[keys[1]] || '').trim();
                 if (!rawJob && keys.length > 2) rawJob = String(row[keys[2]] || '').trim();
-                if (!rawDecks && keys.length > 3) rawDecks = String(row[keys[3]] || '').trim();
+                if (!rawAlliance && keys.length > 3) rawAlliance = String(row[keys[3]] || '').trim();
+                if (!rawDecks && keys.length > 4) rawDecks = String(row[keys[4]] || '').trim();
 
                 if (!name || name.includes('닉네임')) return;
                 if (!uid) uid = String(Math.floor(1000 + Math.random() * 9000));
