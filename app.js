@@ -25,6 +25,11 @@ let DICT_CONTENTS = {
     commonTactic: `# 4. 공용 전법정리 대도감`
 };
 
+function getDisplayCategoryName(cat) {
+    if (cat === "낙원(동맹)") return "낙원";
+    return cat;
+}
+
 function switchPageView(viewName) {
     currentActiveView = viewName;
     const dashView = document.getElementById('view-dashboard');
@@ -54,7 +59,7 @@ function switchPageView(viewName) {
     }
 }
 
-// 일반 연맹 명단 업로드 파싱 로직 (해당 카테고리 지정 가능, 덱 보존)
+// 일반 연맹 명단 업로드 파싱 로직 (닉네임 인식 필드 대폭 확장, 덱 보존)
 function handleAllianceExcelUpload(event) {
     const file = event.target.files[0];
     if (!file) return;
@@ -78,7 +83,8 @@ function handleAllianceExcelUpload(event) {
                 });
 
                 const uidVal = rawRow['캐릭터id'] || rawRow['uid'] || rawRow['id'] || rawRow['캐릭터아이디'] || '';
-                const nameVal = rawRow['멤버'] || rawRow['닉네임'] || rawRow['이름'] || rawRow['캐릭터이름'] || `대원_${idx+1}`;
+                // 닉네임 인식 필드 확장 (캐릭터, 캐릭터명, 유저명, 성명, 군주명 등 추가)
+                const nameVal = rawRow['멤버'] || rawRow['닉네임'] || rawRow['이름'] || rawRow['캐릭터이름'] || rawRow['캐릭터'] || rawRow['캐릭터명'] || rawRow['유저명'] || rawRow['성명'] || rawRow['군주명'] || `대원_${idx+1}`;
                 const jobVal = rawRow['직업'] || '';
 
                 if (!uidVal) return;
@@ -102,7 +108,7 @@ function handleAllianceExcelUpload(event) {
             });
 
             saveDataToStorage();
-            alert(`👥 ${allianceToAssign} 인원 엑셀 데이터 반영 완료! (${members.length}명 보유)[cite: 7]`);
+            alert(`👥 ${getDisplayCategoryName(allianceToAssign)} 인원 엑셀 데이터 반영 완료! (${members.length}명 보유)[cite: 7]`);
             renderTable();
             toggleModal('dataUploadModal');
         } catch (err) {
@@ -137,19 +143,17 @@ function handleMemberWeekExcelUpload(event) {
                 });
 
                 const uidVal = rawRow['캐릭터id'] || rawRow['uid'] || rawRow['id'] || '';
-                const nameVal = rawRow['멤버'] || rawRow['닉네임'] || rawRow['이름'] || '';
+                const nameVal = rawRow['멤버'] || rawRow['닉네임'] || rawRow['이름'] || rawRow['캐릭터'] || rawRow['캐릭터명'] || rawRow['유저명'] || rawRow['성명'] || rawRow['군주명'] || '';
                 const jobVal = rawRow['직업'] || '';
 
                 if (uidVal) uploadedUids.add(uidVal);
 
                 let existingMember = members.find(m => String(m.uid) === uidVal);
                 if (existingMember) {
-                    // 기존 멤버인 경우 덱은 유지하고 UID, 닉네임, 직업 갱신 및 소속을 금의위로 조정
                     existingMember.name = nameVal;
                     if (jobVal) existingMember.job = jobVal;
                     existingMember.alliance = '금의위';
                 } else if (uidVal) {
-                    // 편성에 없던 신규 인원인 경우 금의위 소속으로 새로 추가
                     members.push({
                         id: Date.now() + Math.random() + idx,
                         uid: uidVal,
@@ -177,7 +181,6 @@ function handleMemberWeekExcelUpload(event) {
                 };
             });
 
-            // 기존에 '금의위' 소속이었으나 이번 통계룸 데이터에서 누락된 인원만 '재야'로 변경 (낙원, 낙화, 고구려 등 타 카테고리는 보존)
             members.forEach(m => {
                 if (m.alliance === '금의위' && m.uid && !uploadedUids.has(String(m.uid))) {
                     m.alliance = '재야';
@@ -323,7 +326,7 @@ function runSpyCheck() {
     } else {
         let html = '';
         duplicates.forEach(dup => {
-            const names = dup.members.map(m => `${m.name}(${m.alliance})`).join(', ');
+            const names = dup.members.map(m => `${m.name}(${getDisplayCategoryName(m.alliance)})`).join(', ');
             html += `<div class="bg-panel p-2 rounded border border-red-500/30 flex justify-between"><span class="text-main font-bold">UID: ${dup.uid}</span><span class="text-red-400 text-right">${names}</span></div>`;
         });
         duplicateBox.innerHTML = html;
@@ -592,10 +595,11 @@ function renderCategoryModalInputs() {
     const container = document.getElementById('categoryInputsContainer');
     container.innerHTML = '';
     categoryNames.forEach((cat, index) => {
+        const displayName = getDisplayCategoryName(cat);
         container.innerHTML += `
         <div class="category-draggable-item flex gap-2 items-center bg-main p-2 rounded-lg border border-theme" draggable="true" data-index="${index}">
             <span class="text-muted font-bold text-xs select-none">☰</span>
-            <input type="text" value="${cat}" class="cat-input flex-1 bg-panel border border-theme px-3 py-1.5 rounded-lg text-sm text-main">
+            <input type="text" value="${displayName}" class="cat-input flex-1 bg-panel border border-theme px-3 py-1.5 rounded-lg text-sm text-main">
             <button type="button" onclick="this.parentElement.remove()" class="bg-red-800 text-white px-3 py-1.5 rounded-lg text-xs font-bold">삭제</button>
         </div>`;
     });
@@ -615,7 +619,11 @@ function addCategoryInput() {
 
 function saveCategorySettings() {
     const inputs = document.querySelectorAll('.cat-input');
-    categoryNames = Array.from(inputs).map(input => input.value.trim()).filter(val => val !== '');
+    categoryNames = Array.from(inputs).map(input => {
+        let val = input.value.trim();
+        if (val === '낙원') return '낙원(동맹)';
+        return val;
+    }).filter(val => val !== '');
     if (currentFilter !== '⭐ 즐겨찾기' && !categoryNames.includes(currentFilter)) currentFilter = categoryNames[0];
     saveDataToStorage();
     renderFilterButtons();
@@ -632,7 +640,8 @@ function openDataUploadModal() {
     if (box) {
         let html = '';
         categoryNames.forEach(cat => {
-            html += `<div class="flex items-center justify-between bg-panel p-2.5 rounded-lg border border-theme"><span class="text-xs font-bold gold-text">⚔️ ${cat} 업로드</span><button onclick="activeUploadAlliance='${cat}'; document.getElementById('allianceExcelInput').click();" class="bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold">파일 선택</button></div>`;
+            const displayName = getDisplayCategoryName(cat);
+            html += `<div class="flex items-center justify-between bg-panel p-2.5 rounded-lg border border-theme"><span class="text-xs font-bold gold-text">⚔️ ${displayName} 업로드</span><button onclick="activeUploadAlliance='${cat}'; document.getElementById('allianceExcelInput').click();" class="bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold">파일 선택</button></div>`;
         });
         box.innerHTML = html;
     }
@@ -668,8 +677,9 @@ function renderFilterButtons() {
     categoryNames.forEach((cat, index) => {
         const isSelected = currentFilter === cat && currentActiveView === 'dashboard';
         const btnClass = isSelected ? 'bg-yellow-600 text-white shadow' : 'bg-panel hover:bg-hover border border-theme text-muted';
-        html += `<button onclick="switchPageView('dashboard'); filterTable('${cat}');" class="px-3 py-2 rounded-lg text-xs font-bold transition whitespace-nowrap ${btnClass}">${cat}</button>`;
-        sidebarHtml += `<a href="#" onclick="switchPageView('dashboard'); filterTable('${cat}'); toggleMobileDrawer(); return false;" class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium text-muted hover:bg-hover transition"><span>${index + 1}.</span> ${cat}</a>`;
+        const displayName = getDisplayCategoryName(cat);
+        html += `<button onclick="switchPageView('dashboard'); filterTable('${cat}');" class="px-3 py-2 rounded-lg text-xs font-bold transition whitespace-nowrap ${btnClass}">${displayName}</button>`;
+        sidebarHtml += `<a href="#" onclick="switchPageView('dashboard'); filterTable('${cat}'); toggleMobileDrawer(); return false;" class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium text-muted hover:bg-hover transition"><span>${index + 1}.</span> ${displayName}</a>`;
     });
     
     if(container) container.innerHTML = html;
@@ -791,11 +801,12 @@ function renderTable() {
         if (effectiveIsAdmin) {
             let catOptions = '';
             categoryNames.forEach(c => {
-                catOptions += `<option value="${c}" ${member.alliance === c ? 'selected' : ''}>${c}</option>`;
+                const displayName = getDisplayCategoryName(c);
+                catOptions += `<option value="${c}" ${member.alliance === c ? 'selected' : ''}>${displayName}</option>`;
             });
             html += `<td class="p-3 sm:p-4 border-r border-theme"><select onchange="updateMemberField(${member.id}, 'alliance', this.value)" class="bg-main border border-theme px-2 py-1 rounded text-xs text-main">${catOptions}</select></td>`;
         } else {
-            html += `<td class="p-3 sm:p-4 border-r border-theme">${member.alliance}</td>`;
+            html += `<td class="p-3 sm:p-4 border-r border-theme">${getDisplayCategoryName(member.alliance)}</td>`;
         }
 
         // 7. 보유덱 1~5 열
@@ -861,7 +872,7 @@ function renderPagination(totalPages) {
 
 function downloadShareExcel() {
     let exportData = members.map((m, idx) => ({
-        "No": idx + 1, "UID": m.uid, "닉네임": m.name, "직업": m.job || "", "소속": m.alliance || ""
+        "No": idx + 1, "UID": m.uid, "닉네임": m.name, "직업": m.job || "", "소속": getDisplayCategoryName(m.alliance || "")
     }));
     let ws = XLSX.utils.json_to_sheet(exportData);
     let wb = XLSX.utils.book_new();
