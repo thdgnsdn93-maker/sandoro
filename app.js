@@ -188,10 +188,10 @@ function applyAdminUIState() {
             btn.className = "bg-amber-600 hover:bg-amber-500 px-4 py-2 rounded-lg font-bold text-white text-xs shadow transition flex items-center gap-1.5";
         }
         if(addBtn) addBtn.classList.add('hidden');
-        if(delSelectedBtn) addBtn.classList.add('hidden');
-        if(delHeader) addBtn.classList.add('hidden');
+        if(delSelectedBtn) delSelectedBtn.classList.add('hidden');
+        if(delHeader) delHeader.classList.add('hidden');
         if(selectAllHeader) addBtn.classList.add('hidden');
-        if(uidHeader) addBtn.classList.add('hidden');
+        if(uidHeader) uidHeader.classList.add('hidden');
     }
     renderFilterButtons();
     renderTable();
@@ -368,11 +368,15 @@ function openDeckModal(memberId, deckIndex) {
     toggleModal('deckEditModal');
 }
 
-// ✨ 툴팁 표시 함수 (`고유전법:` 접두사 제거 및 순수 전법 이름만 깔끔하게 타이틀로 출력)
+// ✨ 완벽하게 정제된 툴팁 표시 함수 (마크다운 기호 및 고유전법 접두사 완벽 제거)
 function showTacticTooltip(tacticName) {
     if (isDeckEditUnlocked) return; 
     if (!tacticName) return;
-    let cleanName = tacticName.replace(/고유전법[:：]/g, '').trim();
+    
+    // 입력된 텍스트에서 마크다운 기호와 '고유전법' 등의 단어를 완전히 제거하여 순수 전법 이름 추출
+    let cleanName = tacticName.replace(/[-*#]/g, '').replace(/고유전법/g, '').replace(/고유\s*전법/g, '').replace(/[:：]/g, '').trim();
+    let nameMatch = cleanName.match(/^([^(]+)/);
+    if (nameMatch) cleanName = nameMatch[1].trim();
 
     let allDictTexts = (DICT_CONTENTS['commonTactic'] || "") + "\n" + (DICT_CONTENTS['generalTactic'] || "");
     let lines = allDictTexts.split('\n');
@@ -383,12 +387,14 @@ function showTacticTooltip(tacticName) {
 
     for (let i = 0; i < lines.length; i++) {
         let l = lines[i].trim();
-        if (l.includes('고유 전법:')) {
-            let parts = l.replace(/-\s*고유\s*전법[:：]?/, '').trim();
-            let nameMatch = parts.match(/^([^(]+)/);
-            let tName = nameMatch ? nameMatch[1].trim() : parts;
+        // 도감 내 전법 라인 비교 시에도 마크다운과 접두사 제거 후 비교
+        let plainLine = l.replace(/[-*#]/g, '').replace(/고유전법/g, '').replace(/고유\s*전법/g, '').replace(/[:：]/g, '').trim();
+        
+        if (l.includes('고유') && l.includes('전법')) {
+            let partsMatch = plainLine.match(/^([^(]+)/);
+            let tName = partsMatch ? partsMatch[1].trim() : plainLine;
             if (tName.toLowerCase() === cleanName.toLowerCase()) {
-                foundTitle = parts;
+                foundTitle = l.replace(/-\s*고유\s*전법[:：]?/, '').trim();
                 capturing = true;
                 continue;
             }
@@ -399,7 +405,7 @@ function showTacticTooltip(tacticName) {
         }
 
         if (capturing) {
-            if (l.startsWith('### ') || l.includes('고유 전법:') || l.startsWith('## ')) {
+            if (l.startsWith('### ') || (l.includes('고유') && l.includes('전법')) || l.startsWith('## ')) {
                 break;
             }
             if (l && l !== '-') {
@@ -511,7 +517,6 @@ function toggleDeckEditUnlock() {
     applyDeckUnlockUIState();
 }
 
-// ✨ 잠금 상태일 때 툴팁 이벤트는 오직 전법 입력란(T1_1, T1_2, T1_3 등)에만 적용되도록 수정
 function applyDeckUnlockUIState() {
     const statusLabel = document.getElementById('deckEditLockStatus');
     const unlockBtn = document.getElementById('deckUnlockBtn');
@@ -547,7 +552,6 @@ function applyDeckUnlockUIState() {
         unlockBtn.className = "bg-amber-600 hover:bg-amber-500 text-white px-4 py-1.5 rounded-lg text-xs font-bold shadow transition";
         formationSelect.disabled = true;
 
-        // 장수 이름 입력란에는 툴팁 적용 안 함 (readonly만 설정)
         generalInputs.forEach(id => {
             const el = document.getElementById(id);
             if(el) {
@@ -557,7 +561,6 @@ function applyDeckUnlockUIState() {
             }
         });
 
-        // 전법 입력란에만 툴팁 이벤트 적용
         tacticInputs.forEach(id => {
             const el = document.getElementById(id);
             if(el) {
@@ -625,6 +628,7 @@ function handleDeckInputSearch(slotNum, tacticType) {
     listContainer.classList.remove('hidden');
 }
 
+// ✨ 장수 선택 시 마크다운 기호와 '고유전법' 접두사를 완벽히 제거하여 오직 순수 전법 이름만 입력
 function selectDeckAutocompleteValue(slotNum, tacticType, name) {
     if (tacticType === 'g') {
         document.getElementById(`deckG${slotNum}`).value = name;
@@ -644,7 +648,7 @@ function selectDeckAutocompleteValue(slotNum, tacticType, name) {
             if (foundGeneral) {
                 if (l.startsWith('### ')) break;
                 if (l.includes('고유') && l.includes('전법')) {
-                    let parts = l.replace(/-\s*고유\s*전법[:：]?/, '').trim();
+                    let parts = l.replace(/[-*#]/g, '').replace(/고유전법/g, '').replace(/고유\s*전법/g, '').replace(/[:：]/g, '').trim();
                     let match = parts.match(/^([^(]+)/);
                     if (match && match[1]) {
                         uniqueTactic = match[1].trim();
