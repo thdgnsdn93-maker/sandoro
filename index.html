@@ -151,16 +151,11 @@
             </div>
 
             <div class="space-y-4">
-                <!-- 진형 선택 영역 -->
+                <!-- 진형 선택 영역 (도감에서 동적 연동) -->
                 <div class="bg-main p-3.5 rounded-xl border border-theme space-y-1.5">
-                    <label class="text-xs text-muted block">선택 진형</label>
+                    <label class="text-xs text-muted block">선택 진형 (도감 연동)</label>
                     <select id="deckFormationSelect" class="w-full bg-panel border border-theme px-3 py-2 rounded-lg text-sm text-main font-bold">
-                        <option value="기략진">기략진</option>
-                        <option value="학익진">학익진</option>
-                        <option value="어룡진">어룡진</option>
-                        <option value="봉시진">봉시진</option>
-                        <option value="안행진">안행진</option>
-                        <option value="언월진">언월진</option>
+                        <!-- 동적으로 도감의 formation 목록이 채워집니다 -->
                     </select>
                 </div>
 
@@ -254,13 +249,12 @@
         </div>
     </div>
 
-    <!-- 📚 [개편완료] 예시 7 스타일의 도감 모달 (좌측 항목 리스트 + 우측 상세 카드) -->
+    <!-- 📚 도감 모달 -->
     <div id="dictModal" class="hidden fixed inset-0 modal-bg flex items-center justify-center z-50 p-4">
         <div class="bg-panel border-2 gold-border rounded-xl shadow-2xl w-full max-w-4xl p-6 relative max-h-[90vh] flex flex-col">
             <button onclick="toggleModal('dictModal')" class="absolute top-4 right-4 p-2 rounded-lg border border-theme bg-panel text-xl font-bold z-10">&times;</button>
             <h2 class="text-xl font-bold gold-text mb-4">📚 정보일람 대도감</h2>
             
-            <!-- 대분류 탭 -->
             <div class="flex flex-wrap gap-2 border-b border-theme pb-2 mb-4">
                 <button onclick="switchDictTab('formation')" id="dictTab-formation" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-amber-600 text-white shadow">1. 진형 및 상성</button>
                 <button onclick="switchDictTab('synergy')" id="dictTab-synergy" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-main text-muted hover:bg-hover">2. 무장 인연</button>
@@ -268,7 +262,6 @@
                 <button onclick="switchDictTab('commonTactic')" id="dictTab-commonTactic" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-main text-muted hover:bg-hover">4. 공용전법</button>
             </div>
 
-            <!-- 본문 그리드: 좌측 세로 리스트 | 우측 상세 카드 -->
             <div class="flex flex-col md:flex-row gap-4 flex-1 overflow-hidden">
                 <div id="dictSubItemList" class="w-full md:w-56 bg-main border border-theme rounded-xl p-3 flex flex-col gap-1.5 overflow-y-auto shrink-0"></div>
                 <div id="dictContentArea" class="flex-1 overflow-y-auto bg-main p-5 rounded-xl border border-theme text-xs sm:text-sm text-main space-y-3 leading-relaxed"></div>
