@@ -188,10 +188,10 @@ function applyAdminUIState() {
             btn.className = "bg-amber-600 hover:bg-amber-500 px-4 py-2 rounded-lg font-bold text-white text-xs shadow transition flex items-center gap-1.5";
         }
         if(addBtn) addBtn.classList.add('hidden');
-        if(delSelectedBtn) delSelectedBtn.classList.add('hidden');
-        if(delHeader) delHeader.classList.add('hidden');
-        if(selectAllHeader) selectAllHeader.classList.add('hidden');
-        if(uidHeader) uidHeader.classList.add('hidden');
+        if(delSelectedBtn) addBtn.classList.add('hidden');
+        if(delHeader) addBtn.classList.add('hidden');
+        if(selectAllHeader) addBtn.classList.add('hidden');
+        if(uidHeader) addBtn.classList.add('hidden');
     }
     renderFilterButtons();
     renderTable();
@@ -368,7 +368,7 @@ function openDeckModal(memberId, deckIndex) {
     toggleModal('deckEditModal');
 }
 
-// ✨ 툴팁 표시 함수
+// ✨ 툴팁 표시 함수 (`고유전법:` 접두사 제거 및 순수 전법 이름만 깔끔하게 타이틀로 출력)
 function showTacticTooltip(tacticName) {
     if (isDeckEditUnlocked) return; 
     if (!tacticName) return;
@@ -377,7 +377,7 @@ function showTacticTooltip(tacticName) {
     let allDictTexts = (DICT_CONTENTS['commonTactic'] || "") + "\n" + (DICT_CONTENTS['generalTactic'] || "");
     let lines = allDictTexts.split('\n');
     
-    let foundTitle = "";
+    let foundTitle = cleanName;
     let foundDescLines = [];
     let capturing = false;
 
@@ -416,7 +416,7 @@ function showTacticTooltip(tacticName) {
         document.body.appendChild(tooltipElem);
     }
 
-    if (foundTitle) {
+    if (foundDescLines.length > 0) {
         let descHtml = foundDescLines.join('<br>').replace(/\*\*(.*?)\*\*/g, '<strong class="gold-text">$1</strong>');
         tooltipElem.innerHTML = `<strong class="gold-text block mb-1">📜 ${foundTitle}</strong>${descHtml}`;
     } else {
@@ -511,15 +511,17 @@ function toggleDeckEditUnlock() {
     applyDeckUnlockUIState();
 }
 
+// ✨ 잠금 상태일 때 툴팁 이벤트는 오직 전법 입력란(T1_1, T1_2, T1_3 등)에만 적용되도록 수정
 function applyDeckUnlockUIState() {
     const statusLabel = document.getElementById('deckEditLockStatus');
     const unlockBtn = document.getElementById('deckUnlockBtn');
     const formationSelect = document.getElementById('editDeckFormation');
 
-    const inputs = [
-        'deckG1', 'deckT1_2', 'deckT1_3',
-        'deckG2', 'deckT2_2', 'deckT2_3',
-        'deckG3', 'deckT3_2', 'deckT3_3'
+    const generalInputs = ['deckG1', 'deckG2', 'deckG3'];
+    const tacticInputs = [
+        'deckT1_1', 'deckT1_2', 'deckT1_3',
+        'deckT2_1', 'deckT2_2', 'deckT2_3',
+        'deckT3_1', 'deckT3_2', 'deckT3_3'
     ];
 
     if (isDeckEditUnlocked) {
@@ -529,18 +531,13 @@ function applyDeckUnlockUIState() {
         unlockBtn.className = "bg-red-700 hover:bg-red-600 text-white px-4 py-1.5 rounded-lg text-xs font-bold shadow transition";
         formationSelect.disabled = false;
 
-        inputs.forEach(id => {
+        [...generalInputs, ...tacticInputs].forEach(id => {
             const el = document.getElementById(id);
             if(el) {
                 el.removeAttribute('readonly');
                 el.onmouseenter = null;
                 el.onmouseleave = null;
             }
-        });
-
-        ['deckT1_1', 'deckT2_1', 'deckT3_1'].forEach(id => {
-            const el = document.getElementById(id);
-            if(el) { el.onmouseenter = null; el.onmouseleave = null; }
         });
 
     } else {
@@ -550,18 +547,21 @@ function applyDeckUnlockUIState() {
         unlockBtn.className = "bg-amber-600 hover:bg-amber-500 text-white px-4 py-1.5 rounded-lg text-xs font-bold shadow transition";
         formationSelect.disabled = true;
 
-        inputs.forEach(id => {
+        // 장수 이름 입력란에는 툴팁 적용 안 함 (readonly만 설정)
+        generalInputs.forEach(id => {
             const el = document.getElementById(id);
             if(el) {
                 el.setAttribute('readonly', true);
-                el.onmouseenter = function() { showTacticTooltip(this.value); };
-                el.onmouseleave = function() { hideTacticTooltip(); };
+                el.onmouseenter = null;
+                el.onmouseleave = null;
             }
         });
 
-        ['deckT1_1', 'deckT2_1', 'deckT3_1'].forEach(id => {
+        // 전법 입력란에만 툴팁 이벤트 적용
+        tacticInputs.forEach(id => {
             const el = document.getElementById(id);
             if(el) {
+                el.setAttribute('readonly', true);
                 el.onmouseenter = function() { showTacticTooltip(this.value); };
                 el.onmouseleave = function() { hideTacticTooltip(); };
             }
@@ -625,7 +625,6 @@ function handleDeckInputSearch(slotNum, tacticType) {
     listContainer.classList.remove('hidden');
 }
 
-// ✨ 장수 선택 시 고유 전법 이름을 정확하게 추출하도록 수정된 함수
 function selectDeckAutocompleteValue(slotNum, tacticType, name) {
     if (tacticType === 'g') {
         document.getElementById(`deckG${slotNum}`).value = name;
@@ -644,7 +643,6 @@ function selectDeckAutocompleteValue(slotNum, tacticType, name) {
             }
             if (foundGeneral) {
                 if (l.startsWith('### ')) break;
-                // '고유 전법:' 또는 '고유전법:' 패턴 유연하게 탐색
                 if (l.includes('고유') && l.includes('전법')) {
                     let parts = l.replace(/-\s*고유\s*전법[:：]?/, '').trim();
                     let match = parts.match(/^([^(]+)/);
