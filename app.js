@@ -9,23 +9,21 @@ let categoryNames = ["금의위", "낙원(동맹)", "낙화", "고구려", "재�
 let currentFilter = '금의위';
 let searchQuery = '';
 let currentDictTargetTab = 'formation';
-let currentActiveView = 'dashboard'; // 'dashboard' 또는 'stats'
+let currentActiveView = 'dashboard';
 
 let favorites = JSON.parse(localStorage.getItem('userFavorites') || '[]');
 let accessLogs = JSON.parse(localStorage.getItem('accessLogs') || '[]');
 const AVAILABLE_JOBS = ["진군", "신행", "기좌", "병참", "천공", "청낭", "금의위"];
 let members = [];
-
 let memberWeekData = JSON.parse(localStorage.getItem('memberWeekData') || '[]');
 
 let DICT_CONTENTS = {
-    formation: `# 1. 진형 및 병종상성 대도감\n## 진형\n### 기형진\n- **특성**: 기병 피해 증가 및 방어 상승`,
+    formation: `# 1. 진형 및 병종상성 대도감`,
     synergy: `# 2. 각 장수 인연보너스 대도감`,
     generalTactic: `# 3. 장수 전법정리 대도감`,
     commonTactic: `# 4. 공용 전법정리 대도감`
 };
 
-// 페이지 뷰 전환 함수 (편성 뷰 vs 통계 룸 뷰)
 function switchPageView(viewName) {
     currentActiveView = viewName;
     const dashView = document.getElementById('view-dashboard');
@@ -55,7 +53,6 @@ function switchPageView(viewName) {
     }
 }
 
-// 엑셀 파일 업로드 처리 (금의위 맹원 주간 활동 리포트)
 function handleMemberWeekExcelUpload(event) {
     const file = event.target.files[0];
     if (!file) return;
@@ -70,24 +67,51 @@ function handleMemberWeekExcelUpload(event) {
             
             if(jsonRows.length === 0) return alert("엑셀 파일에 데이터가 없습니다.");
 
-            memberWeekData = jsonRows.map((row, idx) => ({
-                id: row['캐릭터 ID'] || idx,
-                name: row['멤버'] || '',
-                job: row['직업'] || '',
-                group: row['조별'] || '',
-                position: row['직위'] || '',
-                prosperity: Number(String(row['번영'] || 0).replace(/,/g, '')) || 0,
-                mhoon: row['주간 무훈'] || 0,
-                contribution: Number(String(row['주간 공헌'] || 0).replace(/,/g, '')) || 0,
-                camp: row['주둔지'] || '',
-                siegeCount: Number(String(row['주 공성 횟수'] || 0).replace(/,/g, '')) || 0
-            }));
+            memberWeekData = jsonRows.map((row, idx) => {
+                const uidVal = String(row['캐릭터 ID'] || '').trim();
+                const nameVal = row['멤버'] || '';
+                const jobVal = row['직업'] || '';
 
+                let existingMember = members.find(m => String(m.uid) === uidVal);
+                if (existingMember) {
+                    existingMember.name = nameVal;
+                    if (jobVal) existingMember.job = jobVal;
+                } else {
+                    members.push({
+                        id: Date.now() + Math.random(),
+                        uid: uidVal,
+                        name: nameVal,
+                        job: jobVal,
+                        alliance: '금의위',
+                        isAdminRole: false,
+                        decks: []
+                    });
+                }
+
+                return {
+                    id: uidVal || idx,
+                    uid: uidVal,
+                    name: nameVal,
+                    job: jobVal,
+                    alliance: existingMember ? existingMember.alliance : '금의위',
+                    group: row['조별'] || '',
+                    position: row['직위'] || '일반 멤버',
+                    prosperity: Number(String(row['번영'] || 0).replace(/,/g, '')) || 0,
+                    mhoon: row['주간 무훈'] || 0,
+                    contribution: Number(String(row['주간 공헌'] || 0).replace(/,/g, '')) || 0,
+                    camp: row['주둔지'] || '',
+                    siegeCount: Number(String(row['주 공성 횟수'] || 0).replace(/,/g, '')) || 0
+                };
+            });
+
+            saveDataToStorage();
             localStorage.setItem('memberWeekData', JSON.stringify(memberWeekData));
-            alert(`📊 주간활동 데이터 ${memberWeekData.length}건 업로드 완료!`);
+            alert(`📊 최신 주간활동 데이터 ${memberWeekData.length}건이 반영 및 편성 대시보드와 동기화되었습니다!`);
             
             if (currentActiveView === 'stats') {
                 renderStatsTable();
+            } else {
+                renderTable();
             }
             toggleModal('dataUploadModal');
         } catch (err) {
@@ -98,13 +122,23 @@ function handleMemberWeekExcelUpload(event) {
     reader.readAsArrayBuffer(file);
 }
 
-// 통계 페이지 데이터 및 요약 카드 렌더링
+// 📊 통계 페이지 정렬 및 권한별 요약 렌더링 (하위 5% 기준 저조 인원 산출)
 function renderStatsTable() {
     const tbody = document.getElementById('stats-table-body');
     if (!tbody) return;
 
     const keyword = (document.getElementById('statsSearchInput')?.value || '').toLowerCase().trim();
-    const filtered = memberWeekData.filter(m => m.name.toLowerCase().includes(keyword));
+    const sortType = document.getElementById('statsSortSelect')?.value || 'contributionDesc';
+
+    let filtered = memberWeekData.filter(m => m.name.toLowerCase().includes(keyword));
+
+    filtered.sort((a, b) => {
+        if (sortType === 'contributionDesc') return b.contribution - a.contribution;
+        if (sortType === 'contributionAsc') return a.contribution - b.contribution;
+        if (sortType === 'prosperityDesc') return b.prosperity - a.prosperity;
+        if (sortType === 'siegeDesc') return b.siegeCount - a.siegeCount;
+        return 0;
+    });
 
     const totalMembers = memberWeekData.length;
     const totalProsperity = memberWeekData.reduce((acc, cur) => acc + cur.prosperity, 0);
@@ -116,6 +150,45 @@ function renderStatsTable() {
     document.getElementById('statTotalContribution').innerText = totalContribution.toLocaleString();
     document.getElementById('statAvgProsperity').innerText = avgProsperity.toLocaleString();
 
+    const evaluatedMembers = [...memberWeekData].map(m => {
+        const mhoonNum = Number(String(m.mhoon).replace(/,/g, '')) || 0;
+        return {
+            ...m,
+            totalScore: m.contribution + (mhoonNum * 10) + (m.siegeCount * 1000)
+        };
+    });
+    evaluatedMembers.sort((a, b) => b.totalScore - a.totalScore);
+
+    // 🌟 우수 활약 맹원 TOP 10 (전체 공개)
+    const topExecBox = document.getElementById('topExecutivesList');
+    if (evaluatedMembers.length > 0) {
+        let topHtml = '';
+        evaluatedMembers.slice(0, 10).forEach((ex, i) => {
+            const medal = i === 0 ? '🥇' : (i === 1 ? '🥈' : (i === 2 ? '🥉' : `${i+1}.`));
+            topHtml += `<div class="flex justify-between items-center bg-main p-2 rounded border border-theme"><span>${medal} <strong>${ex.name}</strong> <span class="text-[10px] text-muted">(${ex.position})</span></span><span class="gold-text font-bold">공헌: ${ex.contribution.toLocaleString()}</span></div>`;
+        });
+        topExecBox.innerHTML = topHtml;
+    }
+
+    // 🔒 저조한 지표 맹원 관리 박스 (관리자 전용 - 하위 5% 자동 산출)
+    const adminLowBoxWrapper = document.getElementById('adminLowBoxWrapper');
+    const lowExecBox = document.getElementById('lowExecutivesList');
+    const effectiveIsAdmin = isAdminMode && !isUserPreview;
+    const hasAdminRole = isCurrentLoggedUserAdmin();
+
+    if (effectiveIsAdmin || hasAdminRole) {
+        adminLowBoxWrapper.classList.remove('hidden');
+        let lowHtml = '';
+        const bottomCount = Math.max(1, Math.ceil(evaluatedMembers.length * 0.05));
+        const bottomMembers = [...evaluatedMembers].reverse().slice(0, bottomCount);
+        bottomMembers.forEach((ex) => {
+            lowHtml += `<div class="flex justify-between items-center bg-main p-2 rounded border border-theme"><span>⚠ <strong>${ex.name}</strong> <span class="text-[10px] text-muted">(${ex.position})</span></span><span class="text-red-400 font-bold">공헌: ${ex.contribution.toLocaleString()}</span></div>`;
+        });
+        lowExecBox.innerHTML = lowHtml;
+    } else {
+        adminLowBoxWrapper.classList.add('hidden');
+    }
+
     if (filtered.length === 0) {
         tbody.innerHTML = `<tr><td colspan="10" class="p-8 text-center text-muted">등록된 주간활동 데이터가 없습니다. 관리자 제어판에서 엑셀 파일을 업로드해주세요.</td></tr>`;
         return;
@@ -123,13 +196,15 @@ function renderStatsTable() {
 
     let html = '';
     filtered.forEach((m, idx) => {
+        const isExec = m.position && m.position !== '일반 멤버';
+        const badgeClass = isExec ? 'bg-amber-500/20 text-yellow-500 font-bold border border-amber-500/40' : 'bg-panel border border-theme text-muted';
         html += `
         <tr class="border-b border-theme transition bg-hover">
             <td class="p-3 sm:p-4 border-r border-theme text-center font-bold text-muted">${idx + 1}</td>
             <td class="p-3 sm:p-4 border-r border-theme font-bold text-main">${m.name}</td>
-            <td class="p-3 sm:p-4 border-r border-theme text-muted">${m.job}</td>
-            <td class="p-3 sm:p-4 border-r border-theme text-muted">${m.group}</td>
-            <td class="p-3 sm:p-4 border-r border-theme"><span class="px-2 py-0.5 rounded text-xs bg-panel border border-theme gold-text font-bold">${m.position}</span></td>
+            <td class="p-3 sm:p-4 border-r border-theme text-muted">${m.job || '-'}</td>
+            <td class="p-3 sm:p-4 border-r border-theme text-muted">${m.group || '-'}</td>
+            <td class="p-3 sm:p-4 border-r border-theme"><span class="px-2 py-0.5 rounded text-xs ${badgeClass}">${m.position}</span></td>
             <td class="p-3 sm:p-4 border-r border-theme text-right font-mono">${m.prosperity.toLocaleString()}</td>
             <td class="p-3 sm:p-4 border-r border-theme text-right font-mono text-yellow-500">${m.mhoon}</td>
             <td class="p-3 sm:p-4 border-r border-theme text-right font-mono text-emerald-400">${m.contribution.toLocaleString()}</td>
@@ -334,6 +409,7 @@ function applyAdminUIState() {
     }
     renderFilterButtons();
     if (currentActiveView === 'dashboard') renderTable();
+    if (currentActiveView === 'stats') renderStatsTable();
 }
 
 function openCategoryModal() {
