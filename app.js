@@ -36,7 +36,7 @@ const COMMON_TACTICS_LIST = [
     "태평요술 (효과: 책략 피해 극대화 및 발동 확률 증가)"
 ];
 
-// 순수 8대 진형 및 도감 데이터
+// 한자 없이 순수 한글 진형 이름으로 정돈된 데이터
 let DICT_DETAIL_DATA = {
     formation: [
         { name: "일자진", type: "밸런스 분산형 / 전열 받는 피해 8% 감소", effect: "어그로가 3곳으로 균등 분산되는 기본 밸런스진" },
@@ -69,18 +69,48 @@ let DICT_DETAIL_DATA = {
     ]
 };
 
-// 도감 데이터에서 전법 상세 효과를 찾아 툴팁(말풍선) 텍스트를 생성하는 함수
 function getTacticTooltip(skillName) {
     if (!skillName) return "등록된 전법이 없습니다.";
     const cleanName = skillName.split(' ')[0].trim();
-    
-    // 무장고유전법 및 공용전법 검색
     const allTactics = [...(DICT_DETAIL_DATA.generalTactic || []), ...(DICT_DETAIL_DATA.commonTactic || [])];
     const found = allTactics.find(t => t.name.includes(cleanName));
     if (found) {
         return `[${found.name}]\n유형/발동: ${found.type}\n효과: ${found.effect}`;
     }
     return `전법명: ${skillName} (등록된 상세 효과 없음)`;
+}
+
+// 진형 효과 및 장수 인연 보너스를 실시간으로 계산하여 안내 문구 생성
+function updateFormationAndSynergyBonusText() {
+    const formationSelect = document.getElementById('deckFormationSelect');
+    const selectedFormationName = formationSelect ? formationSelect.value : '일자진';
+    
+    // 선택된 진형 정보 찾기
+    const formationObj = (DICT_DETAIL_DATA.formation || []).find(f => f.name === selectedFormationName);
+    let formationText = formationObj ? `[진형(${formationObj.name})] ${formationObj.effect}` : "선택된 진형 효과 없음";
+
+    // 현재 배치된 장수들 확인 (장수 1, 2, 3)
+    const g1 = document.getElementById('deckGen1')?.value.trim() || '';
+    const g2 = document.getElementById('deckGen2')?.value.trim() || '';
+    const g3 = document.getElementById('deckGen3')?.value.trim() || '';
+    const currentGenerators = [g1, g2, g3].filter(Boolean);
+
+    // 인연 매칭 검사
+    let matchedSynergies = [];
+    (DICT_DETAIL_DATA.synergy || []).forEach(syn => {
+        // 인연 대상 문자열에 포함된 장수 이름들 파싱
+        const matchedCount = currentGenerators.filter(g => syn.type.includes(g)).length;
+        if (matchedCount >= 2) {
+            matchedSynergies.push(`✨ 인연[${syn.name}]: ${syn.effect}`);
+        }
+    });
+
+    let synergyText = matchedSynergies.length > 0 ? matchedSynergies.join(' | ') : "활성화된 장수 인연 보너스 없음 (2명 이상 배치 시 적용)";
+    
+    const bannerEl = document.getElementById('formationSynergyBonusBanner');
+    if (bannerEl) {
+        bannerEl.innerText = `${formationText}  |  ${synergyText}`;
+    }
 }
 
 function getDisplayCategoryName(cat) {
@@ -188,10 +218,7 @@ function handleDictMarkdownUpload(event) {
     reader.onload = function(e) {
         try {
             const rawContent = e.target.result;
-            if (!rawContent.trim()) {
-                alert("파일 내용이 비어있습니다.");
-                return;
-            }
+            if (!rawContent.trim()) { alert("파일 내용이 비어있습니다."); return; }
 
             const lines = rawContent.split(/\r?\n/);
             let parsedItems = [];
@@ -247,7 +274,6 @@ function populateFormationSelect(selectedFormation) {
     const selectEl = document.getElementById('deckFormationSelect');
     if (!selectEl) return;
     
-    // 상단 진형 선택에는 8대 진형 데이터만 명확히 바인딩
     const formations = DICT_DETAIL_DATA.formation || [];
     selectEl.innerHTML = formations.map(f => `<option value="${f.name}" ${f.name === selectedFormation ? 'selected' : ''}>${f.name}</option>`).join('');
 }
@@ -258,7 +284,7 @@ function openDeckModal(memberId, deckIdx) {
 
     currentEditingMemberId = memberId;
     currentEditingDeckIdx = deckIdx;
-    isDeckEditMode = false; // 기본 읽기 전용 상태로 모달 열기
+    isDeckEditMode = false; // 기본 읽기 전용 상태
 
     const titleEl = document.getElementById('deckModalTitle');
     if (titleEl) titleEl.innerText = `⚔️ ${member.name} - 보유덱 ${deckIdx + 1} 덱 상세`;
@@ -270,7 +296,6 @@ function openDeckModal(memberId, deckIdx) {
     document.getElementById('deckGen2').value = deck.g2 || '';
     document.getElementById('deckGen3').value = deck.g3 || '';
 
-    // 전법 입력창에 마우스 호버 시 도감 상세 내용이 툴팁(말풍선)으로 뜨도록 바인딩
     const s1_1 = deck.s1_1 || '';
     const s1_2 = deck.s1_2 || '';
     const s1_3 = deck.s1_3 || '';
@@ -303,10 +328,10 @@ function openDeckModal(memberId, deckIdx) {
     document.getElementById('deckSkill3_3').title = getTacticTooltip(s3_3);
 
     applyDeckEditModeUI();
+    updateFormationAndSynergyBonusText();
     toggleModal('deckModal');
 }
 
-// 덱 수정모드 토글 함수
 function toggleDeckEditMode() {
     isDeckEditMode = !isDeckEditMode;
     applyDeckEditModeUI();
@@ -351,6 +376,8 @@ function handleGenInput(genNum) {
         skillInput.title = "";
     }
 
+    updateFormationAndSynergyBonusText();
+
     if (!inputVal) { dropdown.classList.add('hidden'); return; }
 
     const matches = Object.keys(GENERAL_DATABASE).filter(name => name.includes(inputVal));
@@ -367,6 +394,7 @@ function selectGeneral(genNum, name) {
     skillInput.value = tacticVal;
     skillInput.title = getTacticTooltip(tacticVal);
     document.getElementById(`genDropdown${genNum}`).classList.add('hidden');
+    updateFormationAndSynergyBonusText();
 }
 
 function handleSkillInput(genNum, skillNum) {
@@ -402,6 +430,7 @@ function clearDeckInputs() {
         document.getElementById(`deckSkill${i}_3`).value = '';
         document.getElementById(`deckSkill${i}_3`).title = '';
     }
+    updateFormationAndSynergyBonusText();
 }
 
 function saveDeckData() {
