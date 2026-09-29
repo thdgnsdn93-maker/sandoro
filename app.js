@@ -188,9 +188,9 @@ function applyAdminUIState() {
             btn.className = "bg-amber-600 hover:bg-amber-500 px-4 py-2 rounded-lg font-bold text-white text-xs shadow transition flex items-center gap-1.5";
         }
         if(addBtn) addBtn.classList.add('hidden');
-        if(delSelectedBtn) delSelectedBtn.classList.add('hidden');
-        if(delHeader) delHeader.classList.add('hidden');
-        if(selectAllHeader) selectAllHeader.classList.add('hidden');
+        if(delSelectedBtn) addBtn.classList.add('hidden');
+        if(delHeader) addBtn.classList.add('hidden');
+        if(selectAllHeader) addBtn.classList.add('hidden');
         if(uidHeader) uidHeader.classList.add('hidden');
     }
     renderFilterButtons();
@@ -368,24 +368,27 @@ function openDeckModal(memberId, deckIndex) {
     toggleModal('deckEditModal');
 }
 
-// ✨ 진형 효과 및 인연 보너스 유연한 매칭 함수
+// ✨ 진형 효과 및 인연 보너스 핵심 내용만 추출하여 간결하게 표시
 function updateDeckFormationBonusInfo() {
     const selectedFormation = document.getElementById('editDeckFormation').value.trim();
     const formationTextElem = document.getElementById('deckFormationBonusText');
     const synergyTextElem = document.getElementById('deckSynergyBonusText');
 
-    // 1. 진형 효과 도감 검색 (포함 관계 허용)
+    // 1. 진형 효과 (주요 효과 및 피격률 관련 라인만 추출)
     const formationMarkdown = DICT_CONTENTS['formation'] || "";
     let parsedFormations = parseMarkdownByTarget(formationMarkdown);
     let foundForm = parsedFormations.find(f => f.title.replace(/\s+/g, '').includes(selectedFormation.replace(/\s+/g, '')));
     
     if (foundForm) {
-        formationTextElem.innerHTML = foundForm.desc;
+        // 상세 설명 줄바꿈 단위로 나누어 핵심 내용(효과, 피격 등)만 필터링하거나 깔끔하게 정돈
+        let lines = foundForm.desc.split('<br>');
+        let conciseLines = lines.filter(l => l.includes('효과') || l.includes('피격') || l.includes('피해') || l.includes('특성')).slice(0, 2);
+        formationTextElem.innerHTML = conciseLines.length > 0 ? conciseLines.join(' | ') : foundForm.desc;
     } else {
-        formationTextElem.innerText = `${selectedFormation} 효과가 도감(1. 진형 및 병종상성)에 등록되어 있지 않습니다.`;
+        formationTextElem.innerText = `${selectedFormation} 정보 없음`;
     }
 
-    // 2. 장수 이름 정제 (괄호 및 공백 제거 후 순수 장수명 추출)
+    // 2. 장수 인연 보너스 (인연 효과 이름만 간결하게 추출)
     const g1 = document.getElementById('deckG1').value.split('(')[0].trim();
     const g2 = document.getElementById('deckG2').value.split('(')[0].trim();
     const g3 = document.getElementById('deckG3').value.split('(')[0].trim();
@@ -403,14 +406,15 @@ function updateDeckFormationBonusInfo() {
             }
         });
         if (matchedCount >= 2) {
-            activeSynergies.push(`⭐ ${syn.title} (${syn.desc.replace(/<[^>]*>?/gm, '')})`);
+            // 장황한 설명 제외하고 인연 효과 타이틀 위주로 추출
+            activeSynergies.setItem ? null : activeSynergies.push(`⭐ ${syn.title}`);
         }
     });
 
     if (activeSynergies.length > 0) {
         synergyTextElem.innerHTML = activeSynergies.join(' | ');
     } else {
-        synergyTextElem.innerText = activeGenerals.length > 0 ? "현재 조합에서 활성화된 인연 보너스가 없습니다." : "장수를 선택하면 인연 보너스가 자동으로 계산됩니다.";
+        synergyTextElem.innerText = activeGenerals.length > 0 ? "활성화된 인연 효과 없음" : "장수를 선택하세요.";
     }
 }
 
