@@ -10,7 +10,7 @@
 </head>
 <body class="theme-imperial-gold min-h-screen flex flex-col md:flex-row relative" id="app-body">
 
-    <!-- 📱 모바일용 슬라이드 사이드바 백드롭 (배경 어둡게) -->
+    <!-- 📱 모바일용 슬라이드 사이드바 백드롭 -->
     <div id="mobileDrawerBackdrop" onclick="toggleMobileDrawer()" class="hidden fixed inset-0 bg-black/60 z-40 md:hidden transition-opacity"></div>
 
     <!-- 🔒 UID 로그인 팝업 -->
@@ -61,7 +61,6 @@
         <div class="bg-panel border-2 gold-border rounded-xl shadow-2xl w-full max-w-md p-6 relative max-h-[90vh] overflow-y-auto">
             <button onclick="openAdminControlFromSub('categoryModal')" class="absolute top-4 right-4 p-2 rounded-lg border border-theme bg-panel text-xl font-bold">&times;</button>
             <h2 class="text-2xl font-bold gold-text mb-2">📁 동맹 카테고리 편집</h2>
-            <p class="text-[11px] text-muted mb-4">💡 항목을 마우스로 드래그하거나 순서를 변경할 수 있습니다.</p>
             <div id="categoryInputsContainer" class="space-y-2 mb-6"></div>
             <button onclick="addCategoryInput()" class="w-full bg-blue-600 text-white py-2 rounded-lg text-xs font-bold mb-4">+ 카테고리 추가</button>
             <div class="flex justify-between">
@@ -76,189 +75,20 @@
         <div class="bg-panel border-2 gold-border rounded-xl shadow-2xl w-full max-w-md p-6 relative max-h-[90vh] overflow-y-auto">
             <button onclick="openAdminControlFromSub('dataUploadModal')" class="absolute top-4 right-4 p-2 rounded-lg border border-theme bg-panel text-xl font-bold">&times;</button>
             <h2 class="text-2xl font-bold gold-text mb-2">📤 데이터 업로드 센터</h2>
-            <p class="text-xs text-muted mb-4">각 연맹별 명단 파일 및 도감 파일을 개별 업로드할 수 있습니다.</p>
-            
             <div class="space-y-4">
                 <div class="bg-main p-4 rounded-xl border border-theme space-y-2.5">
-                    <p class="text-xs font-bold gold-text">👥 각 연맹별 명단 현황 (엑셀 파일)</p>
-                    <p class="text-[11px] text-yellow-500">※ 업로드 파일에 없는 기존 인원은 자동으로 '재야'로 이동됩니다.</p>
-                    
+                    <p class="text-xs font-bold gold-text">👥 각 연맹별 명단 현황 (엑셀)</p>
                     <div class="space-y-2 pt-1" id="allianceUploadButtonsBox"></div>
                     <input type="file" id="allianceExcelInput" accept=".xlsx, .xls, .csv" class="hidden" onchange="handleAllianceExcelUpload(event)">
                 </div>
-
-                <div class="bg-main p-4 rounded-xl border border-theme space-y-2">
-                    <p class="text-xs font-bold gold-text">📖 천하열전 대도감 (마크다운 파일)</p>
-                    <input type="file" id="dictFileInput" accept=".md, .txt" class="hidden" onchange="handleDictFileUpload(event)">
-                    <div class="grid grid-cols-2 gap-2 pt-1">
-                        <button onclick="currentDictTargetTab='formation'; document.getElementById('dictFileInput').click();" class="bg-purple-700 text-white py-2 rounded text-[11px] font-bold">1. 진형상성</button>
-                        <button onclick="currentDictTargetTab='synergy'; document.getElementById('dictFileInput').click();" class="bg-purple-700 text-white py-2 rounded text-[11px] font-bold">2. 인연</button>
-                        <button onclick="currentDictTargetTab='generalTactic'; document.getElementById('dictFileInput').click();" class="bg-purple-700 text-white py-2 rounded text-[11px] font-bold">3. 장수전법</button>
-                        <button onclick="currentDictTargetTab='commonTactic'; document.getElementById('dictFileInput').click();" class="bg-purple-700 text-white py-2 rounded text-[11px] font-bold">4. 공용전법</button>
-                    </div>
+                <div class="bg-main p-4 rounded-xl border border-theme space-y-2.5">
+                    <p class="text-xs font-bold gold-text">📊 금의위 맹원 주간활동 리포트 (엑셀)</p>
+                    <input type="file" id="memberWeekExcelInput" accept=".xlsx, .xls, .csv" class="hidden" onchange="handleMemberWeekExcelUpload(event)">
+                    <button onclick="document.getElementById('memberWeekExcelInput').click();" class="w-full bg-teal-700 text-white py-2 rounded text-xs font-bold">📊 주간활동 데이터 업로드</button>
                 </div>
             </div>
             <div class="mt-6 flex justify-end">
                 <button onclick="openAdminControlFromSub('dataUploadModal')" class="px-4 py-2 bg-gray-700 text-white rounded-lg text-xs">뒤로가기</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- ⚠ 중복 인원 감지 알림 모달 -->
-    <div id="duplicateAlertModal" class="hidden fixed inset-0 modal-bg flex items-center justify-center z-50 p-4">
-        <div class="bg-panel border-2 border-amber-500 rounded-xl shadow-2xl w-full max-w-lg p-6 relative flex flex-col max-h-[85vh]">
-            <h2 class="text-xl font-bold text-amber-400 mb-2">⚠ 엑셀 업로드 중복 감지</h2>
-            <div id="duplicateListContainer" class="flex-1 overflow-y-auto bg-main border border-theme p-3 rounded-lg space-y-2 mb-6 text-xs"></div>
-            <div class="flex justify-end">
-                <button onclick="toggleModal('duplicateAlertModal')" class="px-4 py-2 bg-gray-700 text-white rounded-lg text-xs font-bold">확인</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- 📋 접속자 로그 모달 -->
-    <div id="adminLogModal" class="hidden fixed inset-0 modal-bg flex items-center justify-center z-50 p-4">
-        <div class="bg-panel border-2 gold-border rounded-xl shadow-2xl w-full max-w-2xl p-6 relative max-h-[90vh] flex flex-col">
-            <button onclick="openAdminControlFromSub('adminLogModal')" class="absolute top-4 right-4 p-2 rounded-lg border border-theme bg-panel text-xl font-bold">&times;</button>
-            <h2 class="text-2xl font-bold gold-text mb-2">🛡 접속자 로그 기록</h2>
-            <div class="space-y-3 flex-1 overflow-y-auto pr-2" id="adminLogContainer"></div>
-            <div class="mt-6 flex justify-end">
-                <button onclick="openAdminControlFromSub('adminLogModal')" class="px-4 py-2 bg-gray-700 text-white rounded-lg text-xs">뒤로가기</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- ⚔️ 덱 편집 모달 -->
-    <div id="deckEditModal" class="hidden fixed inset-0 modal-bg flex items-center justify-center z-50 p-2 sm:p-4">
-        <div class="bg-panel border-2 gold-border rounded-xl shadow-2xl w-full max-w-4xl p-4 sm:p-6 relative max-h-[95vh] overflow-y-auto">
-            <button onclick="toggleModal('deckEditModal')" class="absolute top-3 right-3 p-2 rounded-lg border border-theme bg-panel text-xl font-bold">&times;</button>
-            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 border-b border-theme pb-3 gap-2">
-                <h2 class="text-lg sm:text-xl font-bold gold-text">⚔️ 조합 공유 & 부대 편성 편집</h2>
-                <div class="flex items-center gap-2">
-                    <span id="deckEditLockStatus" class="text-[11px] sm:text-xs bg-red-900/50 text-red-300 px-2 py-1 rounded border border-red-700">🔒 잠김</span>
-                    <button onclick="toggleDeckEditUnlock()" id="deckUnlockBtn" class="bg-amber-600 hover:bg-amber-500 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow">🔓 수정</button>
-                </div>
-            </div>
-            <input type="hidden" id="editDeckMemberId">
-            <input type="hidden" id="editDeckIndex">
-            <div class="mb-4 bg-main p-3 rounded-xl border border-theme flex items-center justify-between">
-                <span class="text-xs font-bold text-muted">선택 진형</span>
-                <select id="editDeckFormation" onchange="updateDeckFormationBonusInfo()" disabled class="bg-panel border border-theme px-3 py-1.5 rounded-lg text-xs sm:text-sm font-bold gold-text">
-                    <option value="기형진">기형진</option>
-                    <option value="일자진">일자진</option>
-                    <option value="학익진">학익진</option>
-                    <option value="어린진">어린진</option>
-                    <option value="팔괘진">팔괘진</option>
-                </select>
-            </div>
-            <div id="deckFormationBonusBox" class="mb-3 bg-amber-500/10 border border-amber-500/30 p-2.5 rounded-xl text-xs text-main">
-                <span class="font-bold text-yellow-600">🛡 진형 효과:</span> <span id="deckFormationBonusText" class="text-muted">선택된 진형 특성</span>
-            </div>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
-                <div class="bg-main border border-theme rounded-xl p-3 flex flex-col gap-2.5 relative">
-                    <span class="text-xs font-bold text-yellow-500">장수 1 (메인)</span>
-                    <div class="relative autocomplete-container">
-                        <input type="text" id="deckG1" readonly oninput="handleDeckInputSearch(1, 'g')" placeholder="장수 검색..." class="w-full bg-panel border border-theme px-3 py-2 rounded-lg text-xs sm:text-sm text-main font-bold">
-                        <div id="autocomplete-list-g1" class="autocomplete-items hidden"></div>
-                    </div>
-                    <input type="text" id="deckT1_1" readonly class="w-full bg-panel/50 border border-theme px-3 py-1.5 rounded-lg text-xs text-yellow-400 font-bold" placeholder="고유전법">
-                    <div class="relative autocomplete-container">
-                        <input type="text" id="deckT1_2" readonly oninput="handleDeckInputSearch(1, 't1_2')" placeholder="2번 전법 검색..." class="w-full bg-panel border border-theme px-3 py-1.5 rounded-lg text-xs text-main">
-                        <div id="autocomplete-list-t1_2" class="autocomplete-items hidden"></div>
-                    </div>
-                    <div class="relative autocomplete-container">
-                        <input type="text" id="deckT1_3" readonly oninput="handleDeckInputSearch(1, 't1_3')" placeholder="3번 전법 검색..." class="w-full bg-panel border border-theme px-3 py-1.5 rounded-lg text-xs text-main">
-                        <div id="autocomplete-list-t1_3" class="autocomplete-items hidden"></div>
-                    </div>
-                </div>
-                <div class="bg-main border border-theme rounded-xl p-3 flex flex-col gap-2.5 relative">
-                    <span class="text-xs font-bold text-yellow-500">장수 2</span>
-                    <div class="relative autocomplete-container">
-                        <input type="text" id="deckG2" readonly oninput="handleDeckInputSearch(2, 'g')" placeholder="장수 검색..." class="w-full bg-panel border border-theme px-3 py-2 rounded-lg text-xs sm:text-sm text-main font-bold">
-                        <div id="autocomplete-list-g2" class="autocomplete-items hidden"></div>
-                    </div>
-                    <input type="text" id="deckT2_1" readonly class="w-full bg-panel/50 border border-theme px-3 py-1.5 rounded-lg text-xs text-yellow-400 font-bold" placeholder="고유전법">
-                    <div class="relative autocomplete-container">
-                        <input type="text" id="deckT2_2" readonly oninput="handleDeckInputSearch(2, 't2_2')" placeholder="2번 전법 검색..." class="w-full bg-panel border border-theme px-3 py-1.5 rounded-lg text-xs text-main">
-                        <div id="autocomplete-list-t2_2" class="autocomplete-items hidden"></div>
-                    </div>
-                    <div class="relative autocomplete-container">
-                        <input type="text" id="deckT2_3" readonly oninput="handleDeckInputSearch(2, 't3_3')" placeholder="3번 전법 검색..." class="w-full bg-panel border border-theme px-3 py-1.5 rounded-lg text-xs text-main">
-                        <div id="autocomplete-list-t2_3" class="autocomplete-items hidden"></div>
-                    </div>
-                </div>
-                <div class="bg-main border border-theme rounded-xl p-3 flex flex-col gap-2.5 relative">
-                    <span class="text-xs font-bold text-yellow-500">장수 3</span>
-                    <div class="relative autocomplete-container">
-                        <input type="text" id="deckG3" readonly oninput="handleDeckInputSearch(3, 'g')" placeholder="장수 검색..." class="w-full bg-panel border border-theme px-3 py-2 rounded-lg text-xs sm:text-sm text-main font-bold">
-                        <div id="autocomplete-list-g3" class="autocomplete-items hidden"></div>
-                    </div>
-                    <input type="text" id="deckT3_1" readonly class="w-full bg-panel/50 border border-theme px-3 py-1.5 rounded-lg text-xs text-yellow-400 font-bold" placeholder="고유전법">
-                    <div class="relative autocomplete-container">
-                        <input type="text" id="deckT3_2" readonly oninput="handleDeckInputSearch(3, 't3_2')" placeholder="2번 전법 검색..." class="w-full bg-panel border border-theme px-3 py-1.5 rounded-lg text-xs text-main">
-                        <div id="autocomplete-list-t3_2" class="autocomplete-items hidden"></div>
-                    </div>
-                    <div class="relative autocomplete-container">
-                        <input type="text" id="deckT3_3" readonly oninput="handleDeckInputSearch(3, 't3_3')" placeholder="3번 전법 검색..." class="w-full bg-panel border border-theme px-3 py-1.5 rounded-lg text-xs text-main">
-                        <div id="autocomplete-list-t3_3" class="autocomplete-items hidden"></div>
-                    </div>
-                </div>
-            </div>
-            <div id="deckSynergyBonusBox" class="mb-4 bg-blue-500/10 border border-blue-500/30 p-2.5 rounded-xl text-xs text-main">
-                <span class="font-bold text-blue-500">🤝 인연 보너스:</span> <span id="deckSynergyBonusText" class="text-muted">활성화 인연</span>
-            </div>
-            <div class="flex justify-between pt-3 border-t border-theme">
-                <button onclick="clearDeckData()" class="bg-red-800 text-white px-3 py-2 rounded-lg text-xs font-bold">덱 비우기</button>
-                <div class="flex gap-2">
-                    <button onclick="saveDeckData()" class="btn-gold px-5 py-2 rounded-lg text-xs font-bold shadow">저장하기</button>
-                    <button onclick="toggleModal('deckEditModal')" class="px-4 py-2 bg-gray-700 text-white rounded-lg text-xs">닫기</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- 🎮 통합 대도감 모달 -->
-    <div id="dictModal" class="hidden fixed inset-0 modal-bg flex items-center justify-center z-50 p-2 sm:p-4">
-        <div class="bg-panel border-2 gold-border rounded-xl shadow-2xl w-full max-w-6xl h-[90vh] relative flex flex-col overflow-hidden">
-            <div class="bg-main px-4 py-3 border-b border-theme flex flex-col sm:flex-row items-center justify-between gap-2 shrink-0">
-                <div class="flex items-center gap-1.5 flex-wrap">
-                    <span class="text-base sm:text-lg font-extrabold gold-text mr-1">⚔ 대도감</span>
-                    <button onclick="switchDictTab('formation')" id="tabBtn-formation" class="px-2.5 py-1 rounded text-[11px] sm:text-xs font-bold bg-yellow-600 text-white">1. 진형상성</button>
-                    <button onclick="switchDictTab('synergy')" id="tabBtn-synergy" class="px-2.5 py-1 rounded text-[11px] sm:text-xs font-bold bg-main text-muted">2. 인연</button>
-                    <button onclick="switchDictTab('generalTactic')" id="tabBtn-generalTactic" class="px-2.5 py-1 rounded text-[11px] sm:text-xs font-bold bg-main text-muted">3. 장수전법</button>
-                    <button onclick="switchDictTab('commonTactic')" id="tabBtn-commonTactic" class="px-2.5 py-1 rounded text-[11px] sm:text-xs font-bold bg-main text-muted">4. 공용전법</button>
-                </div>
-                <div class="flex items-center gap-2">
-                    <button id="editDictBtn" onclick="openDictEditModal()" class="hidden bg-amber-700 text-white px-2.5 py-1 rounded text-xs font-bold">✏ 수정</button>
-                    <button onclick="toggleModal('dictModal')" class="p-1.5 rounded-lg border border-theme bg-panel text-xl font-bold">&times;</button>
-                </div>
-            </div>
-            <div class="flex-1 flex flex-col sm:flex-row overflow-hidden bg-main p-3 gap-3">
-                <div class="w-full sm:w-1/3 flex flex-col bg-panel border border-theme rounded-xl overflow-hidden shadow h-1/3 sm:h-auto">
-                    <div class="p-2 border-b border-theme bg-main">
-                        <input type="text" id="dictSearchInput" oninput="filterDictList()" placeholder="🔍 항목 검색..." class="w-full bg-panel border border-theme px-3 py-1.5 rounded-lg text-xs text-main">
-                    </div>
-                    <div id="dictListContainer" class="flex-1 overflow-y-auto divide-y divide-theme p-1.5 space-y-1"></div>
-                </div>
-                <div class="w-full sm:w-2/3 flex flex-col bg-panel border border-theme rounded-xl overflow-hidden shadow p-4 sm:p-6 h-2/3 sm:h-auto">
-                    <h3 id="dictDetailTitle" class="text-base sm:text-lg font-bold gold-text border-b border-theme pb-2 mb-3">항목 선택</h3>
-                    <div id="dictDetailDesc" class="flex-1 overflow-y-auto text-xs sm:text-sm text-muted leading-relaxed space-y-2 pr-1">상세 설명</div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- ✏ 도감 편집 모달 -->
-    <div id="dictEditModal" class="hidden fixed inset-0 modal-bg flex items-center justify-center z-50 p-4">
-        <div class="bg-panel border-2 gold-border rounded-xl shadow-2xl w-full max-w-4xl h-[85vh] relative flex flex-col p-4 sm:p-6">
-            <button onclick="toggleModal('dictEditModal')" class="absolute top-3 right-3 p-2 rounded-lg border border-theme bg-panel text-xl font-bold">&times;</button>
-            <h2 class="text-lg font-bold gold-text mb-2">📖 도감 내용 직접 편집 (마크다운)</h2>
-            <textarea id="dictEditTextarea" class="flex-1 w-full bg-main border border-theme p-3 rounded-xl font-mono text-xs text-main leading-relaxed resize-none focus:outline-none"></textarea>
-            <div class="flex justify-between items-center mt-3 pt-3 border-t border-theme">
-                <span class="text-[10px] text-muted">※ 저장 즉시 파이어베이스 동기화</span>
-                <div class="flex gap-2">
-                    <button onclick="saveDictContent()" class="btn-gold px-5 py-2 rounded-lg text-xs font-bold">저장</button>
-                    <button onclick="toggleModal('dictEditModal')" class="px-3 py-2 bg-gray-700 text-white rounded-lg text-xs">취소</button>
-                </div>
             </div>
         </div>
     </div>
@@ -282,6 +112,13 @@
                 </div>
                 <hr class="border-theme">
                 <div>
+                    <!-- ✨ shadcn-admin 스타일 신규 페이지 메뉴 -->
+                    <button onclick="switchPageView('stats')" id="sidebarStatsBtn" class="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-bold text-muted hover:bg-hover hover:text-main transition">
+                        <span>📊</span> 맹원 주간활동 통계룸
+                    </button>
+                </div>
+                <hr class="border-theme">
+                <div>
                     <button onclick="toggleSubMenu('infoSubMenu')" class="w-full flex justify-between items-center text-xs font-bold text-main uppercase tracking-wider mb-2 px-3 py-1 hover:bg-hover rounded transition">
                         <span>정보일람</span>
                         <span id="infoSubMenu-arrow" class="text-muted">▲</span>
@@ -290,7 +127,7 @@
                         <nav class="space-y-1">
                             <a href="#" onclick="openDictTabWithScroll('formation'); toggleMobileDrawer(); return false;" class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium text-muted hover:bg-hover hover:text-main transition"><span>⚔</span> 1. 진형 및 상성</a>
                             <a href="#" onclick="openDictTabWithScroll('synergy'); toggleMobileDrawer(); return false;" class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium text-muted hover:bg-hover hover:text-main transition"><span>🤝</span> 2. 장수 인연</a>
-                            <a href="#" onclick="openDictTabWithScroll('generalTactic'); toggleMobileDrawer(); return false;" class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium text-muted hover:bg-hover hover:text-main transition"><span>🛡️️</span> 3. 장수 전법</a>
+                            <a href="#" onclick="openDictTabWithScroll('generalTactic'); toggleMobileDrawer(); return false;" class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium text-muted hover:bg-hover hover:text-main transition"><span>🛡</span> 3. 장수 전법</a>
                             <a href="#" onclick="openDictTabWithScroll('commonTactic'); toggleMobileDrawer(); return false;" class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium text-muted hover:bg-hover hover:text-main transition"><span>📜</span> 4. 공용 전법</a>
                         </nav>
                     </div>
@@ -311,19 +148,20 @@
                 <button onclick="toggleMobileDrawer()" class="md:hidden bg-main border border-theme px-3 py-2 rounded-lg text-main text-lg font-bold flex items-center gap-1.5 shadow">
                     <span>☰</span> <span class="text-xs">메뉴</span>
                 </button>
-                <h2 class="text-base sm:text-lg font-bold text-main">각 연맹 인원 & 편성 현황</h2>
+                <h2 id="mainHeaderTitle" class="text-base sm:text-lg font-bold text-main">각 연맹 인원 & 편성 현황</h2>
             </div>
             <div class="w-full sm:max-w-md">
-                <input type="text" id="searchInput" oninput="handleSearch()" placeholder="🔍 닉네임으로 검색하세요..." class="w-full bg-main border border-theme px-4 py-2 rounded-lg text-sm search-input">
+                <input type="text" id="searchInput" oninput="handleSearch()" placeholder="🔍 검색하세요..." class="w-full bg-main border border-theme px-4 py-2 rounded-lg text-sm search-input">
             </div>
             <div class="flex flex-wrap gap-2 items-center justify-end w-full sm:w-auto">
                 <button onclick="addNewMember()" id="addMemberBtn" class="hidden bg-emerald-700 hover:bg-emerald-600 px-3 py-2 rounded-lg font-bold text-white text-xs shadow transition">+ 인원 추가</button>
                 <button onclick="deleteSelectedMembers()" id="delSelectedBtn" class="hidden bg-red-800 hover:bg-red-700 px-3 py-2 rounded-lg font-bold text-white text-xs shadow transition">🗑️ 선택 삭제</button>
-                <button onclick="toggleAdminMode()" id="editModeBtn" class="bg-amber-600 hover:bg-amber-500 px-3 sm:px-4 py-2 rounded-lg font-bold text-white text-xs shadow transition flex items-center gap-1.5"><span>🛡️</span> 관리자 모드</button>
+                <button onclick="toggleAdminMode()" id="editModeBtn" class="bg-amber-600 hover:bg-amber-500 px-3 sm:px-4 py-2 rounded-lg font-bold text-white text-xs shadow transition flex items-center gap-1.5"><span>🛡️️</span> 관리자 모드</button>
             </div>
         </header>
 
-        <main class="flex-1 p-3 sm:p-6 md:p-8 overflow-y-auto flex flex-col justify-between">
+        <!-- ✨ [페이지 1] 기존 편성 대시보드 뷰 -->
+        <main id="view-dashboard" class="flex-1 p-3 sm:p-6 md:p-8 overflow-y-auto flex flex-col justify-between">
             <div>
                 <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 sm:mb-6 gap-3">
                     <div class="flex items-center gap-2 overflow-x-auto w-full pb-2 sm:pb-0" id="filter-buttons"></div>
@@ -342,7 +180,6 @@
                     </div>
                 </div>
 
-                <!-- 📱 테이블 영역 (별표 컬럼과 No 컬럼 완벽 분리) -->
                 <div class="overflow-x-auto bg-panel rounded-xl shadow-2xl border border-theme -mx-3 sm:mx-0">
                     <table class="w-full text-left border-collapse whitespace-nowrap text-xs sm:text-sm">
                         <thead>
@@ -368,9 +205,74 @@
                     </table>
                 </div>
             </div>
-
-            <!-- 하단 페이지네이션 -->
             <div id="paginationContainer" class="flex justify-center items-center gap-1.5 sm:gap-2 mt-6 py-2 overflow-x-auto"></div>
+        </main>
+
+        <!-- ✨ [페이지 2] shadcn-admin 스타일 맹원 주간활동 통계 룸 뷰 -->
+        <main id="view-stats" class="hidden flex-1 p-3 sm:p-6 md:p-8 overflow-y-auto space-y-6">
+            <!-- 📊 상단 통계 카드 (Metrics Cards) -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="bg-panel border border-theme p-5 rounded-xl shadow">
+                    <p class="text-xs text-muted font-medium mb-1">총 맹원 인원수</p>
+                    <div class="flex items-baseline justify-between">
+                        <h3 id="statTotalMembers" class="text-2xl font-extrabold gold-text">0명</h3>
+                        <span class="text-xs bg-yellow-500/20 text-yellow-500 px-2 py-0.5 rounded font-bold">Active</span>
+                    </div>
+                </div>
+                <div class="bg-panel border border-theme p-5 rounded-xl shadow">
+                    <p class="text-xs text-muted font-medium mb-1">총 번영도 합계</p>
+                    <div class="flex items-baseline justify-between">
+                        <h3 id="statTotalProsperity" class="text-2xl font-extrabold text-main">0</h3>
+                        <span class="text-xs bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded font-bold">Prosperity</span>
+                    </div>
+                </div>
+                <div class="bg-panel border border-theme p-5 rounded-xl shadow">
+                    <p class="text-xs text-muted font-medium mb-1">주간 공헌 합계</p>
+                    <div class="flex items-baseline justify-between">
+                        <h3 id="statTotalContribution" class="text-2xl font-extrabold text-main">0</h3>
+                        <span class="text-xs bg-purple-500/20 text-purple-400 px-2 py-0.5 rounded font-bold">Contribution</span>
+                    </div>
+                </div>
+                <div class="bg-panel border border-theme p-5 rounded-xl shadow">
+                    <p class="text-xs text-muted font-medium mb-1">평균 번영도</p>
+                    <div class="flex items-baseline justify-between">
+                        <h3 id="statAvgProsperity" class="text-2xl font-extrabold text-main">0</h3>
+                        <span class="text-xs bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded font-bold">Average</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 📊 메인 데이터 테이블 카드 (shadcn-admin 스타일) -->
+            <div class="bg-panel border border-theme rounded-xl shadow-xl overflow-hidden flex flex-col">
+                <div class="p-4 sm:p-5 border-b border-theme flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-main/30">
+                    <div>
+                        <h3 class="text-base font-bold gold-text">📊 금의위 맹원 주간 활동 리포트</h3>
+                        <p class="text-xs text-muted mt-0.5">번영도, 주간 무훈 및 공헌도, 공성 횟수 순위 일람</p>
+                    </div>
+                    <div class="flex items-center gap-2 w-full sm:w-auto">
+                        <input type="text" id="statsSearchInput" oninput="renderStatsTable()" placeholder="🔍 맹원 이름 검색..." class="w-full sm:w-60 bg-main border border-theme px-3 py-1.5 rounded-lg text-xs text-main">
+                    </div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse whitespace-nowrap text-xs sm:text-sm">
+                        <thead>
+                            <tr class="border-b border-theme text-muted bg-main/50">
+                                <th class="p-3 sm:p-4 border-r border-theme text-center w-16">No.</th>
+                                <th class="p-3 sm:p-4 border-r border-theme">멤버 이름</th>
+                                <th class="p-3 sm:p-4 border-r border-theme">직업</th>
+                                <th class="p-3 sm:p-4 border-r border-theme">조별</th>
+                                <th class="p-3 sm:p-4 border-r border-theme">직위</th>
+                                <th class="p-3 sm:p-4 border-r border-theme text-right">번영</th>
+                                <th class="p-3 sm:p-4 border-r border-theme text-right">주간 무훈</th>
+                                <th class="p-3 sm:p-4 border-r border-theme text-right">주간 공헌</th>
+                                <th class="p-3 sm:p-4 border-r border-theme">주둔지</th>
+                                <th class="p-3 sm:p-4 text-center">주 공성 횟수</th>
+                            </tr>
+                        </thead>
+                        <tbody id="stats-table-body" class="divide-y divide-theme"></tbody>
+                    </table>
+                </div>
+            </div>
         </main>
     </div>
 
