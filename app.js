@@ -368,26 +368,27 @@ function openDeckModal(memberId, deckIndex) {
     toggleModal('deckEditModal');
 }
 
-// ✨ 진형 효과 및 인연 보너스 실시간 연동 계산 함수
+// ✨ 진형 효과 및 인연 보너스 유연한 매칭 함수
 function updateDeckFormationBonusInfo() {
-    const selectedFormation = document.getElementById('editDeckFormation').value;
+    const selectedFormation = document.getElementById('editDeckFormation').value.trim();
     const formationTextElem = document.getElementById('deckFormationBonusText');
     const synergyTextElem = document.getElementById('deckSynergyBonusText');
 
-    // 1. 진형 효과 도감에서 추출
+    // 1. 진형 효과 도감 검색 (포함 관계 허용)
     const formationMarkdown = DICT_CONTENTS['formation'] || "";
     let parsedFormations = parseMarkdownByTarget(formationMarkdown);
-    let foundForm = parsedFormations.find(f => f.title === selectedFormation);
+    let foundForm = parsedFormations.find(f => f.title.replace(/\s+/g, '').includes(selectedFormation.replace(/\s+/g, '')));
+    
     if (foundForm) {
         formationTextElem.innerHTML = foundForm.desc;
     } else {
-        formationTextElem.innerText = `${selectedFormation} 효과 정보가 도감에 등록되어 있지 않습니다.`;
+        formationTextElem.innerText = `${selectedFormation} 효과가 도감(1. 진형 및 병종상성)에 등록되어 있지 않습니다.`;
     }
 
-    // 2. 장수 인연 보너스 매칭 확인 (장수 1, 2, 3 이름 수집)
-    const g1 = document.getElementById('deckG1').value.trim();
-    const g2 = document.getElementById('deckG2').value.trim();
-    const g3 = document.getElementById('deckG3').value.trim();
+    // 2. 장수 이름 정제 (괄호 및 공백 제거 후 순수 장수명 추출)
+    const g1 = document.getElementById('deckG1').value.split('(')[0].trim();
+    const g2 = document.getElementById('deckG2').value.split('(')[0].trim();
+    const g3 = document.getElementById('deckG3').value.split('(')[0].trim();
     const activeGenerals = [g1, g2, g3].filter(name => name !== '');
 
     const synergyMarkdown = DICT_CONTENTS['synergy'] || "";
@@ -395,14 +396,13 @@ function updateDeckFormationBonusInfo() {
     let activeSynergies = [];
 
     parsedSynergies.forEach(syn => {
-        // 인연 대상 조건이 포함되어 있는지 단순 매칭 검사
         let matchedCount = 0;
         activeGenerals.forEach(gen => {
             if (syn.desc.includes(gen) || syn.title.includes(gen)) {
                 matchedCount++;
             }
         });
-        if (matchedCount >= 2) { // 2명 이상 포함시 활성화로 간주
+        if (matchedCount >= 2) {
             activeSynergies.push(`⭐ ${syn.title} (${syn.desc.replace(/<[^>]*>?/gm, '')})`);
         }
     });
@@ -521,7 +521,7 @@ function selectDeckAutocompleteValue(slotNum, type, name) {
         document.getElementById(`autocomplete-list-${type}${slotNum}`).classList.add('hidden');
     }
 
-    updateDeckFormationBonusInfo(); // 장수 변경 시 인연 보너스 재계산
+    updateDeckFormationBonusInfo();
 }
 
 function saveDeckData() {
