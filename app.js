@@ -226,13 +226,7 @@ function applyAdminUIState() {
     const btn = document.getElementById('editModeBtn');
     const addBtn = document.getElementById('addMemberBtn');
     const delSelectedBtn = document.getElementById('delSelectedBtn');
-    const delHeader = document.getElementById('delColHeader');
-    const selectAllHeader = document.getElementById('selectAllHeader');
-    const uidHeader = document.getElementById('uidColHeader');
     
-    const hasAdminRole = isCurrentLoggedUserAdmin();
-    const showUidCol = (isAdminMode && !isUserPreview) || hasAdminRole;
-
     if (isAdminMode) {
         if(btn) {
             btn.innerHTML = "<span>🛡️</span> 제어판";
@@ -240,8 +234,6 @@ function applyAdminUIState() {
         }
         if(addBtn) addBtn.classList.remove('hidden');
         if(delSelectedBtn) delSelectedBtn.classList.remove('hidden');
-        if(delHeader) delHeader.classList.remove('hidden');
-        if(selectAllHeader) selectAllHeader.classList.remove('hidden');
     } else {
         if(btn) {
             btn.innerHTML = "<span>🛡️</span> 관리자 모드";
@@ -249,14 +241,6 @@ function applyAdminUIState() {
         }
         if(addBtn) addBtn.classList.add('hidden');
         if(delSelectedBtn) addBtn.classList.add('hidden');
-        if(delHeader) delHeader.classList.add('hidden');
-        if(selectAllHeader) selectAllHeader.classList.add('hidden');
-    }
-
-    if (showUidCol) {
-        if(uidHeader) uidHeader.classList.remove('hidden');
-    } else {
-        if(uidHeader) uidHeader.classList.add('hidden');
     }
 
     renderFilterButtons();
@@ -531,7 +515,7 @@ function updateDeckFormationBonusInfo() {
         let effectLine = syn.desc.split('<br>').find(l => l.includes('효과')) || "효과 미등록";
         let cleanEffect = effectLine.replace(/<[^>]*>?/gm, '').replace('인연 효과:', '').trim();
 
-        let requiredGenerals = ['유비', '관우', '장비', '조운', '마초', '황충', '안량', '문추', '장합'].filter(g => targetLine.includes(g));
+        let requiredGenerals = ['유비', '관우', '장비', '조운', '마초', ' 황충', '안량', '문추', '장합'].filter(g => targetLine.includes(g));
         let matchedCount = 0;
 
         activeGenerals.forEach(gen => {
@@ -990,6 +974,33 @@ function renderTable() {
     const effectiveIsAdmin = isAdminMode && !isUserPreview;
     const hasAdminRole = isCurrentLoggedUserAdmin();
     const showUidCol = effectiveIsAdmin || hasAdminRole;
+
+    // ✨ 상단 테이블 헤더(thead) 동적 렌더링으로 열 밀림 완벽 차단
+    const theadTr = document.querySelector('table thead tr');
+    if (theadTr) {
+        let headHtml = '';
+        if (effectiveIsAdmin) {
+            headHtml += `<th class="p-3 sm:p-4 border-r border-theme text-center w-10"><input type="checkbox" id="selectAllCheckbox" onclick="toggleSelectAll(this)" class="cursor-pointer"></th>`;
+        }
+        headHtml += `<th class="p-3 sm:p-4 border-r border-theme text-center w-24">⭐ / No.</th>`;
+        if (showUidCol) {
+            headHtml += `<th class="p-3 sm:p-4 border-r border-theme">UID</th>`;
+        }
+        headHtml += `
+            <th class="p-3 sm:p-4 border-r border-theme">닉네임</th>
+            <th class="p-3 sm:p-4 border-r border-theme">직업</th>
+            <th class="p-3 sm:p-4 border-r border-theme">소속</th>
+            <th class="p-3 sm:p-4 text-center border-r border-theme min-w-[140px]">보유덱 1</th>
+            <th class="p-3 sm:p-4 text-center border-r border-theme min-w-[140px]">보유덱 2</th>
+            <th class="p-3 sm:p-4 text-center border-r border-theme min-w-[140px]">보유덱 3</th>
+            <th class="p-3 sm:p-4 text-center border-r border-theme min-w-[140px]">보유덱 4</th>
+            <th class="p-3 sm:p-4 text-center min-w-[140px]">보유덱 5</th>
+        `;
+        if (effectiveIsAdmin) {
+            headHtml += `<th class="p-3 sm:p-4 text-center">관리</th>`;
+        }
+        theadTr.innerHTML = headHtml;
+    }
 
     let filtered = members.filter(member => {
         let matchAlliance = false;
