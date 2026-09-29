@@ -53,7 +53,6 @@ function switchPageView(viewName) {
     }
 }
 
-// 📊 통계룸 엑셀 업로드 (통계룸 데이터를 기준으로 편성 맹원 목록까지 100% 동기화)
 function handleMemberWeekExcelUpload(event) {
     const file = event.target.files[0];
     if (!file) return;
@@ -73,7 +72,6 @@ function handleMemberWeekExcelUpload(event) {
                 const nameVal = row['멤버'] || '';
                 const jobVal = row['직업'] || '';
 
-                // 🌟 통계룸(엑셀)에 있는 모든 인원이 편성 대시보드(members)에도 빠짐없이 존재하도록 동기화
                 let existingMember = members.find(m => String(m.uid) === uidVal);
                 if (existingMember) {
                     existingMember.name = nameVal;
@@ -84,7 +82,7 @@ function handleMemberWeekExcelUpload(event) {
                         uid: uidVal,
                         name: nameVal,
                         job: jobVal,
-                        alliance: '금의위', // 기본 소속
+                        alliance: '금의위',
                         isAdminRole: false,
                         decks: []
                     });
@@ -108,7 +106,7 @@ function handleMemberWeekExcelUpload(event) {
 
             saveDataToStorage();
             localStorage.setItem('memberWeekData', JSON.stringify(memberWeekData));
-            alert(`📊 주간활동 데이터 ${memberWeekData.length}건 반영 완료! (편성 대시보드 인원도 통계룸과 일치하도록 동기화되었습니다)`);
+            alert(`📊 주간활동 데이터 ${memberWeekData.length}건 반영 완료!`);
             
             if (currentActiveView === 'stats') {
                 renderStatsTable();
@@ -124,7 +122,7 @@ function handleMemberWeekExcelUpload(event) {
     reader.readAsArrayBuffer(file);
 }
 
-// 📊 통계 페이지 정렬 및 권한별 요약 렌더링 (하위 5% 기준 저조 인원 산출)
+// 📊 통계 페이지 정렬 및 권한별 요약 렌더링
 function renderStatsTable() {
     const tbody = document.getElementById('stats-table-body');
     if (!tbody) return;
@@ -161,7 +159,6 @@ function renderStatsTable() {
     });
     evaluatedMembers.sort((a, b) => b.totalScore - a.totalScore);
 
-    // 🌟 우수 활약 맹원 TOP 10 (전체 공개)
     const topExecBox = document.getElementById('topExecutivesList');
     if (evaluatedMembers.length > 0) {
         let topHtml = '';
@@ -172,7 +169,6 @@ function renderStatsTable() {
         topExecBox.innerHTML = topHtml;
     }
 
-    // 🔒 저조한 지표 맹원 관리 박스 (관리자 전용 - 하위 5% 자동 산출)
     const adminLowBoxWrapper = document.getElementById('adminLowBoxWrapper');
     const lowExecBox = document.getElementById('lowExecutivesList');
     const effectiveIsAdmin = isAdminMode && !isUserPreview;
@@ -215,6 +211,57 @@ function renderStatsTable() {
         </tr>`;
     });
     tbody.innerHTML = html;
+}
+
+// 🕵️ 스파이 및 이상 계정 검사 로직
+function runSpyCheck() {
+    const duplicateBox = document.getElementById('duplicateUidList');
+    const suspiciousBox = document.getElementById('suspiciousUidList');
+    
+    let uidMap = {};
+    let duplicates = [];
+    let suspicious = [];
+
+    members.forEach(m => {
+        const uidStr = String(m.uid).trim();
+        if (!uidStr || uidStr === '0000' || uidStr.length < 5) {
+            suspicious.push(m);
+            return;
+        }
+
+        if (uidMap[uidStr]) {
+            if (!duplicates.some(d => d.uid === uidStr)) {
+                duplicates.push({ uid: uidStr, members: [uidMap[uidStr], m] });
+            } else {
+                duplicates.find(d => d.uid === uidStr).members.push(m);
+            }
+        } else {
+            uidMap[uidStr] = m;
+        }
+    });
+
+    if (duplicates.length === 0) {
+        duplicateBox.innerHTML = `<p class="py-2 text-emerald-400 font-bold">✅ 중복된 UID가 없습니다. (클린함)</p>`;
+    } else {
+        let html = '';
+        duplicates.forEach(dup => {
+            const names = dup.members.map(m => `${m.name}(${m.alliance})`).join(', ');
+            html += `<div class="bg-panel p-2 rounded border border-red-500/30 flex justify-between"><span class="text-main font-bold">UID: ${dup.uid}</span><span class="text-red-400 text-right">${names}</span></div>`;
+        });
+        duplicateBox.innerHTML = html;
+    }
+
+    if (suspicious.length === 0) {
+        suspiciousBox.innerHTML = `<p class="py-2 text-emerald-400 font-bold">✅ 식별 불가/이상 UID가 없습니다.</p>`;
+    } else {
+        let html = '';
+        suspicious.forEach(m => {
+            html += `<div class="bg-panel p-2 rounded border border-orange-500/30 flex justify-between"><span class="text-main font-bold">${m.name}</span><span class="text-orange-400">사유: UID 미확인 (${m.uid || '없음'})</span></div>`;
+        });
+        suspiciousBox.innerHTML = html;
+    }
+
+    toggleModal('spyCheckModal');
 }
 
 function toggleSubMenu(menuId) {
@@ -399,15 +446,18 @@ function applyAdminUIState() {
     const btn = document.getElementById('editModeBtn');
     const addBtn = document.getElementById('addMemberBtn');
     const delSelectedBtn = document.getElementById('delSelectedBtn');
+    const spyBtn = document.getElementById('spyCheckBtn');
     
     if (isAdminMode) {
         if(btn) { btn.innerHTML = "<span>🛡️</span> 제어판"; btn.className = "bg-red-800 hover:bg-red-700 px-3 py-2 rounded-lg font-bold text-white text-xs shadow transition flex items-center gap-1.5"; }
         if(addBtn) addBtn.classList.remove('hidden');
         if(delSelectedBtn) delSelectedBtn.classList.remove('hidden');
+        if(spyBtn) spyBtn.classList.remove('hidden');
     } else {
-        if(btn) { btn.innerHTML = "<span>🛡️</span> 관리자 모드"; btn.className = "bg-amber-600 hover:bg-amber-500 px-3 py-2 rounded-lg font-bold text-white text-xs shadow transition flex items-center gap-1.5"; }
+        if(btn) { btn.innerHTML = "<span>🛡️</span> 관리자 모드"; btn.className = "bg-amber-600 hover:bg-amber-500 px-3 sm:px-4 py-2 rounded-lg font-bold text-white text-xs shadow transition flex items-center gap-1.5"; }
         if(addBtn) addBtn.classList.add('hidden');
         if(delSelectedBtn) delSelectedBtn.classList.add('hidden');
+        if(spyBtn) spyBtn.classList.add('hidden');
     }
     renderFilterButtons();
     if (currentActiveView === 'dashboard') renderTable();
@@ -548,19 +598,6 @@ function renderTable() {
     const hasAdminRole = isCurrentLoggedUserAdmin();
     const showUidCol = effectiveIsAdmin || hasAdminRole;
 
-    const theadTr = document.querySelector('table thead tr');
-    if (theadTr) {
-        let headHtml = '';
-        if (effectiveIsAdmin) headHtml += `<th class="p-3 sm:p-4 border-r border-theme text-center w-10"><input type="checkbox" id="selectAllCheckbox" onclick="toggleSelectAll(this)" class="cursor-pointer"></th>`;
-        headHtml += `<th class="p-3 sm:p-4 border-r border-theme text-center w-12">⭐</th>`;
-        headHtml += `<th class="p-3 sm:p-4 border-r border-theme text-center w-16">No.</th>`;
-        if (showUidCol) headHtml += `<th class="p-3 sm:p-4 border-r border-theme">UID</th>`;
-        headHtml += `<th class="p-3 sm:p-4 border-r border-theme">닉네임</th><th class="p-3 sm:p-4 border-r border-theme">직업</th><th class="p-3 sm:p-4 border-r border-theme">소속</th>`;
-        for(let i=1; i<=5; i++) headHtml += `<th class="p-3 sm:p-4 text-center border-r border-theme min-w-[140px]">보유덱 ${i}</th>`;
-        if (effectiveIsAdmin) headHtml += `<th class="p-3 sm:p-4 text-center">관리</th>`;
-        theadTr.innerHTML = headHtml;
-    }
-
     let filtered = members.filter(m => {
         let match = currentFilter === '즐겨찾기' ? favorites.includes(m.id) : (m.alliance === currentFilter);
         return match && m.name.toLowerCase().includes(searchQuery);
@@ -569,13 +606,16 @@ function renderTable() {
     document.getElementById('total-member-count').innerText = members.length;
     const pageSizeVal = document.getElementById('pageSizeSelect').value;
     let displayedList = filtered;
+    let totalPages = 1;
 
     if (pageSizeVal !== 'all') {
         const limit = parseInt(pageSizeVal, 10);
-        let totalPages = Math.ceil(filtered.length / limit) || 1;
+        totalPages = Math.ceil(filtered.length / limit) || 1;
         if (currentPage > totalPages) currentPage = totalPages;
         displayedList = filtered.slice((currentPage - 1) * limit, (currentPage - 1) * limit + limit);
     }
+
+    renderPagination(totalPages);
 
     if(displayedList.length === 0) {
         tbody.innerHTML = `<tr><td colspan="13" class="p-6 text-center text-muted">등록된 인원이 없습니다.</td></tr>`;
@@ -594,23 +634,77 @@ function renderTable() {
         const absoluteIndex = (pageSizeVal !== 'all') ? ((currentPage - 1) * parseInt(pageSizeVal, 10)) + index + 1 : index + 1;
         html += `<td class="p-3 sm:p-4 border-r border-theme text-center font-bold text-muted">${absoluteIndex}</td>`;
         
-        if (showUidCol) html += `<td class="p-3 sm:p-4 border-r border-theme font-mono">${member.uid}</td>`;
-        html += `<td class="p-3 sm:p-4 border-r border-theme font-bold">${member.name}</td>`;
-        html += `<td class="p-3 sm:p-4 border-r border-theme text-muted">${member.job || '-'}</td>`;
-        html += `<td class="p-3 sm:p-4 border-r border-theme">${member.alliance}</td>`;
+        if (showUidCol) {
+            html += `<td class="p-3 sm:p-4 border-r border-theme font-mono"><input type="text" value="${member.uid || ''}" onchange="updateMemberField(${member.id}, 'uid', this.value)" class="bg-main border border-theme px-2 py-1 rounded text-xs w-28 text-main"></td>`;
+        }
+        
+        // 닉네임 수정 가능 인풋
+        if (effectiveIsAdmin) {
+            html += `<td class="p-3 sm:p-4 border-r border-theme"><input type="text" value="${member.name}" onchange="updateMemberField(${member.id}, 'name', this.value)" class="bg-main border border-theme px-2 py-1 rounded text-xs font-bold w-24 text-main"></td>`;
+        } else {
+            html += `<td class="p-3 sm:p-4 border-r border-theme font-bold">${member.name}</td>`;
+        }
 
+        // 직업 수정 가능 셀렉트박스
+        if (effectiveIsAdmin) {
+            let jobOptions = `<option value="">- 선택 -</option>`;
+            AVAILABLE_JOBS.forEach(j => {
+                jobOptions += `<option value="${j}" ${member.job === j ? 'selected' : ''}>${j}</option>`;
+            });
+            html += `<td class="p-3 sm:p-4 border-r border-theme"><select onchange="updateMemberField(${member.id}, 'job', this.value)" class="bg-main border border-theme px-2 py-1 rounded text-xs text-main">${jobOptions}</select></td>`;
+        } else {
+            html += `<td class="p-3 sm:p-4 border-r border-theme text-muted">${member.job || '-'}</td>`;
+        }
+
+        // 소속 수정 가능 셀렉트박스
+        if (effectiveIsAdmin) {
+            let catOptions = '';
+            categoryNames.forEach(c => {
+                catOptions += `<option value="${c}" ${member.alliance === c ? 'selected' : ''}>${c}</option>`;
+            });
+            html += `<td class="p-3 sm:p-4 border-r border-theme"><select onchange="updateMemberField(${member.id}, 'alliance', this.value)" class="bg-main border border-theme px-2 py-1 rounded text-xs text-main">${catOptions}</select></td>`;
+        } else {
+            html += `<td class="p-3 sm:p-4 border-r border-theme">${member.alliance}</td>`;
+        }
+
+        // 덱 설정 셀 (클릭 시 덱 편집 모달 오픈)
         for(let i=0; i<5; i++) {
             const deck = member.decks && member.decks[i];
             if (deck && (deck.g1 || deck.g2 || deck.g3)) {
-                html += `<td class="p-2 sm:p-3 border-r border-theme"><div class="deck-cell rounded-lg p-1.5 text-center bg-panel"><div class="text-[11px] font-bold gold-text">${deck.g1 || '-'} / ${deck.g2 || '-'} / ${deck.g3 || '-'}</div></div></td>`;
+                html += `<td class="p-2 sm:p-3 border-r border-theme cursor-pointer" onclick="openDeckModal(${member.id}, ${i})"><div class="deck-cell rounded-lg p-1.5 text-center bg-panel hover:bg-hover"><div class="text-[11px] font-bold gold-text">${deck.g1 || '-'} / ${deck.g2 || '-'} / ${deck.g3 || '-'}</div></div></td>`;
             } else {
-                html += `<td class="p-2 sm:p-3 border-r border-theme"><div class="deck-cell rounded-lg p-1.5 text-center text-muted border border-dashed border-theme">+ 설정</div></td>`;
+                html += `<td class="p-2 sm:p-3 border-r border-theme cursor-pointer" onclick="openDeckModal(${member.id}, ${i})"><div class="deck-cell rounded-lg p-1.5 text-center text-muted border border-dashed border-theme hover:bg-hover">+ 설정</div></td>`;
             }
         }
-        if(effectiveIsAdmin) html += `<td class="p-2 text-center"><button onclick="deleteMember(${member.id})" class="bg-red-800 text-white px-2 py-1 rounded text-xs">삭제</button></td>`;
+        
+        if(effectiveIsAdmin) html += `<td class="p-2 text-center"><button onclick="deleteMember(${member.id})" class="bg-red-800 hover:bg-red-700 text-white px-2 py-1 rounded text-xs">삭제</button></td>`;
         tr.innerHTML = html;
         tbody.appendChild(tr);
     });
+}
+
+function updateMemberField(id, field, value) {
+    const member = members.find(m => m.id === id);
+    if (member) {
+        member[field] = value;
+        saveDataToStorage();
+    }
+}
+
+function renderPagination(totalPages) {
+    const container = document.getElementById('paginationContainer');
+    if (!container) return;
+    if (totalPages <= 1) {
+        container.innerHTML = '';
+        return;
+    }
+
+    let html = '';
+    for (let i = 1; i <= totalPages; i++) {
+        const activeClass = i === currentPage ? 'bg-yellow-600 text-white font-bold' : 'bg-panel border border-theme text-muted hover:bg-hover';
+        html += `<button onclick="changePage(${i})" class="px-3 py-1 rounded text-xs transition ${activeClass}">${i}</button>`;
+    }
+    container.innerHTML = html;
 }
 
 function toggleFavorite(id) {
