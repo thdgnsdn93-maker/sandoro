@@ -1130,8 +1130,10 @@ function handleExcelUpload(event) {
 
                 let job = AVAILABLE_JOBS.includes(rawJob) ? rawJob : "";
                 
-                // ✨ 카테고리 자동 분류
-                let alliance = "재야";
+                // ✨ 엑셀 소속명 안전 분류 (기존에 이미 등록된 인원이라면 기존 소속 우선 보호, 신규이거나 명확한 경우 카테고리 매칭)
+                let alliance = "";
+                let existingMatch = members.find(m => String(m.uid) === String(uid));
+
                 if (rawAlliance.includes("금의위")) {
                     alliance = "금의위";
                 } else if (rawAlliance.includes("낙원")) {
@@ -1142,7 +1144,13 @@ function handleExcelUpload(event) {
                     alliance = "고구려";
                 } else {
                     let matchedCat = categoryNames.find(cat => rawAlliance === cat || rawAlliance.includes(cat) || cat.includes(rawAlliance));
-                    if (matchedCat) alliance = matchedCat;
+                    if (matchedCat) {
+                        alliance = matchedCat;
+                    } else if (existingMatch) {
+                        alliance = existingMatch.alliance; // 엑셀에 소속 칸이 비었거나 불명확해도 기존 소속 유지!
+                    } else {
+                        alliance = "재야";
+                    }
                 }
 
                 uploadedUids.add(String(uid));
@@ -1153,7 +1161,6 @@ function handleExcelUpload(event) {
             excelRowsData.forEach(row => {
                 let existingMember = members.find(m => String(m.uid) === String(row.uid));
                 if (existingMember) {
-                    // 소속이 변경된 경우 감지하여 알림 목록에 추가
                     if (existingMember.alliance !== row.alliance) {
                         allianceChanges.push({ name: row.name, uid: row.uid, oldAlliance: existingMember.alliance, newAlliance: row.alliance });
                     }
