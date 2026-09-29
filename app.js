@@ -6,7 +6,7 @@ const ADMIN_PASSWORD = "0731";
 const CREATOR_UID = "20029059326";
 
 // 순수 동맹 카테고리 목록 유지
-let categoryNames = ["금의위", "낙원(동맹)", "낙화", "고구려", "재야"];
+let categoryNames = ["금의위", "낙원", "낙화", "고구려", "재야"];
 let currentFilter = '금의위';
 let searchQuery = '';
 let currentDictTargetTab = 'formation';
