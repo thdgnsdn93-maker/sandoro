@@ -139,7 +139,7 @@ function turnOffAdminMode() {
     isUserPreview = false;
     applyAdminUIState();
     toggleModal('adminControlModal');
-    alert("🛡️ 관리자 모드가 해제되었습니다.");
+    alert("🛡️️ 관리자 모드가 해제되었습니다.");
 }
 
 function toggleUserPreview() {
@@ -918,7 +918,7 @@ function deleteSelectedMembers() {
     if (selectedCheckboxes.length === 0) {
         return alert("삭제할 대원을 선택해주세요.");
     }
-    if (confirm(`선택한 ${selectedCheckboxes.length명의 대원을 정말 삭제하시겠습니까?`)) {
+    if (confirm(`선택한 ${selectedCheckboxes.length}명의 대원을 정말 삭제하시겠습니까?`)) {
         const idsToDelete = Array.from(selectedCheckboxes).map(cb => Number(cb.getAttribute('data-id')));
         members = members.filter(m => !idsToDelete.includes(m.id));
         saveDataToStorage();
@@ -1039,7 +1039,6 @@ function renderTable() {
     });
 }
 
-// ✨ UID / 닉네임 / 직업 / 덱 순서의 엑셀 양식을 완벽히 처리하는 업로드 함수
 function handleExcelUpload(event) {
     const file = event.target.files[0];
     if (!file) return;
