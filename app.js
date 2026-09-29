@@ -1130,7 +1130,7 @@ function handleExcelUpload(event) {
 
                 let job = AVAILABLE_JOBS.includes(rawJob) ? rawJob : "";
                 
-                // ✨ 기존 대원을 우선적으로 탐색하여 기존 소속 완벽 방어
+                // ✨ 업로드된 파일 형식(금의위, 낙원, 낙화, 고구려, 재야)의 소속 문자열 완벽 연동
                 let existingMatch = members.find(m => String(m.uid) === String(uid));
                 let alliance = "";
 
@@ -1142,14 +1142,16 @@ function handleExcelUpload(event) {
                     alliance = "낙화";
                 } else if (rawAlliance.includes("고구려")) {
                     alliance = "고구려";
+                } else if (rawAlliance.includes("재야") || rawAlliance.includes("무소속") || rawAlliance.includes("미가입")) {
+                    alliance = "재야";
                 } else {
                     let matchedCat = categoryNames.find(cat => rawAlliance === cat || rawAlliance.includes(cat) || cat.includes(rawAlliance));
                     if (matchedCat) {
                         alliance = matchedCat;
                     } else if (existingMatch) {
-                        alliance = existingMatch.alliance; // 엑셀에 소속 정보가 없거나 비어 있어도 기존 소속 유지!
+                        alliance = existingMatch.alliance; // 기존 인원 소속 보호
                     } else {
-                        alliance = categoryNames[0]; // 신규 인원일 경우 기본 카테고리 지정
+                        alliance = "재야";
                     }
                 }
 
@@ -1183,7 +1185,7 @@ function handleExcelUpload(event) {
                 }
             });
 
-            // 2. ✨ 기존 인원 중 새 엑셀 명단에 아예 존재하지 않는 인원만 '재야'로 변경 (일부 인원만 올린 파일일 경우 기존 인원이 재야로 빠지지 않도록 엑셀 전체 인원이 50명 이상일 때만 누락자 재야 처리 적용)
+            // 2. ✨ 전체 명단 업로드 시에만 빠진 인원을 '재야'로 이동 (일부 파일 업로드 시 초기화 방지)
             if (uploadedUids.size >= 50) {
                 members.forEach(member => {
                     if (!uploadedUids.has(String(member.uid)) && member.alliance !== "재야") {
