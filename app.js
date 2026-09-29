@@ -147,8 +147,16 @@ function handleLogout() {
     }
 }
 
+// ✨ 관리자 권한을 가진 유저는 비밀번호 없이 바로 관리자 모드 진입
 function toggleAdminMode() {
     if (!isAdminMode) {
+        if (isCurrentLoggedUserAdmin()) {
+            isAdminMode = true;
+            applyAdminUIState();
+            toggleModal('adminControlModal');
+            return;
+        }
+
         const pw = prompt("관리자 비밀번호를 입력하세요:");
         if (pw !== ADMIN_PASSWORD) return alert("비밀번호가 틀렸습니다.");
         
@@ -1114,7 +1122,6 @@ function renderTable() {
 
         const absoluteIndex = (pageSizeVal !== 'all') ? ((currentPage - 1) * parseInt(pageSizeVal, 10)) + index + 1 : index + 1;
         
-        // ✨ 관리자 모드에서는 No. 인덱스를 직접 수정할 수 있도록 입력창 제공
         let indexCellContent = '';
         if (effectiveIsAdmin) {
             indexCellContent = `<input type="number" value="${absoluteIndex}" onchange="updateMemberCustomIndex(${member.id}, this.value)" class="w-12 text-center text-xs font-bold bg-main border border-theme py-1 rounded">`;
