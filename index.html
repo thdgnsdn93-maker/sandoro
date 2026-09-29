@@ -48,6 +48,39 @@
 
     <!-- 하단 전체 리포트 테이블 영역 -->
     <div class="bg-panel border border-theme rounded-xl shadow-xl overflow-hidden flex flex-col">
-        ... (기존 테이블 영역 유지) ...
+        <div class="p-4 border-b border-theme flex flex-col sm:flex-row justify-between items-center gap-3">
+            <h3 class="text-sm font-bold text-main flex items-center gap-2"><span>📋</span> 금의위 맹원 전체 주간활동 리포트</h3>
+            <div class="flex items-center gap-2 w-full sm:w-auto">
+                <input type="text" id="statsSearchInput" oninput="renderStatsTable()" placeholder="맹원 검색..." class="bg-main border border-theme px-3 py-1.5 rounded-lg text-xs text-main flex-1 sm:w-48">
+                <select id="statsSortSelect" onchange="renderStatsTable()" class="bg-main border border-theme px-3 py-1.5 rounded-lg text-xs text-main">
+                    <option value="contributionDesc">공헌도 높은순</option>
+                    <option value="contributionAsc">공헌도 낮은순</option>
+                    <option value="prosperityDesc">번영도 높은순</option>
+                    <option value="mhoonDesc">무훈 높은순</option>
+                    <option value="siegeDesc">공성 횟수순</option>
+                </select>
+            </div>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse text-xs sm:text-sm">
+                <thead>
+                    <tr class="bg-main border-b border-theme text-muted">
+                        <th class="p-3 sm:p-4 border-r border-theme text-center w-12">No</th>
+                        <th class="p-3 sm:p-4 border-r border-theme">멤버</th>
+                        <th class="p-3 sm:p-4 border-r border-theme">직업</th>
+                        <th class="p-3 sm:p-4 border-r border-theme">조별</th>
+                        <th class="p-3 sm:p-4 border-r border-theme">직위</th>
+                        <th class="p-3 sm:p-4 border-r border-theme text-right">번영도</th>
+                        <th class="p-3 sm:p-4 border-r border-theme text-right">주간무훈</th>
+                        <th class="p-3 sm:p-4 border-r border-theme text-right">주간공헌</th>
+                        <th class="p-3 sm:p-4 border-r border-theme">주둔지</th>
+                        <th class="p-3 sm:p-4 text-center">주 공성 횟수</th>
+                    </tr>
+                </thead>
+                <tbody id="stats-table-body" class="divide-y divide-theme">
+                    <!-- 동적 렌더링 -->
+                </tbody>
+            </table>
+        </div>
     </div>
 </main>

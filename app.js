@@ -508,16 +508,11 @@ function handleUidAuth() {
     loadDataFromFirebase();
 }
 
-// 🛡️️ [수정] 나가기 시 로그인 정보 삭제 후 로그인 오버레이창(authOverlay)을 다시 띄우도록 수정
+// 🛡 [수정] 나가기(로그아웃) 시 브라우저를 깔끔하게 새로고침하여 로그인 오버레이창이 확실하게 뜨도록 처리
 function handleLogout() {
     if (confirm("대시보드에서 나가시겠습니까?")) {
         localStorage.removeItem('loggedUser');
-        const overlay = document.getElementById('authOverlay');
-        if (overlay) {
-            overlay.classList.remove('hidden');
-        } else {
-            location.reload();
-        }
+        location.reload();
     }
 }
 
