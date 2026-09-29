@@ -70,19 +70,44 @@
 
     <!-- 📤 데이터 업로드 센터 모달 -->
     <div id="dataUploadModal" class="hidden fixed inset-0 modal-bg flex items-center justify-center z-50 p-4">
-        <div class="bg-panel border-2 gold-border rounded-xl shadow-2xl w-full max-w-md p-6 relative">
+        <div class="bg-panel border-2 gold-border rounded-xl shadow-2xl w-full max-w-md p-6 relative max-h-[90vh] overflow-y-auto">
             <button onclick="openAdminControlFromSub('dataUploadModal')" class="absolute top-4 right-4 p-2 rounded-lg border border-theme bg-panel hover:bg-hover text-muted hover:text-main text-xl font-bold transition">&times;</button>
             <h2 class="text-2xl font-bold gold-text mb-2">📤 데이터 업로드 센터</h2>
-            <p class="text-xs text-muted mb-4">인원 관리 파일과 도감 파일을 별도로 업로드할 수 있습니다.</p>
+            <p class="text-xs text-muted mb-4">각 연맹별 명단 파일 및 도감 파일을 개별 업로드할 수 있습니다.</p>
             
             <div class="space-y-4">
-                <div class="bg-main p-4 rounded-xl border border-theme space-y-2">
-                    <p class="text-xs font-bold gold-text">👥 맹원 부대 현황 (엑셀 파일)</p>
-                    <p class="text-[11px] text-muted">기존 명단을 지우고 새 엑셀 명단으로 완전히 덮어씁니다.</p>
-                    <input type="file" id="excelInput" accept=".xlsx, .xls, .csv" class="hidden" onchange="handleExcelUpload(event)">
-                    <button onclick="document.getElementById('excelInput').click()" class="w-full bg-emerald-700 hover:bg-emerald-600 text-white py-2.5 rounded-lg text-xs font-bold shadow transition">📁 맹원 엑셀 파일 업로드</button>
+                <!-- 각 연맹별 엑셀 업로드 영역 -->
+                <div class="bg-main p-4 rounded-xl border border-theme space-y-2.5">
+                    <p class="text-xs font-bold gold-text">👥 각 연맹별 명단 현황 (엑셀 파일)</p>
+                    <p class="text-[11px] text-yellow-500">※ 업로드 파일에 없는 기존 인원은 자동으로 '재야'로 이동됩니다.</p>
+                    
+                    <div class="space-y-2 pt-1">
+                        <div class="flex items-center justify-between bg-panel p-2 rounded-lg border border-theme">
+                            <span class="text-xs font-bold text-main">🛡️ 금의위</span>
+                            <button onclick="triggerAllianceUpload('금의위')" class="bg-emerald-700 hover:bg-emerald-600 text-white px-3 py-1 rounded text-xs font-bold shadow transition">파일 업로드</button>
+                        </div>
+                        <div class="flex items-center justify-between bg-panel p-2 rounded-lg border border-theme">
+                            <span class="text-xs font-bold text-main">🛡️ 낙원(동맹)</span>
+                            <button onclick="triggerAllianceUpload('낙원(동맹)')" class="bg-emerald-700 hover:bg-emerald-600 text-white px-3 py-1 rounded text-xs font-bold shadow transition">파일 업로드</button>
+                        </div>
+                        <div class="flex items-center justify-between bg-panel p-2 rounded-lg border border-theme">
+                            <span class="text-xs font-bold text-main">🛡️ 낙화</span>
+                            <button onclick="triggerAllianceUpload('낙화')" class="bg-emerald-700 hover:bg-emerald-600 text-white px-3 py-1 rounded text-xs font-bold shadow transition">파일 업로드</button>
+                        </div>
+                        <div class="flex items-center justify-between bg-panel p-2 rounded-lg border border-theme">
+                            <span class="text-xs font-bold text-main">🛡️ 고구려</span>
+                            <button onclick="triggerAllianceUpload('고구려')" class="bg-emerald-700 hover:bg-emerald-600 text-white px-3 py-1 rounded text-xs font-bold shadow transition">파일 업로드</button>
+                        </div>
+                        <div class="flex items-center justify-between bg-panel p-2 rounded-lg border border-theme">
+                            <span class="text-xs font-bold text-main">🛡️ 재야</span>
+                            <button onclick="triggerAllianceUpload('재야')" class="bg-emerald-700 hover:bg-emerald-600 text-white px-3 py-1 rounded text-xs font-bold shadow transition">파일 업로드</button>
+                        </div>
+                    </div>
+                    <!-- 숨겨진 공용 엑셀 파일 입력기 -->
+                    <input type="file" id="allianceExcelInput" accept=".xlsx, .xls, .csv" class="hidden" onchange="handleAllianceExcelUpload(event)">
                 </div>
 
+                <!-- 도감 업로드 영역 -->
                 <div class="bg-main p-4 rounded-xl border border-theme space-y-2">
                     <p class="text-xs font-bold gold-text">📖 천하열전 대도감 (마크다운 파일)</p>
                     <p class="text-[11px] text-muted">선택한 도감 탭의 내용을 마크다운 파일로 일괄 업데이트합니다.</p>
@@ -104,7 +129,7 @@
         </div>
     </div>
 
-    <!-- ⚠️ 중복 인원 감지 관리자 알림 모달 -->
+    <!-- ⚠️️ 중복 인원 감지 관리자 알림 모달 -->
     <div id="duplicateAlertModal" class="hidden fixed inset-0 modal-bg flex items-center justify-center z-50 p-4">
         <div class="bg-panel border-2 border-amber-500 rounded-xl shadow-2xl w-full max-w-lg p-6 relative flex flex-col max-h-[85vh]">
             <h2 class="text-xl font-bold text-amber-400 mb-2 flex items-center gap-2">⚠️ 엑셀 업로드 중복 인원 감지</h2>
