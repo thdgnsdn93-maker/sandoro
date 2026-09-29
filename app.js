@@ -120,10 +120,11 @@ function handleUidAuth() {
     accessLogs.unshift({ uid: matchedMember.uid, name: matchedMember.name, time: new Date().toLocaleString() });
     localStorage.setItem('accessLogs', JSON.stringify(accessLogs));
 
+    // ✨ 요구사항 반영: 환영합니다 UID 닉네임 형태의 메시지 출력
     if (isCreator || matchedMember.uid === CREATOR_UID) {
         alert("반갑습니다 관리자(산도로)님!");
     } else {
-        alert(`환영합니다, ${matchedMember.name}님! (일반 모드 로그인)`);
+        alert(`환영합니다 ${matchedMember.uid} ${matchedMember.name}님! (일반 모드 로그인)`);
     }
 
     document.getElementById('authOverlay').classList.add('hidden');
@@ -1107,7 +1108,6 @@ function handleExcelUpload(event) {
                 if (!name || name.includes('닉네임')) return;
                 if (!uid) uid = String(Math.floor(1000 + Math.random() * 9000));
 
-                // ✨ 중복 체크 로직
                 if (seenUids.has(uid) || seenNames.has(name)) {
                     duplicates.push({ uid, name });
                 } else {
@@ -1138,16 +1138,14 @@ function handleExcelUpload(event) {
                 });
             });
 
-            // 덮어쓰기 적용
             members = newParsedMembers;
             saveDataToStorage();
             renderFilterButtons();
             renderTable();
 
-            // ✨ 중복 인원이 존재할 경우 관리자 알림 팝업 오픈
             if (duplicates.length > 0) {
                 let dupContainer = document.getElementById('duplicateListContainer');
-                let dupHtml = `<p class="font-bold text-amber-400 mb-2">총 ${duplicates.length건}의 중복 데이터가 감지되었습니다:</p>`;
+                let dupHtml = `<p class="font-bold text-amber-400 mb-2">총 ${duplicates.length}건의 중복 데이터가 감지되었습니다:</p>`;
                 duplicates.forEach(d => {
                     dupHtml += `<div class="bg-panel p-2 rounded border border-theme flex justify-between"><span>닉네임: <strong>${d.name}</strong></span><span class="text-muted">UID: ${d.uid}</span></div>`;
                 });
@@ -1197,4 +1195,22 @@ function updateMemberField(id, field, val) {
     const m = members.find(x => x.id === id);
     if(m) { m[field] = val; saveDataToStorage(); }
 }
-function downloadShareExcel() {}
+function downloadShareExcel() {
+    let exportData = members.map((m, idx) => ({
+        "No": idx + 1,
+        "UID": m.uid,
+        "닉네임": m.name,
+        "직업": m.job || "",
+        "소속": m.alliance || "",
+        "보유덱1": m.decks && m.decks[0] ? (m.decks[0].g1 || "") : "",
+        "보유덱2": m.decks && m.decks[1] ? (m.decks[1].g1 || "") : "",
+        "보유덱3": m.decks && m.decks[2] ? (m.decks[2].g1 || "") : "",
+        "보유덱4": m.decks && m.decks[3] ? (m.decks[3].g1 || "") : "",
+        "보유덱5": m.decks && m.decks[4] ? (m.decks[4].g1 || "") : ""
+    }));
+
+    let worksheet = XLSX.utils.json_to_sheet(exportData);
+    let workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "연맹원현황");
+    XLSX.writeFile(workbook, "금의위_연맹원_현황.xlsx");
+}
