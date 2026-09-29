@@ -138,7 +138,7 @@
         </div>
     </div>
 
-    <!-- ⚔️ 덱 편성 및 조합 공유 모달 (덱 수정 버튼으로 이름 변경됨) -->
+    <!-- ⚔️ 덱 편성 및 조합 공유 모달 -->
     <div id="deckModal" class="hidden fixed inset-0 modal-bg flex items-center justify-center z-50 p-4">
         <div class="bg-panel border-2 gold-border rounded-xl shadow-2xl w-full max-w-4xl p-6 relative max-h-[92vh] overflow-y-auto">
             <button onclick="toggleModal('deckModal')" class="absolute top-4 right-4 p-2 rounded-lg border border-theme bg-panel text-xl font-bold">&times;</button>
@@ -146,7 +146,7 @@
             <div class="flex justify-between items-center pb-3 border-b border-theme mb-4">
                 <h2 id="deckModalTitle" class="text-lg font-bold gold-text flex items-center gap-2">⚔️ 조합 공유 & 부대 편성 편집</h2>
                 <div class="flex gap-2">
-                    <button onclick="alert('덱 수정 모드 활성화됨')" class="bg-amber-600 hover:bg-amber-500 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition">덱 수정</button>
+                    <button onclick="alert('덱 수정 모드 활성화')" class="bg-amber-600 hover:bg-amber-500 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition">덱 수정</button>
                 </div>
             </div>
 
@@ -254,25 +254,24 @@
         </div>
     </div>
 
-    <!-- 📚 좌측 사이드바 + 우측 이름/효과 중심의 깔끔한 도감 모달 -->
+    <!-- 📚 [개편완료] 예시 7 스타일의 도감 모달 (좌측 항목 리스트 + 우측 상세 카드) -->
     <div id="dictModal" class="hidden fixed inset-0 modal-bg flex items-center justify-center z-50 p-4">
         <div class="bg-panel border-2 gold-border rounded-xl shadow-2xl w-full max-w-4xl p-6 relative max-h-[90vh] flex flex-col">
             <button onclick="toggleModal('dictModal')" class="absolute top-4 right-4 p-2 rounded-lg border border-theme bg-panel text-xl font-bold z-10">&times;</button>
             <h2 class="text-xl font-bold gold-text mb-4">📚 정보일람 대도감</h2>
             
-            <div class="flex flex-col md:flex-row gap-4 flex-1 overflow-hidden">
-                <!-- 👈 좌측: 각 도감 항목 선택 세로 버튼 리스트 -->
-                <div class="w-full md:w-64 bg-main border border-theme rounded-xl p-3 flex flex-col gap-2 overflow-y-auto shrink-0">
-                    <button onclick="switchDictTab('formation')" id="dictTab-formation" class="w-full text-left px-3.5 py-3 rounded-lg text-xs font-bold bg-amber-600 text-white transition flex items-center gap-2.5 shadow"><span>⚔️</span> 1. 진형 및 병종상성</button>
-                    <button onclick="switchDictTab('synergy')" id="dictTab-synergy" class="w-full text-left px-3.5 py-3 rounded-lg text-xs font-bold bg-panel text-muted hover:bg-hover transition flex items-center gap-2.5"><span>🤝</span> 2. 무장 인연 보너스</button>
-                    <button onclick="switchDictTab('generalTactic')" id="dictTab-generalTactic" class="w-full text-left px-3.5 py-3 rounded-lg text-xs font-bold bg-panel text-muted hover:bg-hover transition flex items-center gap-2.5"><span>🛡️</span> 3. 무장고유전법</button>
-                    <button onclick="switchDictTab('commonTactic')" id="dictTab-commonTactic" class="w-full text-left px-3.5 py-3 rounded-lg text-xs font-bold bg-panel text-muted hover:bg-hover transition flex items-center gap-2.5"><span>📜</span> 4. 공용전법</button>
-                </div>
+            <!-- 대분류 탭 -->
+            <div class="flex flex-wrap gap-2 border-b border-theme pb-2 mb-4">
+                <button onclick="switchDictTab('formation')" id="dictTab-formation" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-amber-600 text-white shadow">1. 진형 및 상성</button>
+                <button onclick="switchDictTab('synergy')" id="dictTab-synergy" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-main text-muted hover:bg-hover">2. 무장 인연</button>
+                <button onclick="switchDictTab('generalTactic')" id="dictTab-generalTactic" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-main text-muted hover:bg-hover">3. 무장고유전법</button>
+                <button onclick="switchDictTab('commonTactic')" id="dictTab-commonTactic" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-main text-muted hover:bg-hover">4. 공용전법</button>
+            </div>
 
-                <!-- 👉 우측: 이름과 효과 위주로 깔끔하게 정리된 상세 설명 영역 -->
-                <div id="dictContentArea" class="flex-1 overflow-y-auto bg-main p-5 rounded-xl border border-theme text-xs sm:text-sm text-main space-y-3 leading-relaxed">
-                    <!-- 도감 내용 렌더링 영역 -->
-                </div>
+            <!-- 본문 그리드: 좌측 세로 리스트 | 우측 상세 카드 -->
+            <div class="flex flex-col md:flex-row gap-4 flex-1 overflow-hidden">
+                <div id="dictSubItemList" class="w-full md:w-56 bg-main border border-theme rounded-xl p-3 flex flex-col gap-1.5 overflow-y-auto shrink-0"></div>
+                <div id="dictContentArea" class="flex-1 overflow-y-auto bg-main p-5 rounded-xl border border-theme text-xs sm:text-sm text-main space-y-3 leading-relaxed"></div>
             </div>
 
             <div class="mt-4 flex justify-end">
@@ -343,9 +342,7 @@
             <div class="flex flex-wrap gap-2 items-center justify-end w-full sm:w-auto">
                 <button onclick="addNewMember()" id="addMemberBtn" class="hidden bg-emerald-700 hover:bg-emerald-600 px-3 py-2 rounded-lg font-bold text-white text-xs shadow transition">+ 인원 추가</button>
                 <button onclick="deleteSelectedMembers()" id="delSelectedBtn" class="hidden bg-red-800 hover:bg-red-700 px-3 py-2 rounded-lg font-bold text-white text-xs shadow transition">🗑️ 선택 삭제</button>
-                
                 <button onclick="runSpyCheck()" id="spyCheckBtn" class="hidden bg-purple-700 hover:bg-purple-600 px-3 py-2 rounded-lg font-bold text-white text-xs shadow transition flex items-center gap-1.5 border border-purple-500/50"><span>🕵️</span> 스파이/중복 검사</button>
-
                 <button onclick="toggleAdminMode()" id="editModeBtn" class="bg-amber-600 hover:bg-amber-500 px-3 sm:px-4 py-2 rounded-lg font-bold text-white text-xs shadow transition flex items-center gap-1.5"><span>🛡</span> 관리자 모드</button>
             </div>
         </header>
@@ -420,38 +417,15 @@
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div class="bg-panel border border-theme p-5 rounded-xl shadow">
-                    <h3 class="text-sm font-bold gold-text mb-3 flex items-center gap-1.5"><span>⚔</span> 주간 무훈 순위 TOP 5</h3>
-                    <div id="topMhoonList" class="space-y-2 text-xs text-main"></div>
-                </div>
-                <div class="bg-panel border border-theme p-5 rounded-xl shadow">
-                    <h3 class="text-sm font-bold text-emerald-400 mb-3 flex items-center gap-1.5"><span>🏆</span> 주간 공헌도 순위 TOP 5</h3>
-                    <div id="topContribList" class="space-y-2 text-xs text-main"></div>
-                </div>
-                <div class="bg-panel border border-theme p-5 rounded-xl shadow">
-                    <h3 class="text-sm font-bold text-blue-400 mb-3 flex items-center gap-1.5"><span>🏰</span> 주간 공성횟수 순위 TOP 5</h3>
-                    <div id="topSiegeList" class="space-y-2 text-xs text-main"></div>
-                </div>
-            </div>
-
-            <div id="adminLowBoxWrapper" class="bg-panel border border-red-500/40 p-5 rounded-xl shadow hidden">
-                <h3 class="text-sm font-bold text-red-400 mb-3 flex items-center gap-1.5"><span>🔒 [관리자 전용] 3대 지표 종합 저조 인원 (하위 10%)</span></h3>
-                <div id="lowExecutivesList" class="space-y-2 text-xs text-main"></div>
-            </div>
-
             <div class="bg-panel border border-theme rounded-xl shadow-xl overflow-hidden flex flex-col">
                 <div class="p-4 sm:p-5 border-b border-theme flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-main/30">
-                    <div class="flex items-center gap-3">
-                        <div>
-                            <h3 class="text-base font-bold gold-text">📊 금의위 맹원 전체 주간활동 리포트</h3>
-                            <p class="text-xs text-muted mt-0.5">번영도, 주간 무훈 및 공헌도 순위 일람</p>
-                        </div>
+                    <div>
+                        <h3 class="text-base font-bold gold-text">📊 금의위 맹원 전체 주간활동 리포트</h3>
+                        <p class="text-xs text-muted mt-0.5">번영도, 주간 무훈 및 공헌도 순위 일람</p>
                     </div>
                     <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto">
                         <select id="statsSortSelect" onchange="renderStatsTable()" class="bg-main border border-theme px-3 py-1.5 rounded-lg text-xs text-main font-bold">
                             <option value="contributionDesc">공헌도 높은순</option>
-                            <option value="contributionAsc">공헌도 낮은순</option>
                             <option value="prosperityDesc">번영도 높은순</option>
                             <option value="mhoonDesc">무훈 높은순</option>
                             <option value="siegeDesc">공성 횟수순</option>

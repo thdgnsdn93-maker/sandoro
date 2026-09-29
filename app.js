@@ -17,37 +17,50 @@ const AVAILABLE_JOBS = ["진군", "신행", "기좌", "병참", "천공", "청�
 let members = [];
 let memberWeekData = JSON.parse(localStorage.getItem('memberWeekData') || '[]');
 
-// 샘플 장수 데이터 및 고유전법 매핑 (자동완성 및 고유전법 연동용)
 const GENERAL_DATABASE = {
     "조조": "난세의 간웅 (효과: 아군 전체 피해 감소 및 통솔 증가)",
     "관우": "위진화하 (효과: 적 단일 대상에게 강력한 물리 피해 및 무장 해제)",
     "제갈량": "신산귀모 (효과: 적의 책략 피해를 무효화하고 지혜 기반 반격)",
     "조운": "단기참장 (효과: 통상 공격 후 추가 피해 및 제어 효과 면역)",
     "초선": "폐월 (효과: 적군 주장을 현혹시켜 아군을 공격하게 만듦)",
-    "장비": "연인환성 (효과: 전투 시작 후 적 전체에 광역 물리 피해 및 방어력 감소)",
+    "장비": "연인환성 (효과: 전투 시작 후 적 전체에 광역 물리 피해)",
     "여포": "천하무쌍 (효과: 적군을 도발하여 결투를 벌이고 공격력 대폭 상승)",
-    "주유": "동만지화 (효과: 적 전체에 지속적인 화계 피해 부여)",
-    "육손": "화련영영 (효과: 화계 상태의 적에게 연쇄 폭발 피해 부여)",
-    "사마의": "응변무방 (효과: 전투 후반부로 갈수록 치명타 확률 및 책략 피해 극대화)"
+    "주유": "동만지화 (효과: 적 전체에 지속적인 화계 피해 부여)"
 };
 
-// 공용전법 리스트 (자동완성용)
 const COMMON_TACTICS_LIST = [
-    "팔문금사阵 (효과: 전투 초반 아군 피해 감소)",
+    "팔문금사陣 (효과: 전투 초반 아군 피해 감소)",
     "백의교위 (효과: 선공 효과 및 회피율 증가)",
     "파진함락 (효과: 적 방어력 무시 물리 피해)",
-    "태평요술 (효과: 책략 피해 극대화 및 발동 확률 증가)",
-    "초선계책 (효과: 적 지혜 감소 및 혼란 부여)",
-    "성벽구축 (효과: 아군 전체 방어력 및 통솔 대폭 증가)",
-    "맹렬한공격 (효과: 매턴 추가 물리 대미지)",
-    "화공계책 (효과: 적에게 화염 피해 부여)"
+    "태평요술 (효과: 책략 피해 극대화 및 발동 확률 증가)"
 ];
 
-let DICT_CONTENTS = {
-    formation: `### ⚔️️ [진형 및 병종상성]\n\n- **기략진**: 책략 피해 및 속도 보너스\n- **학익진**: 원거리 공격력 및 사거리 증가\n- **어룡진**: 기동력 및 돌격 피해 증가\n- **봉시진**: 전방 돌파력 및 물리 공격력 극대화\n- **안행진**: 방어 및 지속 전투력 강화\n- **언월진**: 단일 대상 치명타 확률 증가`,
-    synergy: `### 🤝 [무장 인연 보너스]\n\n- **오호대장군**: 무력 및 통솔력 +15\n- **오자량장**: 속도 및 회피율 증가\n- **삼형제 (유관장)**: 전투 시작 시 아군 전체 보호막 생성\n- **동탁과 여포**: 치명타 피해량 증가`,
-    generalTactic: `### 🛡️ [무장고유전법]\n\n- **난세의 간웅 (조조)**: 아군 전체 피해 감소 및 통솔 증가\n- **위진화하 (관우)**: 적 단일 대상 강력한 물리 피해 및 무장 해제\n- **신산귀모 (제갈량)**: 책략 피해 무효화 및 지혜 반격\n- **천하무쌍 (여포)**: 적군 도발 및 공격력 대폭 상승`,
-    commonTactic: `### 📜 [공용전법]\n\n- **팔문금사阵**: 전투 초반 아군 피해 감소\n- **백의교위**: 선공 효과 및 회피율 증가\n- **파진함락**: 적 방어력 무시 물리 피해\n- **태평요술**: 책략 피해 극대화 및 발동 확률 증가`
+// 도감 데이터 (formation 목록이 진형 선택 Selectbox에 동적으로 연동됨)
+let DICT_DETAIL_DATA = {
+    formation: [
+        { name: "기략진", type: "진형 / 상성", effect: "책략 피해 및 속도 보너스 부여" },
+        { name: "학익진", type: "진형 / 상성", effect: "원거리 공격력 및 사거리 증가" },
+        { name: "어룡진", type: "진형 / 상성", effect: "기동력 및 돌격 피해 증가" },
+        { name: "봉시진", type: "진형 / 상성", effect: "전방 돌파력 및 물리 공격력 극대화" },
+        { name: "안행진", type: "진형 / 상성", effect: "방어 및 지속 전투력 강화" },
+        { name: "언월진", type: "진형 / 상성", effect: "단일 대상 치명타 확률 증가" }
+    ],
+    synergy: [
+        { name: "오호대장군", type: "인연 / 상시", effect: "무력 및 통솔력 +15 추가 상승" },
+        { name: "오자량장", type: "인연 / 상시", effect: "속도 및 회피율 증가 버프" },
+        { name: "삼형제", type: "인연 / 전투시작", effect: "전투 시작 시 아군 전체 보호막 생성" }
+    ],
+    generalTactic: [
+        { name: "관우 (위진화하)", type: "고유전법 / 발동률 45%", effect: "적 단일 대상에게 강력한 물리 피해 및 무장 해제 효과 부여" },
+        { name: "조조 (난세의 간웅)", type: "고유전법 / 지휘", effect: "아군 전체 피해 감소 및 통솔력 증가" },
+        { name: "제갈량 (신산귀모)", type: "고유전법 / 액티브", effect: "적의 책략 피해를 무효화하고 지혜 기반 반격" },
+        { name: "여포 (천하무쌍)", type: "고유전법 / 돌격", effect: "적군을 도발하여 결투를 벌이고 공격력 대폭 상승" }
+    ],
+    commonTactic: [
+        { name: "팔문금사陣", type: "공용전법 / 지휘", effect: "전투 초반 아군 피해 감소" },
+        { name: "백의교위", type: "공용전법 / 패시브", effect: "선공 효과 및 회피율 증가" },
+        { name: "파진함락", type: "공용전법 / 액티브", effect: "적 방어력을 무시하는 물리 피해 부여" }
+    ]
 };
 
 function getDisplayCategoryName(cat) {
@@ -84,31 +97,82 @@ function switchPageView(viewName) {
     }
 }
 
-// 📚 도감 탭 전환 (이름과 효과 중심의 깔끔한 구성)
+// 📚 도감 탭 전환 및 좌측 리스트 렌더링
 function switchDictTab(tabKey) {
     currentDictTargetTab = tabKey;
-    const tabs = ['formation', 'synergy', 'generalTactic', 'commonTactic'];
-    tabs.forEach(t => {
+    ['formation', 'synergy', 'generalTactic', 'commonTactic'].forEach(t => {
         const btn = document.getElementById(`dictTab-${t}`);
-        if (btn) {
-            if (t === tabKey) {
-                btn.className = "w-full text-left px-3.5 py-3 rounded-lg text-xs font-bold bg-amber-600 text-white transition flex items-center gap-2.5 shadow";
-            } else {
-                btn.className = "w-full text-left px-3.5 py-3 rounded-lg text-xs font-bold bg-panel text-muted hover:bg-hover transition flex items-center gap-2.5";
-            }
-        }
+        if (btn) btn.className = `px-3 py-1.5 rounded-lg text-xs font-bold ${t === tabKey ? 'bg-amber-600 text-white shadow' : 'bg-main text-muted hover:bg-hover'}`;
     });
 
-    const contentArea = document.getElementById('dictContentArea');
-    if (contentArea) {
-        const text = DICT_CONTENTS[tabKey] || "등록된 내용이 없습니다.";
-        contentArea.innerHTML = `<div class="whitespace-pre-line leading-relaxed">${text}</div>`;
-    }
+    renderDictSubList(tabKey);
 }
 
-// ⚔️ 덱 설정 모달 관련 변수 및 자동완성 함수
+function renderDictSubList(tabKey) {
+    const listContainer = document.getElementById('dictSubItemList');
+    const items = DICT_DETAIL_DATA[tabKey] || [];
+
+    if (items.length === 0) {
+        listContainer.innerHTML = `<p class="text-muted text-xs p-2">항목이 없습니다.</p>`;
+        document.getElementById('dictContentArea').innerHTML = `<p class="text-muted">등록된 상세 내용이 없습니다.</p>`;
+        return;
+    }
+
+    let html = '';
+    items.forEach((item, idx) => {
+        const activeClass = idx === 0 ? 'bg-amber-600/20 gold-text border-amber-500/50 font-bold' : 'bg-panel text-main hover:bg-hover border-theme';
+        html += `<button onclick="selectDictItem('${tabKey}', ${idx}, this)" class="w-full text-left px-3 py-2.5 rounded-lg text-xs transition border ${activeClass}">${item.name}</button>`;
+    });
+    listContainer.innerHTML = html;
+
+    if (items.length > 0) showDictDetail(items[0]);
+}
+
+function selectDictItem(tabKey, index, btnElement) {
+    const items = DICT_DETAIL_DATA[tabKey] || [];
+    const item = items[index];
+    if (!item) return;
+
+    const parent = document.getElementById('dictSubItemList');
+    Array.from(parent.children).forEach(child => {
+        child.className = "w-full text-left px-3 py-2.5 rounded-lg text-xs transition border bg-panel text-main hover:bg-hover border-theme";
+    });
+    btnElement.className = "w-full text-left px-3 py-2.5 rounded-lg text-xs transition border bg-amber-600/20 gold-text border-amber-500/50 font-bold";
+
+    showDictDetail(item);
+}
+
+function showDictDetail(item) {
+    const contentArea = document.getElementById('dictContentArea');
+    contentArea.innerHTML = `
+        <div class="space-y-3 bg-panel p-5 rounded-xl border border-theme shadow-inner">
+            <div class="border-b border-theme pb-2">
+                <span class="text-muted text-[11px] block">이름</span>
+                <h3 class="text-base font-extrabold gold-text">${item.name}</h3>
+            </div>
+            <div class="border-b border-theme pb-2">
+                <span class="text-muted text-[11px] block">특성 / 발동률</span>
+                <p class="text-sm font-bold text-main mt-0.5">${item.type}</p>
+            </div>
+            <div>
+                <span class="text-muted text-[11px] block">상세효과</span>
+                <p class="text-sm text-main mt-1 leading-relaxed">${item.effect}</p>
+            </div>
+        </div>
+    `;
+}
+
+// ⚔️ 덱 설정 모달 열기 및 진형 목록 도감 연동
 let currentEditingMemberId = null;
 let currentEditingDeckIdx = 0;
+
+function populateFormationSelect(selectedFormation) {
+    const selectEl = document.getElementById('deckFormationSelect');
+    if (!selectEl) return;
+    
+    const formations = DICT_DETAIL_DATA.formation || [];
+    selectEl.innerHTML = formations.map(f => `<option value="${f.name}" ${f.name === selectedFormation ? 'selected' : ''}>${f.name}</option>`).join('');
+}
 
 function openDeckModal(memberId, deckIdx) {
     const member = members.find(m => m.id === memberId);
@@ -122,7 +186,9 @@ function openDeckModal(memberId, deckIdx) {
 
     const deck = (member.decks && member.decks[deckIdx]) || {};
     
-    document.getElementById('deckFormationSelect').value = deck.formation || '기략진';
+    // 도감에서 진형 목록 동적 로드 후 선택값 반영
+    populateFormationSelect(deck.formation || '기략진');
+
     document.getElementById('deckGen1').value = deck.g1 || '';
     document.getElementById('deckGen2').value = deck.g2 || '';
     document.getElementById('deckGen3').value = deck.g3 || '';
@@ -142,7 +208,6 @@ function openDeckModal(memberId, deckIdx) {
     toggleModal('deckModal');
 }
 
-// 장수 이름 입력 시 자동완성 및 1번 고유전법 자동 연동
 function handleGenInput(genNum) {
     const inputVal = document.getElementById(`deckGen${genNum}`).value.trim();
     const dropdown = document.getElementById(`genDropdown${genNum}`);
@@ -161,11 +226,7 @@ function handleGenInput(genNum) {
 
     const matches = Object.keys(GENERAL_DATABASE).filter(name => name.includes(inputVal));
     if (matches.length > 0) {
-        let html = '';
-        matches.forEach(name => {
-            html += `<div onclick="selectGeneral(${genNum}, '${name}')" class="px-3 py-2 text-xs text-main hover:bg-hover cursor-pointer border-b border-theme last:border-b-0"><strong>${name}</strong> <span class="text-[10px] text-muted">(${GENERAL_DATABASE[name].split(' ')[0]})</span></div>`;
-        });
-        dropdown.innerHTML = html;
+        dropdown.innerHTML = matches.map(name => `<div onclick="selectGeneral(${genNum}, '${name}')" class="px-3 py-2 text-xs text-main hover:bg-hover cursor-pointer border-b border-theme last:border-b-0"><strong>${name}</strong></div>`).join('');
         dropdown.classList.remove('hidden');
     } else {
         dropdown.classList.add('hidden');
@@ -178,7 +239,6 @@ function selectGeneral(genNum, name) {
     document.getElementById(`genDropdown${genNum}`).classList.add('hidden');
 }
 
-// 공용전법(2번, 3번 전법) 검색 자동완성
 function handleSkillInput(genNum, skillNum) {
     const inputVal = document.getElementById(`deckSkill${genNum}_${skillNum}`).value.trim();
     const dropdown = document.getElementById(`skillDropdown${genNum}_${skillNum}`);
@@ -190,11 +250,7 @@ function handleSkillInput(genNum, skillNum) {
 
     const matches = COMMON_TACTICS_LIST.filter(tactic => tactic.includes(inputVal));
     if (matches.length > 0) {
-        let html = '';
-        matches.forEach(tactic => {
-            html += `<div onclick="selectSkill(${genNum}, ${skillNum}, '${tactic}')" class="px-3 py-2 text-xs text-main hover:bg-hover cursor-pointer border-b border-theme last:border-b-0">${tactic}</div>`;
-        });
-        dropdown.innerHTML = html;
+        dropdown.innerHTML = matches.map(tactic => `<div onclick="selectSkill(${genNum}, ${skillNum}, '${tactic}')" class="px-3 py-2 text-xs text-main hover:bg-hover cursor-pointer border-b border-theme last:border-b-0">${tactic}</div>`).join('');
         dropdown.classList.remove('hidden');
     } else {
         dropdown.classList.add('hidden');
@@ -206,9 +262,8 @@ function selectSkill(genNum, skillNum, tactic) {
     document.getElementById(`skillDropdown${genNum}_${skillNum}`).classList.add('hidden');
 }
 
-// 덱 비우기
 function clearDeckInputs() {
-    document.getElementById('deckFormationSelect').value = '기략진';
+    populateFormationSelect('기략진');
     for(let i=1; i<=3; i++) {
         document.getElementById(`deckGen${i}`).value = '';
         document.getElementById(`deckSkill${i}_1`).value = '';
@@ -217,7 +272,6 @@ function clearDeckInputs() {
     }
 }
 
-// 덱 저장
 function saveDeckData() {
     const member = members.find(m => m.id === currentEditingMemberId);
     if (!member) return;
@@ -246,7 +300,6 @@ function saveDeckData() {
     alert("덱 편성이 성공적으로 수정되었습니다!");
 }
 
-// 도감 마크다운 업로드 처리
 function handleDictMarkdownUpload(event) {
     const file = event.target.files[0];
     if (!file) return;
@@ -255,18 +308,11 @@ function handleDictMarkdownUpload(event) {
     reader.onload = function(e) {
         try {
             const content = e.target.result;
-            if (!content.trim()) return alert("업로드한 파일에 내용이 없습니다.");
-
-            DICT_CONTENTS[activeDictUploadKey] = content;
-            saveDataToStorage();
-
-            alert("📚 도감 데이터가 갱신되었습니다!");
-            if (!document.getElementById('dictModal').classList.contains('hidden')) {
-                switchDictTab(currentDictTargetTab);
-            }
+            if (!content.trim()) return alert("파일 내용이 비어있습니다.");
+            alert("📚 도감 마크다운이 업로드되었습니다!");
             toggleModal('dataUploadModal');
         } catch (err) {
-            alert("마크다운 읽기 오류: " + err.message);
+            alert("오류 발생: " + err.message);
         }
         event.target.value = '';
     };
@@ -283,12 +329,11 @@ function handleAllianceExcelUpload(event) {
             const workbook = XLSX.read(data, {type: 'array'});
             const worksheet = workbook.Sheets[workbook.SheetNames[0]];
             const jsonRows = XLSX.utils.sheet_to_json(worksheet, {defval: ""});
-            if(jsonRows.length === 0) return alert("엑셀 파일에 데이터가 없습니다.");
+            if(jsonRows.length === 0) return alert("엑셀 데이터가 없습니다.");
 
             const allianceToAssign = activeUploadAlliance || categoryNames[0];
             jsonRows.forEach((row, idx) => {
-                let rawRow = {};
-                let rawNameKey = '';
+                let rawRow = {}, rawNameKey = '';
                 Object.keys(row).forEach(k => {
                     const cleanKey = k.trim().toLowerCase().replace(/\s+/g, '');
                     const val = String(row[k]).trim();
@@ -300,29 +345,22 @@ function handleAllianceExcelUpload(event) {
 
                 const uidVal = rawRow['캐릭터id'] || rawRow['uid'] || rawRow['id'] || '';
                 const nameVal = rawRow['멤버'] || rawRow['닉네임'] || rawRow['이름'] || rawNameKey || `대원_${idx+1}`;
-                const jobVal = rawRow['직업'] || '';
                 if (!uidVal) return;
 
                 let existing = members.find(m => String(m.uid) === uidVal);
                 if (existing) {
                     existing.name = nameVal;
-                    if (jobVal) existing.job = jobVal;
                     existing.alliance = allianceToAssign;
                 } else {
-                    members.push({
-                        id: Date.now() + Math.random() + idx,
-                        uid: uidVal, name: nameVal, job: jobVal, alliance: allianceToAssign, isAdminRole: false, decks: []
-                    });
+                    members.push({ id: Date.now() + Math.random() + idx, uid: uidVal, name: nameVal, job: rawRow['직업'] || '', alliance: allianceToAssign, isAdminRole: false, decks: [] });
                 }
             });
 
             saveDataToStorage();
-            alert(`👥 ${getDisplayCategoryName(allianceToAssign)} 엑셀 반영 완료!`);
             renderTable();
+            alert("연맹 명단 반영 완료!");
             toggleModal('dataUploadModal');
-        } catch (err) {
-            alert("엑셀 파싱 오류: " + err.message);
-        }
+        } catch (err) { alert("파싱 오류: " + err.message); }
         event.target.value = '';
     };
     reader.readAsArrayBuffer(file);
@@ -338,14 +376,12 @@ function handleMemberWeekExcelUpload(event) {
             const workbook = XLSX.read(data, {type: 'array'});
             const worksheet = workbook.Sheets[workbook.SheetNames[0]];
             const jsonRows = XLSX.utils.sheet_to_json(worksheet, {defval: ""});
-            if(jsonRows.length === 0) return alert("엑셀 파일에 데이터가 없습니다.");
+            if(jsonRows.length === 0) return alert("데이터 없음");
 
             let uploadedUids = new Set();
             memberWeekData = jsonRows.map((row, idx) => {
                 let rawRow = {};
-                Object.keys(row).forEach(k => {
-                    rawRow[k.trim().toLowerCase().replace(/\s+/g, '')] = String(row[k]).trim();
-                });
+                Object.keys(row).forEach(k => { rawRow[k.trim().toLowerCase().replace(/\s+/g, '')] = String(row[k]).trim(); });
 
                 const uidVal = rawRow['캐릭터id'] || rawRow['uid'] || rawRow['id'] || '';
                 const nameVal = rawRow['멤버'] || rawRow['닉네임'] || rawRow['이름'] || '';
@@ -356,41 +392,26 @@ function handleMemberWeekExcelUpload(event) {
                     existingMember.name = nameVal;
                     existingMember.alliance = '금의위';
                 } else if (uidVal) {
-                    members.push({
-                        id: Date.now() + Math.random() + idx,
-                        uid: uidVal, name: nameVal, job: rawRow['직업'] || '', alliance: '금의위', isAdminRole: false, decks: []
-                    });
+                    members.push({ id: Date.now() + Math.random() + idx, uid: uidVal, name: nameVal, job: rawRow['직업'] || '', alliance: '금의위', isAdminRole: false, decks: [] });
                 }
 
                 return {
-                    id: uidVal || idx,
-                    uid: uidVal,
-                    name: nameVal,
-                    job: rawRow['직업'] || '',
-                    alliance: '금의위',
-                    group: rawRow['조별'] || '',
-                    position: rawRow['직위'] || '일반 멤버',
+                    id: uidVal || idx, uid: uidVal, name: nameVal, job: rawRow['직업'] || '', alliance: '금의위',
+                    group: rawRow['조별'] || '', position: rawRow['직위'] || '일반 멤버',
                     prosperity: Number(String(rawRow['번영'] || 0).replace(/,/g, '')) || 0,
                     mhoon: Number(String(rawRow['주간무훈'] || rawRow['무훈'] || 0).replace(/,/g, '')) || 0,
                     contribution: Number(String(rawRow['주간공헌'] || rawRow['공헌'] || 0).replace(/,/g, '')) || 0,
-                    camp: rawRow['주둔지'] || '',
-                    siegeCount: Number(String(rawRow['주공성횟수'] || rawRow['공성횟수'] || 0).replace(/,/g, '')) || 0
+                    camp: rawRow['주둔지'] || '', siegeCount: Number(String(rawRow['주공성횟수'] || rawRow['공성횟수'] || 0).replace(/,/g, '')) || 0
                 };
             });
 
-            members.forEach(m => {
-                if (m.alliance === '금의위' && m.uid && !uploadedUids.has(String(m.uid))) m.alliance = '재야';
-            });
-
+            members.forEach(m => { if (m.alliance === '금의위' && m.uid && !uploadedUids.has(String(m.uid))) m.alliance = '재야'; });
             saveDataToStorage();
             localStorage.setItem('memberWeekData', JSON.stringify(memberWeekData));
-            alert(`📊 주간활동 데이터 ${memberWeekData.length}건 반영 완료!`);
-            if (currentActiveView === 'stats') renderStatsTable();
-            else renderTable();
+            alert("주간활동 데이터 반영 완료!");
+            if (currentActiveView === 'stats') renderStatsTable(); else renderTable();
             toggleModal('dataUploadModal');
-        } catch (err) {
-            alert("엑셀 파싱 오류: " + err.message);
-        }
+        } catch (err) { alert("오류: " + err.message); }
         event.target.value = '';
     };
     reader.readAsArrayBuffer(file);
@@ -417,9 +438,7 @@ function renderStatsTable() {
     document.getElementById('statAvgContribution').innerText = Math.round(memberWeekData.reduce((a,c)=>a+c.contribution,0)/(memberWeekData.length||1)).toLocaleString();
     document.getElementById('statAvgSiege').innerText = `${(memberWeekData.reduce((a,c)=>a+c.siegeCount,0)/(memberWeekData.length||1)).toFixed(1)}회`;
 
-    let html = '';
-    filtered.forEach((m, idx) => {
-        html += `
+    tbody.innerHTML = filtered.map((m, idx) => `
         <tr class="border-b border-theme transition bg-hover">
             <td class="p-3 sm:p-4 border-r border-theme text-center font-bold text-muted">${idx + 1}</td>
             <td class="p-3 sm:p-4 border-r border-theme font-bold text-main">${m.name}</td>
@@ -431,32 +450,21 @@ function renderStatsTable() {
             <td class="p-3 sm:p-4 border-r border-theme text-right font-mono text-emerald-400">${m.contribution.toLocaleString()}</td>
             <td class="p-3 sm:p-4 border-r border-theme text-muted text-xs">${m.camp}</td>
             <td class="p-3 sm:p-4 text-center font-bold">${m.siegeCount}회</td>
-        </tr>`;
-    });
-    tbody.innerHTML = html || `<tr><td colspan="10" class="p-8 text-center text-muted">데이터 없음</td></tr>`;
+        </tr>`).join('') || `<tr><td colspan="10" class="p-8 text-center text-muted">데이터 없음</td></tr>`;
 }
 
 function runSpyCheck() {
-    const duplicateBox = document.getElementById('duplicateUidList');
-    const suspiciousBox = document.getElementById('suspiciousUidList');
     let uidMap = {}, duplicates = [], suspicious = [];
-
     members.forEach(m => {
         const uidStr = String(m.uid).trim();
-        if (!uidStr || uidStr === '0000' || uidStr.length < 5) {
-            suspicious.push(m);
-            return;
-        }
+        if (!uidStr || uidStr === '0000' || uidStr.length < 5) { suspicious.push(m); return; }
         if (uidMap[uidStr]) {
             if (!duplicates.some(d => d.uid === uidStr)) duplicates.push({ uid: uidStr, members: [uidMap[uidStr], m] });
             else duplicates.find(d => d.uid === uidStr).members.push(m);
-        } else {
-            uidMap[uidStr] = m;
-        }
+        } else { uidMap[uidStr] = m; }
     });
-
-    duplicateBox.innerHTML = duplicates.length === 0 ? `<p class="py-2 text-emerald-400 font-bold">✅ 중복 UID 없음</p>` : duplicates.map(d=>`<div class="bg-panel p-2 rounded border border-red-500/30 flex justify-between"><span>${d.uid}</span><span class="text-red-400">${d.members.map(m=>m.name).join(', ')}</span></div>`).join('');
-    suspiciousBox.innerHTML = suspicious.length === 0 ? `<p class="py-2 text-emerald-400 font-bold">✅ 이상 계정 없음</p>` : suspicious.map(m=>`<div class="bg-panel p-2 rounded border border-orange-500/30"><span>${m.name}</span></div>`).join('');
+    document.getElementById('duplicateUidList').innerHTML = duplicates.length === 0 ? `<p class="py-2 text-emerald-400 font-bold">✅ 중복 UID 없음</p>` : duplicates.map(d=>`<div class="bg-panel p-2 rounded border border-red-500/30 flex justify-between"><span>${d.uid}</span><span class="text-red-400">${d.members.map(m=>m.name).join(', ')}</span></div>`).join('');
+    document.getElementById('suspiciousUidList').innerHTML = suspicious.length === 0 ? `<p class="py-2 text-emerald-400 font-bold">✅ 이상 계정 없음</p>` : suspicious.map(m=>`<div class="bg-panel p-2 rounded border border-orange-500/30"><span>${m.name}</span></div>`).join('');
     toggleModal('spyCheckModal');
 }
 
@@ -468,10 +476,8 @@ function toggleSubMenu(menuId) {
 }
 
 function toggleMobileDrawer() {
-    const drawer = document.getElementById('mobileDrawerMenu');
-    const backdrop = document.getElementById('mobileDrawerBackdrop');
-    drawer.classList.toggle('-translate-x-full');
-    backdrop.classList.toggle('hidden');
+    document.getElementById('mobileDrawerMenu').classList.toggle('-translate-x-full');
+    document.getElementById('mobileDrawerBackdrop').classList.toggle('hidden');
 }
 
 async function loadDataFromFirebase() {
@@ -483,7 +489,7 @@ async function loadDataFromFirebase() {
                 const data = docSnap.data();
                 if (data.members) members = data.members;
                 if (data.categoryNames) categoryNames = data.categoryNames;
-                if (data.DICT_CONTENTS) DICT_CONTENTS = data.DICT_CONTENTS;
+                if (data.DICT_DETAIL_DATA) DICT_DETAIL_DATA = data.DICT_DETAIL_DATA;
                 if (currentFilter !== '⭐ 즐겨찾기' && !categoryNames.includes(currentFilter)) currentFilter = categoryNames[0];
                 saveDataToStorage();
                 renderFilterButtons();
@@ -501,14 +507,12 @@ async function loadDataFromFirebase() {
 async function saveDataToStorage() {
     localStorage.setItem('gameMembers', JSON.stringify(members));
     localStorage.setItem('categoryNames', JSON.stringify(categoryNames));
-    localStorage.setItem('dictContents', JSON.stringify(DICT_CONTENTS));
+    localStorage.setItem('dictDetailData', JSON.stringify(DICT_DETAIL_DATA));
     localStorage.setItem('userFavorites', JSON.stringify(favorites));
 
     if (window.firebaseDB) {
         const { db, doc, setDoc } = window.firebaseDB;
-        try {
-            await setDoc(doc(db, "alliance_data", "main"), { members, categoryNames, DICT_CONTENTS }, { merge: true });
-        } catch (err) { console.error(err); }
+        try { await setDoc(doc(db, "alliance_data", "main"), { members, categoryNames, DICT_DETAIL_DATA }, { merge: true }); } catch (err) { console.error(err); }
     }
 }
 
@@ -525,9 +529,7 @@ function handleUidAuth() {
         matchedMember = { id: Date.now() + Math.random(), uid: inputUid, name: isCreator ? "관리자(산도로)" : `대원_${inputUid.slice(-4)}`, alliance: categoryNames[0], job: "", isAdminRole: isCreator, decks: [] };
         members.push(matchedMember);
         saveDataToStorage();
-    } else if (isCreator) {
-        matchedMember.isAdminRole = true;
-    }
+    } else if (isCreator) { matchedMember.isAdminRole = true; }
 
     localStorage.setItem('loggedUser', JSON.stringify({ uid: matchedMember.uid, name: matchedMember.name, time: new Date().toLocaleString() }));
     document.getElementById('authOverlay').classList.add('hidden');
@@ -587,7 +589,7 @@ function applyAdminUIState() {
     
     const btn = document.getElementById('editModeBtn');
     if (btn) {
-        btn.innerHTML = effectiveIsAdmin ? "<span>🛡️</span> 제어판" : "<span>🛡️</span> 관리자 모드";
+        btn.innerHTML = effectiveIsAdmin ? "<span>🛡</span> 제어판" : "<span>🛡️</span> 관리자 모드";
         btn.className = effectiveIsAdmin ? "bg-red-800 hover:bg-red-700 px-3 py-2 rounded-lg font-bold text-white text-xs shadow transition flex items-center gap-1.5" : "bg-amber-600 hover:bg-amber-500 px-3 py-2 rounded-lg font-bold text-white text-xs shadow transition flex items-center gap-1.5";
     }
     renderFilterButtons();
@@ -596,8 +598,7 @@ function applyAdminUIState() {
 
 function openCategoryModal() {
     toggleModal('adminControlModal');
-    const container = document.getElementById('categoryInputsContainer');
-    container.innerHTML = categoryNames.map((cat, i) => `
+    document.getElementById('categoryInputsContainer').innerHTML = categoryNames.map(cat => `
         <div class="flex gap-2 items-center bg-main p-2 rounded-lg border border-theme">
             <input type="text" value="${getDisplayCategoryName(cat)}" class="cat-input flex-1 bg-panel border border-theme px-3 py-1.5 rounded-lg text-sm text-main">
             <button type="button" onclick="this.parentElement.remove()" class="bg-red-800 text-white px-3 py-1.5 rounded-lg text-xs font-bold">삭제</button>
@@ -677,8 +678,7 @@ function deleteSelectedMembers() {
     const sel = document.querySelectorAll('.row-checkbox:checked');
     if (sel.length === 0) return alert("선택된 대원이 없습니다.");
     if (confirm("선택한 대원을 삭제하시겠습니까?")) {
-        const ids = Array.from(sel).map(b => Number(b.getAttribute('data-id')));
-        members = members.filter(m => !ids.includes(m.id));
+        members = members.filter(m => !Array.from(sel).map(b => Number(b.getAttribute('data-id'))).includes(m.id));
         saveDataToStorage();
         renderTable();
     }
