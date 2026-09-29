@@ -96,11 +96,23 @@ function handleUidAuth() {
     }
 
     let matchedMember = members.find(m => String(m.uid) === inputUid);
+    let isCreator = (inputUid === CREATOR_UID);
+
     if (!matchedMember) {
-        if (inputUid === CREATOR_UID) {
-            matchedMember = { uid: CREATOR_UID, name: "제작자(총사령관)", alliance: categoryNames[0], job: "금의위", decks: [] };
+        if (isCreator) {
+            matchedMember = { uid: CREATOR_UID, name: "관리자(산도로)", alliance: categoryNames[0], job: "금의위", decks: [] };
         } else {
-            return alert("등록된 대원 정보를 찾을 수 없습니다.");
+            // ✨ 일반 유저는 명단에 없으면 자동 생성 후 일반 로그인 처리, 혹은 안내
+            matchedMember = { 
+                id: Date.now() + Math.random(), 
+                uid: inputUid, 
+                name: `대원_${inputUid.slice(-4)}`, 
+                alliance: categoryNames[0], 
+                job: "", 
+                decks: [] 
+            };
+            members.push(matchedMember);
+            saveDataToStorage();
         }
     }
 
@@ -109,7 +121,13 @@ function handleUidAuth() {
     accessLogs.unshift({ uid: matchedMember.uid, name: matchedMember.name, time: new Date().toLocaleString() });
     localStorage.setItem('accessLogs', JSON.stringify(accessLogs));
 
-    alert(`환영합니다, ${matchedMember.name}님!`);
+    // ✨ 관리자(산도로)와 일반 유저 로그인 멘트 분기 처리
+    if (isCreator || matchedMember.uid === CREATOR_UID) {
+        alert("반갑습니다 관리자(산도로)님!");
+    } else {
+        alert(`환영합니다, ${matchedMember.name}님! (일반 모드 로그인)`);
+    }
+
     document.getElementById('authOverlay').classList.add('hidden');
     loadDataFromFirebase();
 }
@@ -139,7 +157,7 @@ function turnOffAdminMode() {
     isUserPreview = false;
     applyAdminUIState();
     toggleModal('adminControlModal');
-    alert("🛡️️ 관리자 모드가 해제되었습니다.");
+    alert("🛡 관리자 모드가 해제되었습니다.");
 }
 
 function toggleUserPreview() {
