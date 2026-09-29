@@ -17,7 +17,7 @@ let members = [];
 
 let DICT_CONTENTS = {
     formation: `# 1. 진형 및 병종상성 대도감\n## 진형\n### 기형진\n- **특성**: 기병 피해 증가 및 방어 상승\n### 일자진\n- **특성**: 전열 피해 8% 감소\n### 학익진\n- **특성**: 원거리 및 책략 피해 상승\n### 어린진\n- **특성**: 돌격 및 선봉 전투력 극대화\n### 팔괘진\n- **특성**: 진형 전체 책략 방어 및 회복`,
-    synergy: `# 2. 각 장수 인연보너스 대도감\n## 하북 정장\n### 구성원\n- **대상**: 안량, 문추, 장합`,
+    synergy: `# 2. 각 장수 인연보너스 대도감\n## 도원결의\n### 구성원\n- **대상**: 유비, 관우, 장비\n- **인연 효과**: 3번째 턴 행동 전 아군 전체 디버프 일괄 제거\n## 오호상장\n### 구성원\n- **대상**: 관우, 장비, 조운, 마초, 황충\n- **인연 효과**: 회심(치명타) 피해 +10%`,
     generalTactic: `# 3. 장수 전법정리 대도감\n## 오나라\n### 조운\n- **고유전법**: 칠진칠출\n### 유비\n- **고유전법**: 백성과 함께\n### 초선\n- **고유전법**: 폐월`,
     commonTactic: `# 4. 공용 전법정리 대도감\n## 지휘 전법\n### 격려\n- **효과**: 우군 무력 증가\n### 허점 공략\n- **효과**: 방어 감소\n### 청낭 치료\n- **효과**: 회복`
 };
@@ -189,7 +189,7 @@ function applyAdminUIState() {
         }
         if(addBtn) addBtn.classList.add('hidden');
         if(delSelectedBtn) addBtn.classList.add('hidden');
-        if(delHeader) addBtn.classList.add('hidden');
+        if(delHeader) delHeader.classList.add('hidden');
         if(selectAllHeader) addBtn.classList.add('hidden');
         if(uidHeader) uidHeader.classList.add('hidden');
     }
@@ -368,19 +368,18 @@ function openDeckModal(memberId, deckIndex) {
     toggleModal('deckEditModal');
 }
 
-// ✨ 진형 효과 및 인연 보너스 핵심 내용만 추출하여 간결하게 표시
+// ✨ 진형 효과 및 인연 보너스 정밀 매칭 및 [이름 - 효과] 형식 출력 함수
 function updateDeckFormationBonusInfo() {
     const selectedFormation = document.getElementById('editDeckFormation').value.trim();
     const formationTextElem = document.getElementById('deckFormationBonusText');
     const synergyTextElem = document.getElementById('deckSynergyBonusText');
 
-    // 1. 진형 효과 (주요 효과 및 피격률 관련 라인만 추출)
+    // 1. 진형 효과 (주요 효과 및 피격률 관련 내용만 간결하게 추출)
     const formationMarkdown = DICT_CONTENTS['formation'] || "";
     let parsedFormations = parseMarkdownByTarget(formationMarkdown);
     let foundForm = parsedFormations.find(f => f.title.replace(/\s+/g, '').includes(selectedFormation.replace(/\s+/g, '')));
     
     if (foundForm) {
-        // 상세 설명 줄바꿈 단위로 나누어 핵심 내용(효과, 피격 등)만 필터링하거나 깔끔하게 정돈
         let lines = foundForm.desc.split('<br>');
         let conciseLines = lines.filter(l => l.includes('효과') || l.includes('피격') || l.includes('피해') || l.includes('특성')).slice(0, 2);
         formationTextElem.innerHTML = conciseLines.length > 0 ? conciseLines.join(' | ') : foundForm.desc;
@@ -388,7 +387,7 @@ function updateDeckFormationBonusInfo() {
         formationTextElem.innerText = `${selectedFormation} 정보 없음`;
     }
 
-    // 2. 장수 인연 보너스 (인연 효과 이름만 간결하게 추출)
+    // 2. 장수 인연 보너스 ([이름 - 효과] 형식 및 인원수 충족 정확한 매칭)
     const g1 = document.getElementById('deckG1').value.split('(')[0].trim();
     const g2 = document.getElementById('deckG2').value.split('(')[0].trim();
     const g3 = document.getElementById('deckG3').value.split('(')[0].trim();
@@ -399,22 +398,37 @@ function updateDeckFormationBonusInfo() {
     let activeSynergies = [];
 
     parsedSynergies.forEach(syn => {
+        // 도감 내용에서 대상 장수 목록과 인연 효과 분리 추출
+        let targetLine = syn.desc.split('<br>').find(l => l.includes('대상') || l.includes('구성원')) || syn.desc;
+        let effectLine = syn.desc.split('<br>').find(l => l.includes('효과')) || "효과 미등록";
+        
+        let cleanEffect = effectLine.replace(/<[^>]*>?/gm, '').replace('인연 효과:', '').trim();
+
+        // 등록된 대상 장수들이 현재 덱에 몇 명이나 포함되어 있는지 카운트
+        let requiredGenerals = ['유비', '관우', '장비', '조운', '마초', '황충', '안량', '문추', '장합'].filter(g => targetLine.includes(g));
         let matchedCount = 0;
+
         activeGenerals.forEach(gen => {
-            if (syn.desc.includes(gen) || syn.title.includes(gen)) {
+            if (targetLine.includes(gen)) {
                 matchedCount++;
             }
         });
-        if (matchedCount >= 2) {
-            // 장황한 설명 제외하고 인연 효과 타이틀 위주로 추출
-            activeSynergies.setItem ? null : activeSynergies.push(`⭐ ${syn.title}`);
+
+        // 도원결의(3명 전원 필수) 혹은 오호상장 등 조건 인원수에 맞게 엄격하게 판별
+        let minRequired = requiredGenerals.length >= 3 ? 3 : 2; 
+        if (targetLine.includes('유비') && targetLine.includes('관우') && targetLine.includes('장비')) {
+            minRequired = 3; // 도원결의는 3명 모두 필요
+        }
+
+        if (matchedCount >= minRequired) {
+            activeSynergies.push(`⭐ ${syn.title} - ${cleanEffect}`);
         }
     });
 
     if (activeSynergies.length > 0) {
         synergyTextElem.innerHTML = activeSynergies.join(' | ');
     } else {
-        synergyTextElem.innerText = activeGenerals.length > 0 ? "활성화된 인연 효과 없음" : "장수를 선택하세요.";
+        synergyTextElem.innerText = activeGenerals.length > 0 ? "현재 조합에서 활성화된 인연 보너스가 없습니다." : "장수를 선택하면 인연 보너스가 자동으로 계산됩니다.";
     }
 }
 
