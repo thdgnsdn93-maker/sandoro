@@ -35,6 +35,29 @@ function toggleSubMenu(menuId) {
 }
 
 async function loadDataFromFirebase() {
+    // 1. 파이어베이스가 연결되어 있다면 파이어베이스 데이터를 최우선으로 로드
+    if (window.firebaseDB) {
+        const { db, doc, getDoc } = window.firebaseDB;
+        try {
+            const docSnap = await getDoc(doc(db, "alliance_data", "main"));
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                if (data.members) members = data.members;
+                if (data.categoryNames) categoryNames = data.categoryNames;
+                if (data.DICT_CONTENTS) DICT_CONTENTS = data.DICT_CONTENTS;
+                
+                // 로컬 스토리지도 최신 상태로 동기화
+                saveDataToStorage();
+                renderFilterButtons();
+                renderTable();
+                return;
+            }
+        } catch (err) {
+            console.error("파이어베이스 연동 실패:", err);
+        }
+    }
+
+    // 2. 파이어베이스 연결 전이거나 실패한 경우에만 로컬 스토리지 사용
     const localMembers = localStorage.getItem('gameMembers');
     const localCategories = localStorage.getItem('categoryNames');
     const localDict = localStorage.getItem('dictContents');
@@ -43,28 +66,6 @@ async function loadDataFromFirebase() {
     if (localCategories) categoryNames = JSON.parse(localCategories);
     if (localDict) DICT_CONTENTS = JSON.parse(localDict);
 
-    renderFilterButtons();
-    renderTable();
-
-    if (!window.firebaseDB) {
-        setTimeout(loadDataFromFirebase, 300);
-        return;
-    }
-    const { db, doc, getDoc } = window.firebaseDB;
-    try {
-        const docSnap = await getDoc(doc(db, "alliance_data", "main"));
-        if (docSnap.exists()) {
-            const data = docSnap.data();
-            if (data.members && data.members.length > 0) members = data.members;
-            if (data.categoryNames) categoryNames = data.categoryNames;
-            if (data.DICT_CONTENTS) DICT_CONTENTS = data.DICT_CONTENTS;
-            saveDataToStorage();
-        } else {
-            saveDataToStorage();
-        }
-    } catch (err) {
-        console.error("파이어베이스 연동 실패:", err);
-    }
     renderFilterButtons();
     renderTable();
 }
@@ -160,7 +161,6 @@ function openAdminControlFromSub(currentModalId) {
     toggleModal('adminControlModal');
 }
 
-// ✨ 정보일람 및 대도감 팝업 열기 함수 추가
 function openDictTabWithScroll(tabKey) {
     switchDictTab(tabKey);
     toggleModal('dictModal');
@@ -875,6 +875,21 @@ function handleExcelUpload(event) {
         event.target.value = '';
     };
     reader.readAsArrayBuffer(file);
+}
+
+function handleDictFileUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const content = e.target.result;
+        DICT_CONTENTS[currentDictTargetTab] = content;
+        saveDataToStorage();
+        switchDictTab(currentDictTargetTab);
+        alert("도감 데이터가 성공적으로 업데이트되었습니다!");
+        event.target.value = '';
+    };
+    reader.readAsText(file, "utf-8");
 }
 
 function openSettingsModal() { toggleModal('settingsModal'); }
