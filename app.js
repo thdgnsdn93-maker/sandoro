@@ -447,7 +447,6 @@ function openDictTabWithScroll(tabKey) {
 }
 
 function applyAdminUIState() {
-    // 제작자 및 관리자 권한이 확인되면 자동으로 관리자 편집 상태 활성화
     if (isCurrentLoggedUserAdmin() && !isAdminMode) {
         isAdminMode = true;
     }
@@ -457,7 +456,28 @@ function applyAdminUIState() {
     const delSelectedBtn = document.getElementById('delSelectedBtn');
     const spyBtn = document.getElementById('spyCheckBtn');
     
+    const selectAllHeader = document.getElementById('selectAllHeader');
+    const uidColHeader = document.getElementById('uidColHeader');
+    const delColHeader = document.getElementById('delColHeader');
+    
     const effectiveIsAdmin = isAdminMode && !isUserPreview;
+    const hasAdminRole = isCurrentLoggedUserAdmin();
+    const showUidCol = effectiveIsAdmin || hasAdminRole;
+
+    // 헤더 노출 여부 제어
+    if (effectiveIsAdmin) {
+        if(selectAllHeader) selectAllHeader.classList.remove('hidden');
+        if(delColHeader) delColHeader.classList.remove('hidden');
+    } else {
+        if(selectAllHeader) selectAllHeader.classList.add('hidden');
+        if(delColHeader) delColHeader.classList.add('hidden');
+    }
+
+    if (showUidCol) {
+        if(uidColHeader) uidColHeader.classList.remove('hidden');
+    } else {
+        if(uidColHeader) uidColHeader.classList.add('hidden');
+    }
 
     if (effectiveIsAdmin) {
         if(btn) { btn.innerHTML = "<span>🛡️</span> 제어판"; btn.className = "bg-red-800 hover:bg-red-700 px-3 py-2 rounded-lg font-bold text-white text-xs shadow transition flex items-center gap-1.5"; }
@@ -637,26 +657,33 @@ function renderTable() {
         const tr = document.createElement('tr');
         tr.className = `border-b border-theme transition bg-hover`;
         let html = '';
-        if(effectiveIsAdmin) html += `<td class="p-3 sm:p-4 border-r border-theme text-center"><input type="checkbox" class="row-checkbox cursor-pointer" data-id="${member.id}"></td>`;
+        
+        // 1. 체크박스 열 (관리자 모드 전용)
+        if(effectiveIsAdmin) {
+            html += `<td class="p-3 sm:p-4 border-r border-theme text-center"><input type="checkbox" class="row-checkbox cursor-pointer" data-id="${member.id}"></td>`;
+        }
 
+        // 2. 즐겨찾기 열
         const isFav = favorites.includes(member.id);
         html += `<td class="p-3 sm:p-4 border-r border-theme text-center"><button type="button" onclick="toggleFavorite(${member.id})" class="text-sm">${isFav ? '⭐' : '☆'}</button></td>`;
         
+        // 3. No. 열
         const absoluteIndex = (pageSizeVal !== 'all') ? ((currentPage - 1) * parseInt(pageSizeVal, 10)) + index + 1 : index + 1;
         html += `<td class="p-3 sm:p-4 border-r border-theme text-center font-bold text-muted">${absoluteIndex}</td>`;
         
+        // 4. UID 열
         if (showUidCol) {
             html += `<td class="p-3 sm:p-4 border-r border-theme font-mono"><input type="text" value="${member.uid || ''}" onchange="updateMemberField(${member.id}, 'uid', this.value)" class="bg-main border border-theme px-2 py-1 rounded text-xs w-28 text-main"></td>`;
         }
         
-        // 닉네임 수정 가능 인풋
+        // 5. 닉네임 열
         if (effectiveIsAdmin) {
             html += `<td class="p-3 sm:p-4 border-r border-theme"><input type="text" value="${member.name}" onchange="updateMemberField(${member.id}, 'name', this.value)" class="bg-main border border-theme px-2 py-1 rounded text-xs font-bold w-24 text-main"></td>`;
         } else {
             html += `<td class="p-3 sm:p-4 border-r border-theme font-bold">${member.name}</td>`;
         }
 
-        // 직업 수정 가능 셀렉트박스
+        // 6. 직업 열
         if (effectiveIsAdmin) {
             let jobOptions = `<option value="">- 선택 -</option>`;
             AVAILABLE_JOBS.forEach(j => {
@@ -667,7 +694,7 @@ function renderTable() {
             html += `<td class="p-3 sm:p-4 border-r border-theme text-muted">${member.job || '-'}</td>`;
         }
 
-        // 소속 수정 가능 셀렉트박스
+        // 7. 소속 열
         if (effectiveIsAdmin) {
             let catOptions = '';
             categoryNames.forEach(c => {
@@ -678,7 +705,7 @@ function renderTable() {
             html += `<td class="p-3 sm:p-4 border-r border-theme">${member.alliance}</td>`;
         }
 
-        // 덱 설정 셀 (클릭 시 덱 편집 모달 오픈)
+        // 8. 보유덱 1~5 열
         for(let i=0; i<5; i++) {
             const deck = member.decks && member.decks[i];
             if (deck && (deck.g1 || deck.g2 || deck.g3)) {
@@ -688,7 +715,11 @@ function renderTable() {
             }
         }
         
-        if(effectiveIsAdmin) html += `<td class="p-2 text-center"><button onclick="deleteMember(${member.id})" class="bg-red-800 hover:bg-red-700 text-white px-2 py-1 rounded text-xs">삭제</button></td>`;
+        // 9. 관리(삭제) 열 (관리자 모드 전용)
+        if(effectiveIsAdmin) {
+            html += `<td class="p-2 text-center"><button onclick="deleteMember(${member.id})" class="bg-red-800 hover:bg-red-700 text-white px-2 py-1 rounded text-xs">삭제</button></td>`;
+        }
+
         tr.innerHTML = html;
         tbody.appendChild(tr);
     });
