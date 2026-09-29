@@ -213,9 +213,9 @@ function applyAdminUIState() {
             btn.className = "bg-amber-600 hover:bg-amber-500 px-4 py-2 rounded-lg font-bold text-white text-xs shadow transition flex items-center gap-1.5";
         }
         if(addBtn) addBtn.classList.add('hidden');
-        if(delSelectedBtn) addBtn.classList.add('hidden');
+        if(delSelectedBtn) delSelectedBtn.classList.add('hidden');
         if(delHeader) delHeader.classList.add('hidden');
-        if(selectAllHeader) delHeader.classList.add('hidden');
+        if(selectAllHeader) selectAllHeader.classList.add('hidden');
         if(uidHeader) uidHeader.classList.add('hidden');
     }
     renderFilterButtons();
@@ -341,7 +341,6 @@ let activeUploadAlliance = '금의위';
 function openDataUploadModal() {
     toggleModal('adminControlModal');
     
-    // ✨ 데이터 업로드 모달 내부에 각 맹별 업로드 버튼 영역 동적 생성
     let uploadModal = document.getElementById('dataUploadModal');
     if (uploadModal) {
         let modalBox = uploadModal.querySelector('div.bg-panel') || uploadModal.querySelector('div');
@@ -368,7 +367,6 @@ function openDataUploadModal() {
                     <input type="file" id="allianceExcelInput" accept=".xlsx, .xls, .csv" class="hidden" onchange="handleAllianceExcelUpload(event)">
                 `;
 
-                // 기존 통합 업로드 버튼 영역 교체 또는 삽입
                 let oldBox = modalBox.querySelector('div.bg-main');
                 if (oldBox) {
                     oldBox.replaceWith(memberSection);
@@ -1095,6 +1093,7 @@ function renderTable() {
             <td class="p-4 border-r border-theme">${effectiveIsAdmin ? `<select onchange="updateMemberField(${member.id}, 'alliance', this.value)" class="text-xs bg-main border border-theme p-1 rounded">${allianceOptions}</select>` : `<span class="px-2.5 py-1 rounded-lg text-xs bg-panel border border-theme">${member.alliance}</span>`}</td>
         `;
 
+        // ✨ 보유덱 5개 모두 정상 출력되도록 수정 (0부터 4까지 총 5개)
         for(let i=0; i<5; i++) {
             const deck = member.decks && member.decks[i];
             if (deck && (deck.g1 || deck.g2 || deck.g3)) {
@@ -1179,7 +1178,6 @@ function handleAllianceExcelUpload(event) {
 
             let allianceChanges = [];
 
-            // 1. 업로드된 파일에 있는 인원들을 선택한 맹으로 등록 또는 갱신
             excelRowsData.forEach(row => {
                 let existingMember = members.find(m => String(m.uid) === String(row.uid));
                 if (existingMember) {
@@ -1205,7 +1203,6 @@ function handleAllianceExcelUpload(event) {
                 }
             });
 
-            // 2. ✨ 기존에 해당 맹에 있었으나 이번 업로드 파일에서 누락된 인원은 무조건 '재야'로 이동 처리
             members.forEach(member => {
                 if (member.alliance === targetAlliance && !uploadedUidsInThisFile.has(String(member.uid))) {
                     allianceChanges.push({ name: member.name, uid: member.uid, oldAlliance: targetAlliance, newAlliance: "재야 (명단 누락/탈퇴)" });
