@@ -208,7 +208,7 @@ function showDictDetail(item) {
     `;
 }
 
-// 📌 업로드 마크다운 문서를 1:1 정확한 이름과 내용으로 파싱하는 로직
+// 📌 [핵심 개선 파서] 마크다운 문서 내의 각 항목(이름과 상세내용)을 완벽하게 분리하는 로직
 function handleDictMarkdownUpload(event) {
     const file = event.target.files[0];
     if (!file) return;
@@ -228,7 +228,7 @@ function handleDictMarkdownUpload(event) {
                 if (!trimmed) return;
                 if (trimmed.startsWith('>') || trimmed.startsWith('---')) return;
 
-                // 새로운 항목(이름)의 시작점 감지 (### 헤더 또는 **볼드체** 또는 번호 매기기)
+                // 마크다운에서 새로운 항목 제목으로 인식할 패턴 (예: ### 이름, **이름**, 1. 이름 등)
                 const isHeader = trimmed.startsWith('###') || trimmed.startsWith('##') || trimmed.match(/^[0-9]+\.\s+/) || (trimmed.startsWith('**') && trimmed.endsWith('**'));
 
                 if (isHeader) {
@@ -243,7 +243,7 @@ function handleDictMarkdownUpload(event) {
                         .split('-')[0]
                         .trim();
 
-                    if (cleanName && cleanName.length < 20) {
+                    if (cleanName && cleanName.length < 25) {
                         currentItem = { name: cleanName, type: "상세 정보", effect: "" };
                     }
                 } else if (currentItem) {
@@ -276,7 +276,7 @@ function handleDictMarkdownUpload(event) {
                 }
                 alert(`📚 총 ${parsedItems.length}개의 항목이 정확하게 분리되어 반영되었습니다!`);
             } else {
-                alert("⚠️ 마크다운 형식을 올바르게 읽지 못했습니다.");
+                alert("⚠️ 마크다운 형식을 올바르게 읽지 못했습니다. 문서의 제목 형식을 확인해주세요.");
             }
             toggleModal('dataUploadModal');
         } catch (err) { alert("파싱 오류: " + err.message); }
