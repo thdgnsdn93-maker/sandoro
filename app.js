@@ -26,7 +26,8 @@ const GENERAL_DATABASE = {
     "초선": "폐월 (효과: 남성 무장 피해 감소 및 반사 병기 피해)",
     "장비": "만인지적 (효과: 적 전체 병기 피해 및 위협·공포 부여)",
     "여포": "무쌍의 용사 (효과: 전체 적군과 1회 일반 공격 교환 및 추가 병기 피해)",
-    "주유": "기지의 승리 (효과: 이상 상태 감지 시 기지 발동)"
+    "주유": "기지의 승리 (효과: 이상 상태 감지 시 기지 발동)",
+    "유비": "인의의 지도자 (효과: 아군 전체 병력 회복 및 방어력 증가)"
 };
 
 const COMMON_TACTICS_LIST = [
@@ -73,21 +74,29 @@ let DICT_DETAIL_DATA = JSON.parse(localStorage.getItem('dictDetailData')) || DEF
 const INVALID_DICT_NAMES = ['진형 및 상성', '무장 인연', '무장고유전법', '공용전법', '진형', '인연', '고유전법', '공용전법'];
 Object.keys(DICT_DETAIL_DATA).forEach(tabKey => {
     if (Array.isArray(DICT_DETAIL_DATA[tabKey])) {
-        DICT_DETAIL_DATA[tabKey] = DICT_DETAIL_DATA[tabKey].filter(item => {
-            if (!item || !item.name) return false;
-            const name = item.name.trim();
-            if (/^[0-9]+\.\s*$/.test(name)) return false;
-            if (INVALID_DICT_NAMES.includes(name)) return false;
-            if (/^[0-9]+\.\s*(진형|인연|고유전법|공용전법)/.test(name)) return false;
-            return true;
+        let mergedMap = new Map();
+        DICT_DETAIL_DATA[tabKey].forEach(item => {
+            if (!item || !item.name) return;
+            let name = item.name.replace(/[\u{1F000}-\u{1F6FF}|[\u{2600}-\u{27BF}]/gu, '').trim();
+            if (/^[0-9]+\.\s*$/.test(name)) return;
+            if (INVALID_DICT_NAMES.includes(name)) return;
+            if (!name || name.length < 2) return;
+
+            if (mergedMap.has(name)) {
+                let existing = mergedMap.get(name);
+                existing.effect += "\n" + (item.effect || "");
+            } else {
+                mergedMap.set(name, { name: name, type: item.type || "상세 정보", effect: item.effect || "" });
+            }
         });
+        DICT_DETAIL_DATA[tabKey] = Array.from(mergedMap.values());
     }
 });
 localStorage.setItem('dictDetailData', JSON.stringify(DICT_DETAIL_DATA));
 
 function getTacticTooltip(skillName) {
     if (!skillName) return "";
-    const cleanName = skillName.split(' ')[0].trim();
+    const cleanName = skillName.split(' ')[0].replace(/\(메인\)/g, '').trim();
     const allTactics = [...(DICT_DETAIL_DATA.generalTactic || []), ...(DICT_DETAIL_DATA.commonTactic || [])];
     const found = allTactics.find(t => t.name.includes(cleanName) || t.type.includes(cleanName));
     if (found) {
@@ -103,9 +112,9 @@ function updateFormationAndSynergyBonusText() {
     const formationObj = (DICT_DETAIL_DATA.formation || []).find(f => f.name === selectedFormationName);
     let formationText = formationObj ? `[진형보너스(${formationObj.name})] ${formationObj.effect}` : "선택된 진형 효과 없음";
 
-    const g1 = document.getElementById('deckGen1')?.value.trim() || '';
-    const g2 = document.getElementById('deckGen2')?.value.trim() || '';
-    const g3 = document.getElementById('deckGen3')?.value.trim() || '';
+    const g1 = (document.getElementById('deckGen1')?.value || '').replace(/\(메인\)/g, '').trim();
+    const g2 = (document.getElementById('deckGen2')?.value || '').replace(/\(메인\)/g, '').trim();
+    const g3 = (document.getElementById('deckGen3')?.value || '').replace(/\(메인\)/g, '').trim();
     const currentGenerators = [g1, g2, g3].filter(Boolean);
 
     let matchedSynergies = [];
@@ -380,7 +389,6 @@ function applyDeckEditModeUI() {
 
     for(let i=1; i<=3; i++) {
         document.getElementById(`deckGen${i}`).readOnly = !isDeckEditMode;
-        // 🔧 [수정] 장수 이름(g)뿐만 아니라 2번, 3번 전법 인풋 박스도 수정 모드일 때 readOnly가 해제되도록 완벽히 반영
         document.getElementById(`deckSkill${i}_2`).readOnly = !isDeckEditMode;
         document.getElementById(`deckSkill${i}_3`).readOnly = !isDeckEditMode;
     }
@@ -396,9 +404,11 @@ function applyDeckEditModeUI() {
     }
 }
 
+// 🔧 [(메인) 문구 자동 필터링 및 장수 검색 기능]
 function handleGenInput(genNum) {
     if (!isDeckEditMode) return;
-    const inputVal = document.getElementById(`deckGen${genNum}`).value.trim();
+    const rawInputVal = document.getElementById(`deckGen${genNum}`).value;
+    const inputVal = rawInputVal.replace(/\(메인\)/g, '').trim();
     const dropdown = document.getElementById(`genDropdown${genNum}`);
     const skillInput = document.getElementById(`deckSkill${genNum}_1`);
 
@@ -438,7 +448,6 @@ function handleSkillInput(genNum, skillNum) {
 
     if (!inputVal) { dropdown.classList.add('hidden'); return; }
 
-    // 🔧 [수정] 도감에 등록된 공용/고유 전법 전체 데이터에서 검색되도록 확장
     const allTacticsList = [
         ...COMMON_TACTICS_LIST,
         ...(DICT_DETAIL_DATA.generalTactic || []).map(t => `${t.name} (${t.type})`),
@@ -482,9 +491,9 @@ function saveDeckData() {
     
     member.decks[currentEditingDeckIdx] = {
         formation: document.getElementById('deckFormationSelect').value,
-        g1: document.getElementById('deckGen1').value.trim(),
-        g2: document.getElementById('deckGen2').value.trim(),
-        g3: document.getElementById('deckGen3').value.trim(),
+        g1: document.getElementById('deckGen1').value.replace(/\(메인\)/g, '').trim(),
+        g2: document.getElementById('deckGen2').value.replace(/\(메인\)/g, '').trim(),
+        g3: document.getElementById('deckGen3').value.replace(/\(메인\)/g, '').trim(),
         s1_1: document.getElementById('deckSkill1_1').value.trim(),
         s1_2: document.getElementById('deckSkill1_2').value.trim(),
         s1_3: document.getElementById('deckSkill1_3').value.trim(),
