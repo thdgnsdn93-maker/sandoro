@@ -69,7 +69,6 @@ const DEFAULT_DICT_DATA = {
     ]
 };
 
-// 🛡️️ 분류용 타이틀 및 불필요한 키워드 필터링 함수
 function isSectionTitle(name) {
     if (!name) return true;
     const trimmed = name.trim();
@@ -86,7 +85,6 @@ if (!DICT_DETAIL_DATA) {
     localStorage.setItem('dictDetailData', JSON.stringify(DICT_DETAIL_DATA));
 }
 
-// 중복 이름 통합 및 정제 처리
 Object.keys(DICT_DETAIL_DATA).forEach(tabKey => {
     if (Array.isArray(DICT_DETAIL_DATA[tabKey])) {
         let mergedMap = new Map();
@@ -319,7 +317,6 @@ function handleDictMarkdownUpload(event) {
             }
 
             if (parsedItems.length > 0) {
-                // 중복 이름 통합 및 정제
                 let mergedMap = new Map();
                 parsedItems.forEach(item => {
                     let name = item.name;
@@ -368,7 +365,7 @@ function openDeckModal(memberId, deckIdx) {
     isDeckEditMode = false;
 
     const titleEl = document.getElementById('deckModalTitle');
-    if (titleEl) titleEl.innerText = `⚔️ ${member.name} - 보유덱 ${deckIdx + 1} 덱 상세`;
+    if (titleEl) titleEl.innerText = `⚔️️ ${member.name} - 보유덱 ${deckIdx + 1} 덱 상세`;
 
     const deck = (member.decks && member.decks[deckIdx]) || {};
     populateFormationSelect(deck.formation || '일자진');
@@ -647,9 +644,16 @@ function handleMemberWeekExcelUpload(event) {
     reader.readAsArrayBuffer(file);
 }
 
+function switchStatsTab(tabName) {
+    ['mhoonTop10', 'contributionTop10', 'prosperityTop10', 'bottom10Percent'].forEach(t => {
+        const btn = document.getElementById(`statsTabBtn-${t}`);
+        const view = document.getElementById(`statsView-${t}`);
+        if (btn) btn.className = `px-3 py-2 rounded-lg text-xs font-bold transition ${t === tabName ? 'bg-amber-600 text-white shadow' : 'bg-main text-muted hover:bg-hover'}`;
+        if (view) view.classList.toggle('hidden', t !== tabName);
+    });
+}
+
 function renderStatsTable() {
-    const tbody = document.getElementById('stats-table-body');
-    if (!tbody) return;
     const keyword = (document.getElementById('statsSearchInput')?.value || '').toLowerCase().trim();
     const sortType = document.getElementById('statsSortSelect')?.value || 'contributionDesc';
 
@@ -668,19 +672,67 @@ function renderStatsTable() {
     document.getElementById('statAvgContribution').innerText = Math.round(memberWeekData.reduce((a,c)=>a+c.contribution,0)/(memberWeekData.length||1)).toLocaleString();
     document.getElementById('statAvgSiege').innerText = `${(memberWeekData.reduce((a,c)=>a+c.siegeCount,0)/(memberWeekData.length||1)).toFixed(1)}회`;
 
-    tbody.innerHTML = filtered.map((m, idx) => `
-        <tr class="border-b border-theme transition bg-hover">
-            <td class="p-3 sm:p-4 border-r border-theme text-center font-bold text-muted">${idx + 1}</td>
-            <td class="p-3 sm:p-4 border-r border-theme font-bold text-main">${m.name}</td>
-            <td class="p-3 sm:p-4 border-r border-theme text-muted">${m.job || '-'}</td>
-            <td class="p-3 sm:p-4 border-r border-theme text-muted">${m.group || '-'}</td>
-            <td class="p-3 sm:p-4 border-r border-theme"><span class="px-2 py-0.5 rounded text-xs bg-panel border border-theme">${m.position}</span></td>
-            <td class="p-3 sm:p-4 border-r border-theme text-right font-mono">${m.prosperity.toLocaleString()}</td>
-            <td class="p-3 sm:p-4 border-r border-theme text-right font-mono text-yellow-500">${m.mhoon.toLocaleString()}</td>
-            <td class="p-3 sm:p-4 border-r border-theme text-right font-mono text-emerald-400">${m.contribution.toLocaleString()}</td>
-            <td class="p-3 sm:p-4 border-r border-theme text-muted text-xs">${m.camp}</td>
-            <td class="p-3 sm:p-4 text-center font-bold">${m.siegeCount}회</td>
-        </tr>`).join('') || `<tr><td colspan="10" class="p-8 text-center text-muted">데이터 없음</td></tr>`;
+    // 전체 리포트 렌더링
+    const tbody = document.getElementById('stats-table-body');
+    if (tbody) {
+        tbody.innerHTML = filtered.map((m, idx) => `
+            <tr class="border-b border-theme transition bg-hover">
+                <td class="p-3 sm:p-4 border-r border-theme text-center font-bold text-muted">${idx + 1}</td>
+                <td class="p-3 sm:p-4 border-r border-theme font-bold text-main">${m.name}</td>
+                <td class="p-3 sm:p-4 border-r border-theme text-muted">${m.job || '-'}</td>
+                <td class="p-3 sm:p-4 border-r border-theme text-muted">${m.group || '-'}</td>
+                <td class="p-3 sm:p-4 border-r border-theme"><span class="px-2 py-0.5 rounded text-xs bg-panel border border-theme">${m.position}</span></td>
+                <td class="p-3 sm:p-4 border-r border-theme text-right font-mono">${m.prosperity.toLocaleString()}</td>
+                <td class="p-3 sm:p-4 border-r border-theme text-right font-mono text-yellow-500">${m.mhoon.toLocaleString()}</td>
+                <td class="p-3 sm:p-4 border-r border-theme text-right font-mono text-emerald-400">${m.contribution.toLocaleString()}</td>
+                <td class="p-3 sm:p-4 border-r border-theme text-muted text-xs">${m.camp}</td>
+                <td class="p-3 sm:p-4 text-center font-bold">${m.siegeCount}회</td>
+            </tr>`).join('') || `<tr><td colspan="10" class="p-8 text-center text-muted">데이터 없음</td></tr>`;
+    }
+
+    // Top 10 및 하위 10% 데이터 계산
+    const byMhoon = [...memberWeekData].sort((a,b) => b.mhoon - a.mhoon).slice(0, 10);
+    const byContribution = [...memberWeekData].sort((a,b) => b.contribution - a.contribution).slice(0, 10);
+    const byProsperity = [...memberWeekData].sort((a,b) => b.prosperity - a.prosperity).slice(0, 10);
+
+    // 하위 10% (공헌도 기준 오름차순 정렬 후 상위 10% 인원수만큼 추출)
+    const byBottom = [...memberWeekData].sort((a,b) => a.contribution - b.contribution);
+    const bottom10Count = Math.ceil(memberWeekData.length * 0.1);
+    const bottom10List = byBottom.slice(0, bottom10Count);
+
+    const renderMiniTable = (list, valKey, colorClass) => {
+        if (!list || list.length === 0) return `<tr><td colspan="4" class="p-4 text-center text-muted">데이터 없음</td></tr>`;
+        return list.map((m, i) => `
+            <tr class="border-b border-theme bg-hover">
+                <td class="p-2.5 text-center font-bold text-muted">${i+1}</td>
+                <td class="p-2.5 font-bold text-main">${m.name}</td>
+                <td class="p-2.5 text-muted text-xs">${m.job || '-'}</td>
+                <td class="p-2.5 text-right font-mono font-bold ${colorClass}">${m[valKey].toLocaleString()}</td>
+            </tr>`).join('');
+    };
+
+    document.getElementById('mhoonTop10Body').innerHTML = renderMiniTable(byMhoon, 'mhoon', 'text-yellow-500');
+    document.getElementById('contributionTop10Body').innerHTML = renderMiniTable(byContribution, 'contribution', 'text-emerald-400');
+    document.getElementById('prosperityTop10Body').innerHTML = renderMiniTable(byProsperity, 'prosperity', 'text-main');
+
+    // 관리필요(하위 10%) 영역은 관리자 권한일 때만 표시/렌더링
+    const adminBox = document.getElementById('adminManagementBox');
+    const bottomBody = document.getElementById('bottom10PercentBody');
+    if (isCurrentLoggedUserAdmin()) {
+        if (adminBox) adminBox.classList.remove('hidden');
+        if (bottomBody) {
+            bottomBody.innerHTML = bottom10List.length === 0 ? `<tr><td colspan="5" class="p-4 text-center text-muted">데이터 없음</td></tr>` : bottom10List.map((m, i) => `
+                <tr class="border-b border-theme bg-hover">
+                    <td class="p-2.5 text-center font-bold text-muted">${i+1}</td>
+                    <td class="p-2.5 font-bold text-main">${m.name}</td>
+                    <td class="p-2.5 text-muted text-xs">${m.job || '-'}</td>
+                    <td class="p-2.5 text-right font-mono text-emerald-400">${m.contribution.toLocaleString()}</td>
+                    <td class="p-2.5 text-right font-mono text-yellow-500">${m.mhoon.toLocaleString()}</td>
+                </tr>`).join('');
+        }
+    } else {
+        if (adminBox) adminBox.classList.add('hidden');
+    }
 }
 
 function runSpyCheck() {
@@ -827,6 +879,7 @@ function applyAdminUIState() {
     }
     renderFilterButtons();
     if (currentActiveView === 'dashboard') renderTable();
+    if (currentActiveView === 'stats') renderStatsTable();
 }
 
 function openCategoryModal() {
