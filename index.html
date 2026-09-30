@@ -141,7 +141,6 @@
     <!-- ⚔️ 덱 편성 및 조합 공유 모달 -->
     <div id="deckModal" class="hidden fixed inset-0 modal-bg flex items-center justify-center z-50 p-4">
         <div class="bg-panel border-2 gold-border rounded-xl shadow-2xl w-full max-w-4xl p-6 relative max-h-[92vh] overflow-y-auto">
-            <!-- 닫기 버튼과 겹치지 않게 우측 상단 여백 확보 -->
             <button onclick="toggleModal('deckModal')" class="absolute top-4 right-4 p-2 rounded-lg border border-theme bg-panel text-xl font-bold z-20 hover:bg-hover transition">&times;</button>
             
             <div class="flex justify-between items-center pb-3 border-b border-theme mb-4 pr-12">
@@ -152,21 +151,17 @@
             </div>
 
             <div class="space-y-4">
-                <!-- 진형 선택 영역 (8대 진형 전용 연동) -->
                 <div class="bg-main p-3.5 rounded-xl border border-theme space-y-1.5">
                     <label class="text-xs text-muted block">선택 진형 (8대 진형 연동)</label>
                     <select id="deckFormationSelect" disabled class="w-full bg-panel border border-theme px-3 py-2 rounded-lg text-sm text-main font-bold disabled:opacity-80">
-                        <!-- 동적 로드 -->
                     </select>
                 </div>
 
                 <div class="text-center py-1 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
-                    <span class="text-xs font-bold gold-text">✨ 해당 진형 보너스 및 장수 인연 보너스 적용</span>
+                    <span class="text-xs font-bold gold-text" id="formationSynergyBonusBanner">✨ 해당 진형 보너스 및 장수 인연 보너스 적용</span>
                 </div>
 
-                <!-- 장수 1, 2, 3 카드 배치 그리드 -->
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <!-- 장수 1 -->
                     <div class="bg-main p-4 rounded-xl border border-theme space-y-3 relative">
                         <div class="text-xs font-bold gold-text pb-1 border-b border-theme">장수 1 (메인)</div>
                         <div class="relative">
@@ -190,7 +185,6 @@
                         </div>
                     </div>
 
-                    <!-- 장수 2 -->
                     <div class="bg-main p-4 rounded-xl border border-theme space-y-3 relative">
                         <div class="text-xs font-bold gold-text pb-1 border-b border-theme">장수 2</div>
                         <div class="relative">
@@ -214,7 +208,6 @@
                         </div>
                     </div>
 
-                    <!-- 장수 3 -->
                     <div class="bg-main p-4 rounded-xl border border-theme space-y-3 relative">
                         <div class="text-xs font-bold gold-text pb-1 border-b border-theme">장수 3</div>
                         <div class="relative">
@@ -411,7 +404,54 @@
                 </div>
             </div>
 
-            <div class="bg-panel border border-theme rounded-xl shadow-xl overflow-hidden flex flex-col">
+            <!-- 통계 탭 전환 버튼 -->
+            <div class="flex flex-wrap gap-2 border-b border-theme pb-2">
+                <button onclick="switchStatsTab('mhoonTop10')" id="statsTabBtn-mhoonTop10" class="px-3 py-2 rounded-lg text-xs font-bold bg-amber-600 text-white shadow">🏆 주간 무훈 Top 10</button>
+                <button onclick="switchStatsTab('contributionTop10')" id="statsTabBtn-contributionTop10" class="px-3 py-2 rounded-lg text-xs font-bold bg-main text-muted hover:bg-hover">💎 주간 공헌 Top 10</button>
+                <button onclick="switchStatsTab('prosperityTop10')" id="statsTabBtn-prosperityTop10" class="px-3 py-2 rounded-lg text-xs font-bold bg-main text-muted hover:bg-hover">🏰 번영도 Top 10</button>
+                <button onclick="switchStatsTab('bottom10Percent')" id="statsTabBtn-bottom10Percent" class="px-3 py-2 rounded-lg text-xs font-bold bg-main text-muted hover:bg-hover">📋 전체 리포트</button>
+            </div>
+
+            <!-- 1. 주간 무훈/공헌/번영도 Top 10 뷰 -->
+            <div id="statsView-mhoonTop10" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="bg-panel border border-theme rounded-xl p-4 shadow">
+                    <h3 class="text-sm font-bold gold-text mb-3 pb-2 border-b border-theme">🏆 주간 무훈 Top 10</h3>
+                    <div class="overflow-x-auto"><table class="w-full text-xs"><tbody id="mhoonTop10Body"></tbody></table></div>
+                </div>
+                <div class="bg-panel border border-theme rounded-xl p-4 shadow">
+                    <h3 class="text-sm font-bold gold-text mb-3 pb-2 border-b border-theme">💎 주간 공헌 Top 10</h3>
+                    <div class="overflow-x-auto"><table class="w-full text-xs"><tbody id="contributionTop10Body"></tbody></table></div>
+                </div>
+                <div class="bg-panel border border-theme rounded-xl p-4 shadow">
+                    <h3 class="text-sm font-bold gold-text mb-3 pb-2 border-b border-theme">🏰 번영도 Top 10</h3>
+                    <div class="overflow-x-auto"><table class="w-full text-xs"><tbody id="prosperityTop10Body"></tbody></table></div>
+                </div>
+            </div>
+
+            <!-- 2. 관리필요 (관리자 전용 하위 10%) 영역 -->
+            <div id="adminManagementBox" class="hidden bg-panel border-2 border-red-500/50 rounded-xl p-5 shadow-xl space-y-3">
+                <div class="flex justify-between items-center pb-2 border-b border-theme">
+                    <h3 class="text-sm font-bold text-red-400 flex items-center gap-1.5"><span>🚨</span> 관리필요 대상 (하위 10% - 관리자 전용)</h3>
+                    <span class="text-xs text-muted">주간 공헌도 기준 하위 10% 인원 목록</span>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs whitespace-nowrap">
+                        <thead>
+                            <tr class="text-muted border-b border-theme bg-main/50">
+                                <th class="p-2.5 text-center w-12">No</th>
+                                <th class="p-2.5">멤버</th>
+                                <th class="p-2.5">직업</th>
+                                <th class="p-2.5 text-right">주간공헌</th>
+                                <th class="p-2.5 text-right">주간무훈</th>
+                            </tr>
+                        </thead>
+                        <tbody id="bottom10PercentBody" class="divide-y divide-theme"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 3. 전체 리포트 테이블 뷰 -->
+            <div id="statsView-bottom10Percent" class="hidden bg-panel border border-theme rounded-xl shadow-xl overflow-hidden flex flex-col">
                 <div class="p-4 sm:p-5 border-b border-theme flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-main/30">
                     <div>
                         <h3 class="text-base font-bold gold-text">📊 금의위 맹원 전체 주간활동 리포트</h3>
