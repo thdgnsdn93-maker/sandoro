@@ -428,13 +428,16 @@
                 </div>
             </div>
 
-            <!-- 2. 관리필요 (관리자 전용 하위 10%) 영역 -->
+            <!-- 2. 관리필요 (관리자 전용 하위 10%) 접고 펴기 영역 -->
             <div id="adminManagementBox" class="hidden bg-panel border-2 border-red-500/50 rounded-xl p-5 shadow-xl space-y-3">
-                <div class="flex justify-between items-center pb-2 border-b border-theme">
-                    <h3 class="text-sm font-bold text-red-400 flex items-center gap-1.5"><span>🚨</span> 관리필요 대상 (하위 10% - 관리자 전용)</h3>
+                <div class="flex justify-between items-center pb-2 border-b border-theme cursor-pointer select-none" onclick="toggleBottom10Section()">
+                    <div class="flex items-center gap-2">
+                        <h3 class="text-sm font-bold text-red-400 flex items-center gap-1.5"><span>🚨</span> 관리필요 대상 (하위 10% - 관리자 전용)</h3>
+                        <span id="bottom10ToggleArrow" class="text-xs text-muted font-bold">▲ 접기</span>
+                    </div>
                     <span class="text-xs text-muted">주간 공헌도 기준 하위 10% 인원 목록</span>
                 </div>
-                <div class="overflow-x-auto">
+                <div id="bottom10ContentContainer" class="overflow-x-auto transition-all duration-300">
                     <table class="w-full text-left text-xs whitespace-nowrap">
                         <thead>
                             <tr class="text-muted border-b border-theme bg-main/50">
@@ -507,6 +510,20 @@
         </div>
     </div>
 
+    <script>
+        // 하위 10% 영역 접고 펴기 토글 함수
+        function toggleBottom10Section() {
+            const container = document.getElementById('bottom10ContentContainer');
+            const arrow = document.getElementById('bottom10ToggleArrow');
+            if (container.classList.contains('hidden')) {
+                container.classList.remove('hidden');
+                arrow.innerText = '▲ 접기';
+            } else {
+                container.classList.add('hidden');
+                arrow.innerText = '▼ 펼치기';
+            }
+        }
+    </script>
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
         import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
