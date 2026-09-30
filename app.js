@@ -105,12 +105,13 @@ function getTacticTooltip(skillName) {
     return `전법명: ${skillName}`;
 }
 
+// 🔧 [진형 효과 및 인연 조건 확인 및 표기 로직 반영]
 function updateFormationAndSynergyBonusText() {
     const formationSelect = document.getElementById('deckFormationSelect');
     const selectedFormationName = formationSelect ? formationSelect.value : '일자진';
     
     const formationObj = (DICT_DETAIL_DATA.formation || []).find(f => f.name === selectedFormationName);
-    let formationText = formationObj ? `[진형보너스(${formationObj.name})] ${formationObj.effect}` : "선택된 진형 효과 없음";
+    let formationText = formationObj ? `${formationObj.name} 효과: ${formationObj.effect}` : "선택된 진형 효과 없음";
 
     const g1 = (document.getElementById('deckGen1')?.value || '').replace(/\(메인\)/g, '').trim();
     const g2 = (document.getElementById('deckGen2')?.value || '').replace(/\(메인\)/g, '').trim();
@@ -119,17 +120,24 @@ function updateFormationAndSynergyBonusText() {
 
     let matchedSynergies = [];
     (DICT_DETAIL_DATA.synergy || []).forEach(syn => {
+        // 인연 대상 이름들이 현재 배치된 장수들에 포함되는지 검사
         const matchedCount = currentGenerators.filter(g => syn.type.includes(g) || syn.name.includes(g)).length;
-        if (matchedCount >= 2) {
-            matchedSynergies.push(`✨ 인연보너스[${syn.name}]: ${syn.effect}`);
+        
+        // 인원 조건 확인 (예: 인연 설명이나 타입에 명시된 필요 인원 또는 포함된 장수 일치 여부)
+        let requiredCount = 2;
+        if (syn.type.includes('3명')) requiredCount = 3;
+        else if (syn.type.includes('4명')) requiredCount = 4;
+
+        if (matchedCount >= requiredCount || (matchedCount >= 2 && !syn.type.includes('3명'))) {
+            matchedSynergies.push(`인연보너실[${syn.name}](${matchedCount}명 조건확인): ${syn.effect}`);
         }
     });
 
-    let synergyText = matchedSynergies.length > 0 ? matchedSynergies.join(' | ') : "활성화된 장수 인연 보너스 없음 (2명 이상 배치 시 적용)";
+    let synergyText = matchedSynergies.length > 0 ? matchedSynergies.join(' | ') : "장수 인연보너스: 없음";
     
     const bannerEl = document.getElementById('formationSynergyBonusBanner');
     if (bannerEl) {
-        bannerEl.innerText = `${formationText}  |  ${synergyText}`;
+        bannerEl.innerText = `${formationText}  /  ${synergyText}`;
     }
 }
 
@@ -404,7 +412,6 @@ function applyDeckEditModeUI() {
     }
 }
 
-// 🔧 [(메인) 문구 자동 필터링 및 장수 검색 기능]
 function handleGenInput(genNum) {
     if (!isDeckEditMode) return;
     const rawInputVal = document.getElementById(`deckGen${genNum}`).value;
