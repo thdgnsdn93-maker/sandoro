@@ -71,15 +71,25 @@ const DEFAULT_DICT_DATA = {
 
 let DICT_DETAIL_DATA = JSON.parse(localStorage.getItem('dictDetailData')) || DEFAULT_DICT_DATA;
 
-const INVALID_DICT_NAMES = ['진형 및 상성', '무장 인연', '무장고유전법', '공용전법', '진형', '인연', '고유전법', '공용전법'];
+// 🛡️ 분류용 타이틀(숫자+제목 형태) 및 불필요한 키워드 필터링 함수
+function isSectionTitle(name) {
+    if (!name) return true;
+    const trimmed = name.trim();
+    // "1. S대 진형", "3. 병종 상성 및 조합 보너스" 같은 분류 타이틀 패턴 차단
+    if (/^[0-9]+\.\s*(S대|대분류|진형\s*및|무장\s*인연|무장고유|공용전법|병종|상성)/i.test(trimmed)) return true;
+    const INVALID_DICT_NAMES = ['진형 및 상성', '무장 인연', '무장고유전법', '공용전법', '진형', '인연', '고유전법', '공용전법', 's대 진형', '병종 상성 및 조합 보너스'];
+    if (INVALID_DICT_NAMES.includes(trimmed.toLowerCase())) return true;
+    if (/^[0-9]+\.\s*$/.test(trimmed)) return true;
+    return false;
+}
+
 Object.keys(DICT_DETAIL_DATA).forEach(tabKey => {
     if (Array.isArray(DICT_DETAIL_DATA[tabKey])) {
         let mergedMap = new Map();
         DICT_DETAIL_DATA[tabKey].forEach(item => {
             if (!item || !item.name) return;
-            let name = item.name.replace(/[\u{1F000}-\u{1F6FF}|[\u{2600}-\u{27BF}]/gu, '').trim();
-            if (/^[0-9]+\.\s*$/.test(name)) return;
-            if (INVALID_DICT_NAMES.includes(name)) return;
+            let name = item.name.replace(/[\u{1F000}-\u{1F6FF}|[\u{2600}-\u{27BF}]/gu, '').replace(/[🧭⚔️🛡️✨📚📊]/g, '').trim();
+            if (isSectionTitle(name)) return;
             if (!name || name.length < 2) return;
 
             if (mergedMap.has(name)) {
@@ -105,7 +115,6 @@ function getTacticTooltip(skillName) {
     return `전법명: ${skillName}`;
 }
 
-// 🔧 [진형 효과 및 인연 조건 확인 및 표기 로직 반영]
 function updateFormationAndSynergyBonusText() {
     const formationSelect = document.getElementById('deckFormationSelect');
     const selectedFormationName = formationSelect ? formationSelect.value : '일자진';
@@ -120,16 +129,13 @@ function updateFormationAndSynergyBonusText() {
 
     let matchedSynergies = [];
     (DICT_DETAIL_DATA.synergy || []).forEach(syn => {
-        // 인연 대상 이름들이 현재 배치된 장수들에 포함되는지 검사
         const matchedCount = currentGenerators.filter(g => syn.type.includes(g) || syn.name.includes(g)).length;
-        
-        // 인원 조건 확인 (예: 인연 설명이나 타입에 명시된 필요 인원 또는 포함된 장수 일치 여부)
         let requiredCount = 2;
         if (syn.type.includes('3명')) requiredCount = 3;
         else if (syn.type.includes('4명')) requiredCount = 4;
 
         if (matchedCount >= requiredCount || (matchedCount >= 2 && !syn.type.includes('3명'))) {
-            matchedSynergies.push(`인연보너실[${syn.name}](${matchedCount}명 조건확인): ${syn.effect}`);
+            matchedSynergies.push(`인연보너스[${syn.name}](${matchedCount}명 조건확인): ${syn.effect}`);
         }
     });
 
@@ -186,7 +192,12 @@ function switchDictTab(tabKey) {
 
 function renderDictSubList(tabKey) {
     const listContainer = document.getElementById('dictSubItemList');
-    const items = DICT_DETAIL_DATA[tabKey] || [];
+    let items = DICT_DETAIL_DATA[tabKey] || [];
+
+    if (tabKey === 'formation') {
+        const fixedFormations = ["일자진", "기형진", "안행진", "방원진", "추형진", "어린진", "구행진", "언월진"];
+        items = fixedFormations.map(name => items.find(f => f.name === name) || { name: name, type: "기본 진형", effect: "진형 효과 정보" });
+    }
 
     if (items.length === 0) {
         listContainer.innerHTML = `<p class="text-muted text-xs p-2">항목이 없습니다.</p>`;
@@ -205,7 +216,11 @@ function renderDictSubList(tabKey) {
 }
 
 function selectDictItem(tabKey, index, btnElement) {
-    const items = DICT_DETAIL_DATA[tabKey] || [];
+    let items = DICT_DETAIL_DATA[tabKey] || [];
+    if (tabKey === 'formation') {
+        const fixedFormations = ["일자진", "기형진", "안행진", "방원진", "추형진", "어린진", "구행진", "언월진"];
+        items = fixedFormations.map(name => items.find(f => f.name === name) || { name: name, type: "기본 진형", effect: "진형 효과 정보" });
+    }
     const item = items[index];
     if (!item) return;
 
@@ -265,14 +280,19 @@ function handleDictMarkdownUpload(event) {
                     let cleanName = trimmed
                         .replace(/^[#\-*0-9.\s]+/, '')
                         .replace(/\*\*/g, '')
+                        .replace(/[🧭⚔️🛡️✨📚📊]/g, '')
                         .split(':')[0]
                         .split('(')[0]
                         .split('-')[0]
                         .trim();
 
-                    const isIgnoredTitle = INVALID_DICT_NAMES.some(kw => cleanName === kw || cleanName.match(new RegExp(`^[0-9]+\\.\\s*${kw}$`, 'i')));
+                    // 🔧 분류용 타이틀은 업로드 파싱 시에도 완벽히 제외
+                    if (isSectionTitle(cleanName)) {
+                        currentItem = null;
+                        return;
+                    }
 
-                    if (cleanName && cleanName.length >= 2 && !isIgnoredTitle) {
+                    if (cleanName && cleanName.length >= 2) {
                         if (currentItem && currentItem.name) {
                             parsedItems.push(currentItem);
                         }
@@ -324,8 +344,8 @@ function populateFormationSelect(selectedFormation) {
     const selectEl = document.getElementById('deckFormationSelect');
     if (!selectEl) return;
     
-    const formations = DICT_DETAIL_DATA.formation || [];
-    selectEl.innerHTML = formations.map(f => `<option value="${f.name}" ${f.name === selectedFormation ? 'selected' : ''}>${f.name}</option>`).join('');
+    const fixedFormations = ["일자진", "기형진", "안행진", "방원진", "추형진", "어린진", "구행진", "언월진"];
+    selectEl.innerHTML = fixedFormations.map(name => `<option value="${name}" ${name === selectedFormation ? 'selected' : ''}>${name}</option>`).join('');
 }
 
 function openDeckModal(memberId, deckIdx) {
