@@ -69,13 +69,10 @@ const DEFAULT_DICT_DATA = {
     ]
 };
 
-let DICT_DETAIL_DATA = JSON.parse(localStorage.getItem('dictDetailData')) || DEFAULT_DICT_DATA;
-
-// 🛡️ 분류용 타이틀(숫자+제목 형태) 및 불필요한 키워드 필터링 함수
+// 🛡️️ 분류용 타이틀 및 불필요한 키워드 필터링 함수
 function isSectionTitle(name) {
     if (!name) return true;
     const trimmed = name.trim();
-    // "1. S대 진형", "3. 병종 상성 및 조합 보너스" 같은 분류 타이틀 패턴 차단
     if (/^[0-9]+\.\s*(S대|대분류|진형\s*및|무장\s*인연|무장고유|공용전법|병종|상성)/i.test(trimmed)) return true;
     const INVALID_DICT_NAMES = ['진형 및 상성', '무장 인연', '무장고유전법', '공용전법', '진형', '인연', '고유전법', '공용전법', 's대 진형', '병종 상성 및 조합 보너스'];
     if (INVALID_DICT_NAMES.includes(trimmed.toLowerCase())) return true;
@@ -83,6 +80,13 @@ function isSectionTitle(name) {
     return false;
 }
 
+let DICT_DETAIL_DATA = JSON.parse(localStorage.getItem('dictDetailData') || 'null');
+if (!DICT_DETAIL_DATA) {
+    DICT_DETAIL_DATA = DEFAULT_DICT_DATA;
+    localStorage.setItem('dictDetailData', JSON.stringify(DICT_DETAIL_DATA));
+}
+
+// 중복 이름 통합 및 정제 처리
 Object.keys(DICT_DETAIL_DATA).forEach(tabKey => {
     if (Array.isArray(DICT_DETAIL_DATA[tabKey])) {
         let mergedMap = new Map();
@@ -286,7 +290,6 @@ function handleDictMarkdownUpload(event) {
                         .split('-')[0]
                         .trim();
 
-                    // 🔧 분류용 타이틀은 업로드 파싱 시에도 완벽히 제외
                     if (isSectionTitle(cleanName)) {
                         currentItem = null;
                         return;
@@ -316,17 +319,25 @@ function handleDictMarkdownUpload(event) {
             }
 
             if (parsedItems.length > 0) {
-                DICT_DETAIL_DATA[activeDictUploadKey] = parsedItems.map(item => ({
-                    name: item.name,
-                    type: item.type || "세부 분류 및 정보",
-                    effect: item.effect || "상세 효과 내용"
-                }));
+                // 중복 이름 통합 및 정제
+                let mergedMap = new Map();
+                parsedItems.forEach(item => {
+                    let name = item.name;
+                    if (mergedMap.has(name)) {
+                        let existing = mergedMap.get(name);
+                        existing.effect += "\n" + (item.effect || "");
+                    } else {
+                        mergedMap.set(name, { name: name, type: item.type || "세부 분류 및 정보", effect: item.effect || "상세 효과 내용" });
+                    }
+                });
+
+                DICT_DETAIL_DATA[activeDictUploadKey] = Array.from(mergedMap.values());
 
                 saveDataToStorage();
                 if (document.getElementById('dictModal') && !document.getElementById('dictModal').classList.contains('hidden')) {
                     switchDictTab(activeDictUploadKey);
                 }
-                alert(`📚 총 ${parsedItems.length}개의 순수 항목이 정확히 추출되어 반영되었습니다!`);
+                alert(`📚 총 ${mergedMap.size}개의 순수 항목이 정확히 추출되어 반영되었습니다!`);
             } else {
                 alert("⚠️ 유효한 항목을 찾지 못했습니다. 문서 형식을 확인해주세요.");
             }
@@ -708,7 +719,10 @@ async function loadDataFromFirebase() {
                 const data = docSnap.data();
                 if (data.members) members = data.members;
                 if (data.categoryNames) categoryNames = data.categoryNames;
-                if (data.DICT_DETAIL_DATA) DICT_DETAIL_DATA = data.DICT_DETAIL_DATA;
+                if (data.DICT_DETAIL_DATA) {
+                    DICT_DETAIL_DATA = data.DICT_DETAIL_DATA;
+                    localStorage.setItem('dictDetailData', JSON.stringify(DICT_DETAIL_DATA));
+                }
                 if (currentFilter !== '⭐ 즐겨찾기' && !categoryNames.includes(currentFilter)) currentFilter = categoryNames[0];
                 saveDataToStorage();
                 renderFilterButtons();
